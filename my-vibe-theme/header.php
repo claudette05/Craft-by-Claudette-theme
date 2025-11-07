@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?php wp_head(); ?>
 </head>
-<body <?php body_class( 'bg-pink-50 text-zinc-800 min-h-screen selection:bg-amber-200' ); ?>>
+<body <?php body_class( 'bg-red-500 text-zinc-800 min-h-screen selection:bg-amber-200' ); ?>>
     <nav id="main-nav" class="fixed top-0 left-0 right-0 z-50 transition-shadow duration-300 bg-pink-50/0 backdrop-blur-0 shadow-none">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20">
