@@ -1,0 +1,32 @@
+/*
+Theme Name: Craft by Claudette
+Author: AI Engineer
+Description: A stunning, interactive, and responsive eCommerce theme for the handmade jewelry and resin art brand 'Craft by Claudette'. Based on the original React design.
+Version: 1.0
+Requires at least: 5.0
+Tested up to: 6.5
+Requires PHP: 7.4
+License: GNU General Public License v2 or later
+License URI: http://www.gnu.org/licenses/gpl-2.0.html
+Text Domain: craftbyclaudette
+Tags: e-commerce, custom-menu, featured-images, one-column, responsive-layout, translation-ready
+
+This theme, like WordPress, is licensed under the GPL.
+*/
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background-color: #FEF9F1; /* bg-pink-50 */
+  color: #27272a; /* text-zinc-800 */
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
