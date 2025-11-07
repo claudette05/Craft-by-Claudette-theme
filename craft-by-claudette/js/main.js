@@ -7,6 +7,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const mobileMenuContainer = document.getElementById('mobile-menu-container');
     const mobileMenuPanel = document.getElementById('mobile-menu-panel');
     const mobileMenuBackdrop = document.getElementById('mobile-menu-backdrop');
+    const hamburgerIcon = document.getElementById('hamburger-icon');
+    const xIcon = document.getElementById('x-icon');
 
     function handleScroll() {
         if (window.scrollY > 10) {
@@ -27,6 +29,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (isOpen) {
             mobileMenuPanel.style.transform = 'translateY(-100%)';
             mobileMenuBackdrop.style.opacity = 0;
+            hamburgerIcon.classList.remove('hidden');
+            xIcon.classList.add('hidden');
             setTimeout(() => {
                 mobileMenuContainer.classList.remove('open');
                 mobileMenuContainer.classList.add('hidden');
@@ -34,6 +38,8 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             mobileMenuContainer.classList.remove('hidden');
             mobileMenuContainer.classList.add('open');
+            hamburgerIcon.classList.add('hidden');
+            xIcon.classList.remove('hidden');
             setTimeout(() => {
                 mobileMenuPanel.style.transform = 'translateY(0)';
                 mobileMenuBackdrop.style.opacity = 1;
