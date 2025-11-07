@@ -56,11 +56,8 @@ function myvibe_enqueue_assets() {
     // Google Fonts - Poppins
     wp_enqueue_style( 'google-fonts-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap', array(), null );
 
-    // Tailwind CSS CDN (as per original codebase, for development, consider compiling for production)
-    wp_enqueue_style( 'tailwind-cdn', 'https://cdn.tailwindcss.com', array(), null );
-
-    // Theme stylesheet (for global styles like body font and scrollbar hiding)
-    wp_enqueue_style( 'myvibe-custom-style', get_template_directory_uri() . '/assets/css/style.css', array(), '1.0.0' );
+    // Compiled Tailwind CSS (replaces CDN and custom styles)
+    wp_enqueue_style( 'myvibe-tailwind-styles', get_template_directory_uri() . '/assets/css/tailwind.css', array( 'google-fonts-poppins' ), '1.0.0' );
 
     // Main JavaScript file
     wp_enqueue_script( 'myvibe-main-script', get_template_directory_uri() . '/assets/js/main.js', array( 'jquery' ), '1.0.0', true );

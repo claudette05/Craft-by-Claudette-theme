@@ -1,0 +1,14 @@
+{
+  "name": "my-vibe-theme",
+  "version": "1.0.0",
+  "description": "A custom theme converted from a static coded site.",
+  "scripts": {
+    "dev": "npx tailwindcss -i ./my-vibe-theme/assets/css/tailwind-input.css -o ./my-vibe-theme/assets/css/tailwind.css --watch",
+    "build": "npx tailwindcss -i ./my-vibe-theme/assets/css/tailwind-input.css -o ./my-vibe-theme/assets/css/tailwind.css --minify"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.3"
+  }
+}
