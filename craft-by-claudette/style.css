@@ -1,7 +1,7 @@
 /*
 Theme Name: Craft by Claudette
-Author: AI Engineer
-Description: A stunning, interactive, and responsive eCommerce theme for the handmade jewelry and resin art brand 'Craft by Claudette'. Based on the original React design.
+Author: Your Name
+Description: A stunning, interactive, and responsive eCommerce theme for the handmade jewelry and resin art brand 'Craft by Claudette'.
 Version: 1.0
 Requires at least: 5.0
 Tested up to: 6.5
@@ -9,17 +9,15 @@ Requires PHP: 7.4
 License: GNU General Public License v2 or later
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: craftbyclaudette
-Tags: e-commerce, custom-menu, featured-images, one-column, responsive-layout, translation-ready
+Tags: e-commerce, custom-background, custom-logo, custom-menu, featured-images, one-column, responsive-layout, rtl-language-support, threaded-comments, translation-ready, block-styles
 
 This theme, like WordPress, is licensed under the GPL.
+Use it to make something cool, have fun, and share what you've learned with others.
 */
 
 body {
   font-family: 'Poppins', sans-serif;
-  background-color: #FEF9F1; /* bg-pink-50 */
-  color: #27272a; /* text-zinc-800 */
 }
-
 /* Hide scrollbar for Chrome, Safari and Opera */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
@@ -29,33 +27,4 @@ body {
 .hide-scrollbar {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
-}
-
-/* WooCommerce Customizations */
-.woocommerce ul.products li.product .woocommerce-loop-product__title {
-    font-size: 1.125rem; /* text-lg */
-    font-weight: 500;
-    color: #27272a; /* text-zinc-800 */
-    margin: 0.5rem 0;
-}
-
-.woocommerce ul.products li.product .price {
-    font-size: 1rem;
-    font-weight: 600;
-    color: #a16207; /* text-amber-700 */
-}
-
-.woocommerce span.onsale {
-    background-color: #ef4444 !important; /* bg-red-500 */
-    color: white !important;
-    border-radius: 9999px !important;
-    min-height: auto !important;
-    min-width: auto !important;
-    padding: 0.25rem 0.75rem !important;
-    font-size: 0.75rem !important;
-    font-weight: 500 !important;
-    line-height: 1.25 !important;
-    top: 0.75rem !important;
-    right: 0.75rem !important;
-    left: auto !important;
 }
