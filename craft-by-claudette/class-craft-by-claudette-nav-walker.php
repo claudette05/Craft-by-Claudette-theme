@@ -119,6 +119,3 @@ if ( ! class_exists( 'Craft_By_Claudette_Nav_Walker' ) ) {
         }
     }
 }
-
-// Add this to functions.php to include the walker
-require_once get_template_directory() . '/class-craft-by-claudette-nav-walker.php';

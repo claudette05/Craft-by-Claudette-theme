@@ -4,6 +4,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
+// Include custom navigation walkers
+require_once get_template_directory() . '/class-craft-by-claudette-nav-walker.php';
+require_once get_template_directory() . '/class-craft-by-claudette-nav-walker-mobile.php';
+
 /**
  * Craft by Claudette theme setup.
  */
