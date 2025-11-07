@@ -23,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     function toggleMenu() {
+        if (!mobileMenuContainer || !mobileMenuPanel || !mobileMenuBackdrop || !nav) return;
         const isOpen = !mobileMenuContainer.classList.contains('hidden');
         if (isOpen) {
             nav.classList.remove('menu-open');
@@ -63,34 +64,24 @@ document.addEventListener('DOMContentLoaded', function () {
         let currentSlide = 0;
         let slideInterval;
 
-        function showSlide(index, direction) {
+        function showSlide(index) {
             slides.forEach((slide, i) => {
-                slide.style.transition = 'none';
-                slide.style.zIndex = 1;
-                
+                slide.style.transition = 'opacity 0.7s ease-in-out, transform 0.7s ease-in-out';
                 if (i === index) {
-                    slide.style.transform = 'translateX(0)';
                     slide.style.opacity = 1;
+                    slide.style.transform = 'scale(1)';
                     slide.style.zIndex = 2;
                 } else {
-                    const prevSlideIndex = (index - 1 + slides.length) % slides.length;
-                    if( i === prevSlideIndex) {
-                       slide.style.transform = 'translateX(-100%)';
-                    } else {
-                       slide.style.transform = 'translateX(100%)';
-                    }
                     slide.style.opacity = 0;
+                    slide.style.transform = 'scale(1.05)';
+                    slide.style.zIndex = 1;
                 }
-                setTimeout(() => {
-                    slide.style.transition = 'transform 0.5s ease, opacity 0.5s ease';
-                }, 50);
             });
         }
 
         function changeSlide(newDirection) {
-            const nextIndex = (currentSlide + newDirection + slides.length) % slides.length;
-            showSlide(nextIndex, newDirection);
-            currentSlide = nextIndex;
+            currentSlide = (currentSlide + newDirection + slides.length) % slides.length;
+            showSlide(currentSlide);
         }
 
         function startSlideShow() {
@@ -117,10 +108,33 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         
         if(slides.length > 0) {
-            showSlide(0, 1);
+            showSlide(0);
             startSlideShow();
         }
     }
+    
+    // -------------------------------------------------------------------------
+    // Generic Carousel (for Categories)
+    // -------------------------------------------------------------------------
+    const carousels = document.querySelectorAll('.category-carousel-container');
+    carousels.forEach(container => {
+        const carousel = container.querySelector('.category-carousel');
+        const prevBtn = container.querySelector('.carousel-prev');
+        const nextBtn = container.querySelector('.carousel-next');
+
+        if (!carousel || !prevBtn || !nextBtn) return;
+
+        const scrollAmount = carousel.firstElementChild ? carousel.firstElementChild.offsetWidth + 16 : 300; // Card width + gap
+
+        nextBtn.addEventListener('click', () => {
+            carousel.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        });
+
+        prevBtn.addEventListener('click', () => {
+            carousel.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+        });
+    });
+
 
     // -------------------------------------------------------------------------
     // Product Quick View Modal
@@ -144,10 +158,11 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function openQuickViewModal(productId) {
-        if (!modalContainer) return;
+        if (!modalContainer || !craftAjax) return;
 
         modalContainer.classList.remove('hidden');
         modalContainer.innerHTML = `<div class="modal-backdrop fixed inset-0 bg-black/60 z-50 flex justify-center items-center backdrop-blur-sm p-4"><div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-amber-500"></div></div>`;
+        document.body.style.overflow = 'hidden';
 
         const formData = new FormData();
         formData.append('action', 'load_product_quick_view');
@@ -162,13 +177,52 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(response => {
             if (response.success) {
                 modalContainer.innerHTML = response.data;
-                // re-initialize add to cart variation form if it exists
-                if (typeof jQuery !== 'undefined' && typeof jQuery.fn.wc_variation_form !== 'undefined') {
-                    jQuery( '.variations_form' ).each( function() {
-                        jQuery( this ).wc_variation_form();
+                // Re-initialize add to cart variation form if it exists
+                if (typeof jQuery !== 'undefined' && jQuery().wc_variation_form) {
+                    jQuery('.variations_form').wc_variation_form();
+                }
+                 // Handle AJAX add to cart from within the modal
+                const modalForm = modalContainer.querySelector('form.cart');
+                if (modalForm) {
+                    modalForm.addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const form = e.target;
+                        const submitButton = form.querySelector('.single_add_to_cart_button');
+                        if (!submitButton) return;
+
+                        const originalButtonText = submitButton.innerHTML;
+                        submitButton.innerHTML = 'Adding...';
+                        submitButton.disabled = true;
+
+                        const formData = new FormData(form);
+                        
+                        fetch(form.action || window.location.href, {
+                            method: 'POST',
+                            body: new URLSearchParams(formData),
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded'
+                            }
+                        })
+                        .then(res => {
+                            // This triggers the fragments update
+                            if (typeof jQuery !== 'undefined') {
+                                jQuery(document.body).trigger('added_to_cart', [null, null, jQuery(submitButton)]);
+                            }
+
+                            submitButton.innerHTML = 'Added!';
+                            setTimeout(() => {
+                                closeQuickViewModal();
+                            }, 1000);
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            submitButton.innerHTML = originalButtonText;
+                            submitButton.disabled = false;
+                        });
                     });
                 }
             } else {
+                 console.error('Quick view failed:', response.data);
                  closeQuickViewModal();
             }
         })
@@ -182,6 +236,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (modalContainer) {
             modalContainer.classList.add('hidden');
             modalContainer.innerHTML = '';
+            document.body.style.overflow = '';
         }
     }
 });

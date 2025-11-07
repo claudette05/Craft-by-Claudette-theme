@@ -30,3 +30,32 @@ body {
   -ms-overflow-style: none;  /* IE and Edge */
   scrollbar-width: none;  /* Firefox */
 }
+
+/* WooCommerce Customizations */
+.woocommerce ul.products li.product .woocommerce-loop-product__title {
+    font-size: 1.125rem; /* text-lg */
+    font-weight: 500;
+    color: #27272a; /* text-zinc-800 */
+    margin: 0.5rem 0;
+}
+
+.woocommerce ul.products li.product .price {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #a16207; /* text-amber-700 */
+}
+
+.woocommerce span.onsale {
+    background-color: #ef4444 !important; /* bg-red-500 */
+    color: white !important;
+    border-radius: 9999px !important;
+    min-height: auto !important;
+    min-width: auto !important;
+    padding: 0.25rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    line-height: 1.25 !important;
+    top: 0.75rem !important;
+    right: 0.75rem !important;
+    left: auto !important;
+}
