@@ -32,7 +32,7 @@ $posts = array(
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-10 md:mb-12">
             <h2 class="text-2xl md:text-3xl font-bold text-zinc-800">Shop Our Instagram</h2>
-            <p class="text-zinc-600 mt-2">Tag <span class="font-semibold text-amber-600">@CraftByClaudette</span> to be featured!</p>
+            <p class="text-zinc-600 mt-2">Tag <span class="font-semibold text-amber-600">@MyVibeTheme</span> to be featured!</p>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <?php foreach ( $posts as $post ) : ?>

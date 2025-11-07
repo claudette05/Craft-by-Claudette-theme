@@ -17,7 +17,7 @@
             <div>
                 <h2 class="text-2xl md:text-3xl font-bold text-amber-800 mb-4">Meet the Maker</h2>
                 <p class="text-zinc-600 mb-6 leading-relaxed">
-                    Welcome to Craft by Claudette, where every piece tells a story. Founded from a passion for color, creativity, and handmade charm, each item is lovingly crafted in my small home studio. I believe in the beauty of imperfection and the joy of creating something truly unique.
+                    Welcome to My Vibe Theme, where every piece tells a story. Founded from a passion for color, creativity, and handmade charm, each item is lovingly crafted in my small home studio. I believe in the beauty of imperfection and the joy of creating something truly unique.
                 </p>
                 <button class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition-colors">
                     Learn Our Story

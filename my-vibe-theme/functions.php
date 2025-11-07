@@ -5,13 +5,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 // Include custom navigation walkers
-require_once get_template_directory() . '/class-craft-by-claudette-nav-walker.php';
-require_once get_template_directory() . '/class-craft-by-claudette-nav-walker-mobile.php';
+require_once get_template_directory() . '/class-my-vibe-theme-nav-walker.php';
+require_once get_template_directory() . '/class-my-vibe-theme-nav-walker-mobile.php';
 
 /**
- * Craft by Claudette theme setup.
+ * My Vibe Theme setup.
  */
-function craftbyclaudette_setup() {
+function myvibe_theme_setup() {
     // Add default posts and comments RSS feed links to head.
     add_theme_support( 'automatic-feed-links' );
 
@@ -38,7 +38,7 @@ function craftbyclaudette_setup() {
 
     // Register navigation menus.
     register_nav_menus( array(
-        'primary' => esc_html__( 'Primary Menu', 'craftbyclaudette' ),
+        'primary' => esc_html__( 'Primary Menu', 'myvibe-theme' ),
     ) );
 
     // Add support for WooCommerce.
@@ -47,30 +47,30 @@ function craftbyclaudette_setup() {
     add_theme_support( 'wc-product-gallery-lightbox' );
     add_theme_support( 'wc-product-gallery-slider' );
 }
-add_action( 'after_setup_theme', 'craftbyclaudette_setup' );
+add_action( 'after_setup_theme', 'myvibe_theme_setup' );
 
 /**
  * Enqueue scripts and styles.
  */
-function craftbyclaudette_scripts() {
+function myvibe_enqueue_assets() {
     // Google Fonts - Poppins
     wp_enqueue_style( 'google-fonts-poppins', 'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap', array(), null );
 
-    // Tailwind CSS CDN (for development, consider compiling for production)
+    // Tailwind CSS CDN (as per original codebase, for development, consider compiling for production)
     wp_enqueue_style( 'tailwind-cdn', 'https://cdn.tailwindcss.com', array(), null );
 
-    // Theme stylesheet
-    wp_enqueue_style( 'craftbyclaudette-style', get_stylesheet_uri(), array(), '1.0.0' );
+    // Theme stylesheet (for global styles like body font and scrollbar hiding)
+    wp_enqueue_style( 'myvibe-custom-style', get_template_directory_uri() . '/assets/css/style.css', array(), '1.0.0' );
 
     // Main JavaScript file
-    wp_enqueue_script( 'craftbyclaudette-main', get_template_directory_uri() . '/js/main.js', array( 'jquery' ), '1.0.0', true );
+    wp_enqueue_script( 'myvibe-main-script', get_template_directory_uri() . '/assets/js/main.js', array( 'jquery' ), '1.0.0', true );
 
     // Localize script for AJAX
-    wp_localize_script( 'craftbyclaudette-main', 'craftAjax', array(
+    wp_localize_script( 'myvibe-main-script', 'myvibeAjax', array(
         'ajaxurl' => admin_url( 'admin-ajax.php' ),
     ) );
 }
-add_action( 'wp_enqueue_scripts', 'craftbyclaudette_scripts' );
+add_action( 'wp_enqueue_scripts', 'myvibe_enqueue_assets' );
 
 /**
  * WooCommerce specific functions.
@@ -80,21 +80,21 @@ remove_action( 'woocommerce_before_main_content', 'woocommerce_output_content_wr
 remove_action( 'woocommerce_after_main_content', 'woocommerce_output_content_wrapper_end', 10 );
 
 // Add custom WooCommerce wrappers
-add_action( 'woocommerce_before_main_content', 'craftbyclaudette_woocommerce_wrapper_start', 10 );
-add_action( 'woocommerce_after_main_content', 'craftbyclaudette_woocommerce_wrapper_end', 10 );
+add_action( 'woocommerce_before_main_content', 'myvibe_woocommerce_wrapper_start', 10 );
+add_action( 'woocommerce_after_main_content', 'myvibe_woocommerce_wrapper_end', 10 );
 
-function craftbyclaudette_woocommerce_wrapper_start() {
+function myvibe_woocommerce_wrapper_start() {
     echo '<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">';
 }
 
-function craftbyclaudette_woocommerce_wrapper_end() {
+function myvibe_woocommerce_wrapper_end() {
     echo '</div>';
 }
 
 /**
  * AJAX handler for product quick view.
  */
-function craftbyclaudette_load_product_quick_view_callback() {
+function myvibe_load_product_quick_view_callback() {
     if ( ! isset( $_POST['product_id'] ) ) {
         wp_send_json_error( 'Product ID missing.' );
     }
@@ -111,5 +111,5 @@ function craftbyclaudette_load_product_quick_view_callback() {
 
     wp_send_json_success( $modal_content );
 }
-add_action( 'wp_ajax_load_product_quick_view', 'craftbyclaudette_load_product_quick_view_callback' );
-add_action( 'wp_ajax_nopriv_load_product_quick_view', 'craftbyclaudette_load_product_quick_view_callback' );
+add_action( 'wp_ajax_load_product_quick_view', 'myvibe_load_product_quick_view_callback' );
+add_action( 'wp_ajax_nopriv_load_product_quick_view', 'myvibe_load_product_quick_view_callback' );

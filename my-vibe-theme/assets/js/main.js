@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', function () {
         formData.append('action', 'load_product_quick_view');
         formData.append('product_id', productId);
 
-        fetch(craftAjax.ajaxurl, {
+        fetch(myvibeAjax.ajaxurl, { // Changed craftAjax to myvibeAjax
             method: 'POST',
             body: formData,
         })

@@ -3,7 +3,7 @@
       <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left">
           <div class="md:col-span-1">
-            <h3 class="text-xl font-bold text-amber-600 mb-2">Craft by Claudette</h3>
+            <h3 class="text-xl font-bold text-amber-600 mb-2">My Vibe Theme</h3>
             <p class="text-zinc-600 mb-4">Handmade with love, just for you.</p>
             <div class="flex justify-center md:justify-start space-x-6">
               <a href="#" target="_blank" rel="noopener noreferrer" class="text-zinc-500 hover:text-amber-600 transition-colors">
@@ -44,7 +44,7 @@
           </div>
         </div>
         <div class="mt-12 border-t border-pink-200 pt-8 text-center">
-            <p class="text-zinc-500 text-sm">&copy; <?php echo date('Y'); ?> Craft by Claudette. All rights reserved.</p>
+            <p class="text-zinc-500 text-sm">&copy; <?php echo date('Y'); ?> My Vibe Theme. All rights reserved.</p>
         </div>
       </div>
     </footer>
