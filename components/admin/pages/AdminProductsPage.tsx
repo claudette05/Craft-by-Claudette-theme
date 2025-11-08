@@ -1,0 +1,145 @@
+import React, { useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { Product } from '../../../types';
+import { TrashIcon } from '../../../constants';
+
+interface AdminProductsPageProps {
+    products: Product[];
+    onAddProduct: () => void;
+    onEditProduct: (product: Product) => void;
+    onDeleteProduct: (productId: number) => void;
+}
+
+const ProductRow: React.FC<{ product: Product; index: number; onEdit: () => void; onDelete: () => void; }> = ({ product, index, onEdit, onDelete }) => {
+    const stockStatus = product.stock > 10 ? 'In Stock' : (product.stock > 0 ? 'Low Stock' : 'Out of Stock');
+    const stockColor = product.stock > 10 ? 'bg-green-100 text-green-800' : (product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+    const publishedStatus = product.published ? 'Published' : 'Draft';
+    const publishedColor = product.published ? 'bg-blue-100 text-blue-800' : 'bg-zinc-200 text-zinc-800';
+
+    return (
+        <motion.tr
+            className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)]"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+        >
+            <td className="p-4">
+                <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded-md" />
+            </td>
+            <th scope="row" className="px-6 py-4 font-medium text-[var(--text-primary)] whitespace-nowrap">
+                {product.name}
+            </th>
+            <td className="px-6 py-4 font-semibold">GH₵{(product.salePrice ?? product.price).toFixed(2)}</td>
+            <td className="px-6 py-4">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${stockColor}`}>
+                    {stockStatus} ({product.stock})
+                </span>
+            </td>
+             <td className="px-6 py-4">
+                <span className={`px-2 py-1 text-xs font-medium rounded-full ${publishedColor}`}>
+                    {publishedStatus}
+                </span>
+            </td>
+            <td className="px-6 py-4">{product.category}</td>
+            <td className="px-6 py-4 text-right flex items-center justify-end gap-4">
+                <button onClick={onEdit} className="font-medium text-amber-600 hover:underline">Edit</button>
+                <button onClick={onDelete} className="text-zinc-400 hover:text-red-500"><TrashIcon /></button>
+            </td>
+        </motion.tr>
+    );
+};
+
+const AdminProductsPage: React.FC<AdminProductsPageProps> = ({ products, onAddProduct, onEditProduct, onDeleteProduct }) => {
+    const [sortKey, setSortKey] = useState('name-asc');
+
+    const sortedProducts = useMemo(() => {
+        return [...products].sort((a, b) => {
+            switch (sortKey) {
+                case 'name-asc':
+                    return a.name.localeCompare(b.name);
+                case 'price-asc':
+                    return (a.salePrice ?? a.price) - (b.salePrice ?? b.price);
+                case 'price-desc':
+                    return (b.salePrice ?? b.price) - (a.salePrice ?? a.price);
+                case 'stock-asc':
+                    return a.stock - b.stock;
+                case 'stock-desc':
+                    return b.stock - a.stock;
+                case 'category-asc':
+                    return a.category.localeCompare(b.category);
+                default:
+                    return 0;
+            }
+        });
+    }, [products, sortKey]);
+    
+    const sortOptions = [
+        { value: 'name-asc', label: 'Name' },
+        { value: 'price-asc', label: 'Price (Low to High)' },
+        { value: 'price-desc', label: 'Price (High to Low)' },
+        { value: 'stock-asc', label: 'Stock (Ascending)' },
+        { value: 'stock-desc', label: 'Stock (Descending)' },
+        { value: 'category-asc', label: 'Category' },
+    ];
+
+    return (
+        <div>
+            <header className="flex justify-between items-center mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-[var(--text-primary)]">Products</h1>
+                    <p className="text-[var(--text-secondary)] mt-1">Manage your inventory and product details.</p>
+                </div>
+            </header>
+            
+            <div className="flex justify-between items-center mb-4">
+                 <div>
+                    <label htmlFor="sort-products" className="text-sm font-medium text-[var(--text-secondary)] mr-2">Sort by:</label>
+                    <select
+                        id="sort-products"
+                        value={sortKey}
+                        onChange={(e) => setSortKey(e.target.value)}
+                        className="text-sm rounded-lg border-zinc-300 dark:border-zinc-600 bg-[var(--bg-secondary)] shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 text-[var(--text-primary)]"
+                    >
+                        {sortOptions.map(option => (
+                            <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                    </select>
+                </div>
+                <button onClick={onAddProduct} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                    Add New Product
+                </button>
+            </div>
+
+            <div className="bg-[var(--bg-secondary)] p-2 sm:p-6 rounded-lg shadow-sm">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm text-left text-[var(--text-secondary)]">
+                        <thead className="text-xs text-[var(--text-primary)] uppercase bg-[var(--bg-tertiary)]">
+                            <tr>
+                                <th scope="col" className="p-4">Image</th>
+                                <th scope="col" className="px-6 py-3">Product Name</th>
+                                <th scope="col" className="px-6 py-3">Price</th>
+                                <th scope="col" className="px-6 py-3">Stock</th>
+                                <th scope="col" className="px-6 py-3">Status</th>
+                                <th scope="col" className="px-6 py-3">Category</th>
+                                <th scope="col" className="px-6 py-3"><span className="sr-only">Actions</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sortedProducts.map((product, index) => (
+                                <ProductRow 
+                                    key={product.id} 
+                                    product={product} 
+                                    index={index} 
+                                    onEdit={() => onEditProduct(product)}
+                                    onDelete={() => onDeleteProduct(product.id)}
+                                />
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AdminProductsPage;

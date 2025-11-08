@@ -1,0 +1,75 @@
+import React from 'react';
+import Toggle from '../ui/Toggle';
+
+interface AdminSettingsPageProps {
+    isDarkMode: boolean;
+    setIsDarkMode: (value: boolean) => void;
+}
+
+const FormInput: React.FC<{ label: string; id: string; type?: string; value: string; }> = 
+({ label, id, type = 'text', value }) => (
+    <div>
+        <label htmlFor={id} className="block text-sm font-medium text-[var(--text-secondary)]">{label}</label>
+        <div className="mt-1">
+            <input 
+                type={type} 
+                name={id} 
+                id={id} 
+                className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/50 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-3" 
+                defaultValue={value}
+            />
+        </div>
+    </div>
+);
+
+const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, setIsDarkMode }) => {
+    return (
+        <div>
+            <header className="mb-8">
+                <h1 className="text-3xl font-bold text-[var(--text-primary)]">Settings</h1>
+                <p className="text-[var(--text-secondary)] mt-1">Manage your site's settings and preferences.</p>
+            </header>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="md:col-span-2">
+                    <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm space-y-6">
+                        <section>
+                            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Shop Information</h2>
+                            <div className="mt-4 grid grid-cols-1 gap-y-6">
+                                <FormInput label="Shop Name" id="shop-name" value="Craft by Claudette" />
+                                <FormInput label="Contact Email" id="shop-email" type="email" value="hello@craftbyclaudette.com" />
+                            </div>
+                        </section>
+                         <div className="border-t border-[var(--border-primary)]"></div>
+                        <section>
+                            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Payment Gateways</h2>
+                             <p className="mt-2 text-[var(--text-secondary)] text-sm">
+                                Connect and manage your payment providers. (UI Placeholder)
+                            </p>
+                            <div className="flex items-center gap-4 mt-4">
+                                <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md">Connect PayPal</button>
+                                <button className="bg-purple-600 text-white font-semibold py-2 px-4 rounded-md">Connect Stripe</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+                <div>
+                    <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm">
+                        <h2 className="text-xl font-semibold text-[var(--text-primary)]">Appearance</h2>
+                        <div className="mt-4 flex items-center justify-between">
+                            <label className="text-sm font-medium text-[var(--text-secondary)]">
+                                Dark Mode
+                            </label>
+                           <Toggle enabled={isDarkMode} setEnabled={setIsDarkMode} />
+                        </div>
+                         <p className="mt-2 text-xs text-[var(--text-secondary)]">
+                            Toggle dark mode for the admin dashboard.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default AdminSettingsPage;
