@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Product } from '../types';
+import { Product, ProductVariant } from '../types';
 import { HeartIcon } from '../constants';
 import ProductGrid from './ProductGrid';
 
@@ -43,6 +43,35 @@ const Star: React.FC<{ filled?: boolean; half?: boolean }> = ({ filled = false, 
                 d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
             />
         </svg>
+    );
+};
+
+const StockIndicator: React.FC<{ stock: number }> = ({ stock }) => {
+    let text, colorClass, dotColorClass;
+
+    if (stock < 0) {
+        text = 'Select options for availability';
+        colorClass = 'text-zinc-500';
+        dotColorClass = 'bg-zinc-400';
+    } else if (stock > 10) {
+        text = 'In Stock';
+        colorClass = 'text-green-600';
+        dotColorClass = 'bg-green-500';
+    } else if (stock > 0) {
+        text = `Low Stock - Only ${stock} left!`;
+        colorClass = 'text-orange-600';
+        dotColorClass = 'bg-orange-500';
+    } else {
+        text = 'Out of Stock';
+        colorClass = 'text-red-600';
+        dotColorClass = 'bg-red-500';
+    }
+
+    return (
+        <div className={`flex items-center gap-2 mb-4 font-semibold text-sm ${colorClass}`}>
+            <span className={`h-2.5 w-2.5 rounded-full ${dotColorClass}`}></span>
+            {text}
+        </div>
     );
 };
 
@@ -112,7 +141,37 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const hasColorOptions = availableColors.length > 0;
     const hasSizeOptions = availableSizes.length > 0;
 
-    const isAddToCartDisabled = hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize));
+    const stockLevel = useMemo(() => {
+        const hasVariants = product.variants && product.variants.length > 0;
+        
+        if (!hasVariants) {
+            return product.stock;
+        }
+        
+        const hasColorOptions = availableColors.length > 0;
+        const hasSizeOptions = availableSizes.length > 0;
+
+        if (hasColorOptions && !selectedColor) {
+            return -1;
+        }
+        if (hasSizeOptions && !selectedSize) {
+            return -1;
+        }
+
+        const selectedVariant = product.variants.find(v => {
+            const colorMatch = !hasColorOptions || v.color === selectedColor;
+            const sizeMatch = !hasSizeOptions || v.size === selectedSize;
+            return colorMatch && sizeMatch;
+        });
+
+        return selectedVariant ? selectedVariant.stock : 0;
+
+    }, [product, selectedColor, selectedSize, availableColors, availableSizes]);
+
+    const isAddToCartDisabled = (hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) || stockLevel === 0;
+    
+    const addToCartText = stockLevel === 0 ? 'Out of Stock' :
+        ((hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) ? 'Select Options' : 'Add to Cart');
 
     return (
         <motion.main
@@ -152,13 +211,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         </div>
                         
                         {hasSale ? (
-                            <div className="flex items-baseline space-x-3 mb-4">
+                            <div className="flex items-baseline space-x-3">
                                 <p className="text-3xl font-light text-red-600">GH₵{product.salePrice?.toFixed(2)}</p>
                                 <p className="text-xl font-light text-gray-500 line-through">GH₵{product.price.toFixed(2)}</p>
                             </div>
                         ) : (
-                            <p className="text-3xl font-light text-amber-600 mb-4">GH₵{product.price.toFixed(2)}</p>
+                            <p className="text-3xl font-light text-amber-600">GH₵{product.price.toFixed(2)}</p>
                         )}
+
+                        <StockIndicator stock={stockLevel} />
 
                         <p className="text-gray-600 mb-6 leading-relaxed">{product.description}</p>
                         
@@ -228,7 +289,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 className="flex-grow bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-full transition-colors disabled:bg-zinc-400 disabled:cursor-not-allowed"
                                 disabled={isAddToCartDisabled}
                             >
-                                {isAddToCartDisabled ? 'Select Options' : 'Add to Cart'}
+                                {addToCartText}
                             </button>
                             <motion.button
                                 onClick={() => onToggleWishlist(product.id)}

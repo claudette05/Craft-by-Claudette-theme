@@ -32,23 +32,12 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, setIs
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="md:col-span-2">
-                    <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm space-y-6">
+                    <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm">
                         <section>
                             <h2 className="text-xl font-semibold text-[var(--text-primary)]">Shop Information</h2>
                             <div className="mt-4 grid grid-cols-1 gap-y-6">
                                 <FormInput label="Shop Name" id="shop-name" value="Craft by Claudette" />
                                 <FormInput label="Contact Email" id="shop-email" type="email" value="hello@craftbyclaudette.com" />
-                            </div>
-                        </section>
-                         <div className="border-t border-[var(--border-primary)]"></div>
-                        <section>
-                            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Payment Gateways</h2>
-                             <p className="mt-2 text-[var(--text-secondary)] text-sm">
-                                Connect and manage your payment providers. (UI Placeholder)
-                            </p>
-                            <div className="flex items-center gap-4 mt-4">
-                                <button className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md">Connect PayPal</button>
-                                <button className="bg-purple-600 text-white font-semibold py-2 px-4 rounded-md">Connect Stripe</button>
                             </div>
                         </section>
                     </div>
