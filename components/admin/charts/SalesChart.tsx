@@ -1,5 +1,5 @@
 import React from 'react';
-import { MOCK_SALES_DATA } from '@/constants/adminConstants';
+import { MOCK_SALES_DATA } from '../../../adminConstants';
 
 const SalesChart: React.FC = () => {
     const data = MOCK_SALES_DATA;

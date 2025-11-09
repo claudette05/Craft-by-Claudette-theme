@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-
-type Page = 'login' | 'signup';
+import { Page } from '../types';
 
 interface ForgotPasswordPageProps {
   onSendResetLink: (email: string) => void;

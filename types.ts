@@ -113,6 +113,8 @@ export interface Promotion {
     usageCount: number;
 }
 
+export type Page = 'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 'checkout' | 'admin' | 'productReviews' | 'search' | 'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 'resetPassword';
+
 export type ToastMessage = {
   id: number;
   message: string;

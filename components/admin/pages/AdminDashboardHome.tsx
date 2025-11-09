@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ADMIN_STATS, MOCK_ORDERS, MOCK_TOP_PRODUCTS } from '@/constants/adminConstants';
+import { ADMIN_STATS, MOCK_ORDERS, MOCK_TOP_PRODUCTS } from '../../../adminConstants';
 import StatCard from '../StatCard';
 import RecentOrdersTable from '../RecentOrdersTable';
 import TopProductsList from '../TopProductsList';

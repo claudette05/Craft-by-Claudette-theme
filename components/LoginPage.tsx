@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-
-type Page = 'shop' | 'cart' | 'login' | 'signup' | 'forgotPassword';
+import { Page } from '../types';
 
 interface LoginPageProps {
   onLogin: () => void;

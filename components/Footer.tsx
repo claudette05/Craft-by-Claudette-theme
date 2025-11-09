@@ -1,6 +1,5 @@
 import React from 'react';
-
-type Page = 'shop' | 'cart' | 'login' | 'signup' | 'admin' | 'affiliate' | 'account' | 'searchHistory' | 'forgotPassword';
+import { Page } from '../types';
 
 interface FooterProps {
     onNavigate: (page: Page) => void;

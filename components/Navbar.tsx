@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, UserIcon, HeartIcon } from '../constants';
-
-type Page = 'shop' | 'cart' | 'login' | 'signup' | 'affiliate' | 'account' | 'searchHistory' | 'forgotPassword';
+import { Page } from '../types';
 
 interface NavbarProps {
   cartCount: number;
@@ -73,7 +72,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
     toggleMenu();
   };
   
-  const handleAccountNav = (page: 'account') => {
+  const handleAccountNav = (page: Page) => {
     onNavigate(page);
     setIsAccountMenuOpen(false);
   };

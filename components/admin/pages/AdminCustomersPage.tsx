@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MOCK_CUSTOMERS } from '@/constants/adminConstants';
-import { AdminCustomer } from '@/types';
+import { MOCK_CUSTOMERS } from '../../../adminConstants';
+import { AdminCustomer } from '../../../types';
 
 const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ customer, index }) => (
     <motion.tr

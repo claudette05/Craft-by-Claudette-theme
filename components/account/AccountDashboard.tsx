@@ -1,9 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCartIcon } from '@/constants/adminConstants';
-import { HeartIcon } from '@/constants';
+import { ShoppingCartIcon, HeartIcon } from '../../constants';
 import { AccountPage } from '../MyAccountPage';
-import { MOCK_ORDERS } from '@/constants/adminConstants'; // Using for demo data
+import { MOCK_ORDERS } from '../../../adminConstants'; // Using for demo data
 
 interface AccountDashboardProps {
     setActivePage: (page: AccountPage) => void;
