@@ -4,17 +4,22 @@ import { Page } from '../types';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
 
 interface SignupPageProps {
-  onSignup: () => void;
+  onSignup: (email: string, password: string) => void;
   onNavigate: (page: Page) => void;
 }
 
 const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onNavigate }) => {
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd handle form data and API calls here
-    onSignup();
+    if (password !== confirmPassword) {
+      alert("Passwords do not match!");
+      return;
+    }
+    onSignup(email, password);
   };
 
   return (
@@ -61,6 +66,8 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onNavigate }) => {
               type="email"
               autoComplete="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
               placeholder="you@example.com"
             />
@@ -84,6 +91,23 @@ const SignupPage: React.FC<SignupPageProps> = ({ onSignup, onNavigate }) => {
             <AnimatePresence>
                 {password && <PasswordStrengthMeter password={password} />}
             </AnimatePresence>
+          </div>
+
+           <div>
+            <label htmlFor="confirm-password" className="text-sm font-medium text-zinc-700">
+              Confirm Password
+            </label>
+            <input
+              id="confirm-password"
+              name="confirm-password"
+              type="password"
+              autoComplete="new-password"
+              required
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              placeholder="Confirm your password"
+            />
           </div>
 
           <div>

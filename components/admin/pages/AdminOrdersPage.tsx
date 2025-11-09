@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MOCK_ORDERS } from '../../../adminConstants';
 import { AdminOrder, OrderStatus } from '../../../types';
 
 const statusColorMap: Record<OrderStatus, string> = {
@@ -34,7 +33,12 @@ const OrderRow: React.FC<{ order: AdminOrder, index: number }> = ({ order, index
     </motion.tr>
 );
 
-const AdminOrdersPage: React.FC = () => {
+// FIX: Add props interface to accept orders from parent component
+interface AdminOrdersPageProps {
+    orders: AdminOrder[];
+}
+
+const AdminOrdersPage: React.FC<AdminOrdersPageProps> = ({ orders }) => {
     return (
         <div>
             <header className="mb-8">
@@ -56,7 +60,8 @@ const AdminOrdersPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {MOCK_ORDERS.map((order, index) => (
+                            {/* FIX: Use `orders` prop instead of hardcoded MOCK_ORDERS */}
+                            {orders.map((order, index) => (
                                 <OrderRow key={order.id} order={order} index={index} />
                             ))}
                         </tbody>

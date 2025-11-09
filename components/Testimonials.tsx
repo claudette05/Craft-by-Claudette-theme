@@ -1,6 +1,7 @@
 
 import React from 'react';
-import { motion } from 'framer-motion';
+// FIX: Import Variants from framer-motion to correctly type animation variants.
+import { motion, Variants } from 'framer-motion';
 import { Testimonial } from '../types';
 
 interface TestimonialsProps {
@@ -17,7 +18,7 @@ const StarIcon: React.FC<{ filled: boolean }> = ({ filled }) => (
     </svg>
 );
 
-const containerVariants = {
+const containerVariants: Variants = {
     hidden: { opacity: 0 },
     visible: {
         opacity: 1,
@@ -27,7 +28,8 @@ const containerVariants = {
     },
 };
 
-const itemVariants = {
+// FIX: Correctly type the variants object with the `Variants` type from framer-motion.
+const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
     visible: {
         y: 0,

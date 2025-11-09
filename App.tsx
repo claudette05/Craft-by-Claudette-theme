@@ -28,54 +28,98 @@ import WishlistSidebar from './components/WishlistSidebar';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 
+import { auth, db } from './firebase';
+import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+
 const App: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState<Page>('shop');
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [isWishlistOpen, setIsWishlistOpen] = useState(false);
+  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Wishlist State & Persistence
-  const [wishlist, setWishlist] = useState<number[]>(() => {
-    try {
-      const savedWishlist = localStorage.getItem('wishlist');
-      return savedWishlist ? JSON.parse(savedWishlist) : [];
-    } catch (error) {
-      console.error('Error parsing wishlist from localStorage', error);
-      return [];
+  // Auth state listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        setIsAuthLoading(true);
+        if (currentUser) {
+            setUser(currentUser);
+            const userDocRef = doc(db, 'users', currentUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
+            
+            let firestoreWishlist: number[] = [];
+            let firestoreCart: CartItem[] = [];
+
+            if (userDocSnap.exists()) {
+                const data = userDocSnap.data();
+                firestoreWishlist = data.wishlist || [];
+                firestoreCart = data.cart || [];
+            }
+
+            const localWishlist: number[] = JSON.parse(localStorage.getItem('wishlist') || '[]');
+            const localCart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
+
+            const mergedWishlist = [...new Set([...firestoreWishlist, ...localWishlist])];
+            
+            const mergedCartMap = new Map<number, CartItem>();
+            [...firestoreCart, ...localCart].forEach(item => {
+                const existing = mergedCartMap.get(item.productId);
+                if (existing) {
+                    existing.quantity += item.quantity;
+                } else {
+                    mergedCartMap.set(item.productId, { ...item });
+                }
+            });
+            const mergedCart = Array.from(mergedCartMap.values());
+
+            setWishlist(mergedWishlist);
+            setCart(mergedCart);
+
+            await setDoc(userDocRef, { wishlist: mergedWishlist, cart: mergedCart }, { merge: true });
+            localStorage.removeItem('wishlist');
+            localStorage.removeItem('cart');
+
+        } else {
+            setUser(null);
+            const savedWishlist = localStorage.getItem('wishlist');
+            setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
+            const savedCart = localStorage.getItem('cart');
+            setCart(savedCart ? JSON.parse(savedCart) : []);
+        }
+        setIsAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Guest persistence for Wishlist & Cart
+  useEffect(() => {
+    if (!user && !isAuthLoading) {
+      try {
+        localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      } catch (error) {
+        console.error('Error saving guest wishlist to localStorage', error);
+      }
     }
-  });
+  }, [wishlist, user, isAuthLoading]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('wishlist', JSON.stringify(wishlist));
-    } catch (error) {
-      console.error('Error saving wishlist to localStorage', error);
+    if (!user && !isAuthLoading) {
+      try {
+        localStorage.setItem('cart', JSON.stringify(cart));
+      } catch (error) {
+        console.error('Error saving guest cart to localStorage', error);
+      }
     }
-  }, [wishlist]);
-
-  // Cart State & Persistence
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const savedCart = localStorage.getItem('cart');
-      return savedCart ? JSON.parse(savedCart) : [];
-    } catch (error) {
-      console.error('Error parsing cart from localStorage', error);
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('cart', JSON.stringify(cart));
-    } catch (error) {
-      console.error('Error saving cart to localStorage', error);
-    }
-  }, [cart]);
+  }, [cart, user, isAuthLoading]);
   
-    // Search History State & Persistence
+  // Search History State & Persistence
   const [searchHistory, setSearchHistory] = useState<string[]>(() => {
     try {
       const savedHistory = localStorage.getItem('searchHistory');
@@ -100,50 +144,75 @@ const App: React.FC = () => {
   }, [cart]);
 
 
-  const handleToggleWishlist = useCallback((productId: number) => {
-    setWishlist(prevWishlist => {
-      if (prevWishlist.includes(productId)) {
-        return prevWishlist.filter(id => id !== productId);
-      } else {
-        return [...prevWishlist, productId];
-      }
-    });
-  }, []);
-  
-  const handleAddToCart = useCallback((productId: number, quantity: number) => {
-    setCart(prevCart => {
-        const existingItem = prevCart.find(item => item.productId === productId);
-        if (existingItem) {
-            return prevCart.map(item =>
-                item.productId === productId
-                    ? { ...item, quantity: item.quantity + quantity }
-                    : item
-            );
-        }
-        return [...prevCart, { productId, quantity }];
-    });
-    setQuickViewProduct(null); // Close quick view modal on add
-  }, []);
+  const handleToggleWishlist = useCallback(async (productId: number) => {
+    const newWishlist = wishlist.includes(productId)
+        ? wishlist.filter(id => id !== productId)
+        : [...wishlist, productId];
+    
+    setWishlist(newWishlist);
 
-  const handleUpdateCartQuantity = useCallback((productId: number, newQuantity: number) => {
-    if (newQuantity < 1) {
-      setCart(prevCart => prevCart.filter(item => item.productId !== productId));
+    if (user) {
+        await setDoc(doc(db, 'users', user.uid), { wishlist: newWishlist }, { merge: true });
     } else {
-      setCart(prevCart => prevCart.map(item =>
-        item.productId === productId ? { ...item, quantity: newQuantity } : item
-      ));
+        localStorage.setItem('wishlist', JSON.stringify(newWishlist));
     }
-  }, []);
+  }, [wishlist, user]);
+  
+  const handleAddToCart = useCallback(async (productId: number, quantity: number) => {
+    let newCart: CartItem[];
+    const existingItem = cart.find(item => item.productId === productId);
+    if (existingItem) {
+        newCart = cart.map(item =>
+            item.productId === productId
+                ? { ...item, quantity: item.quantity + quantity }
+                : item
+        );
+    } else {
+      newCart = [...cart, { productId, quantity }];
+    }
+    setCart(newCart);
+    setQuickViewProduct(null);
 
-  const handleRemoveFromCart = useCallback((productId: number) => {
-    setCart(prevCart => prevCart.filter(item => item.productId !== productId));
-  }, []);
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
+    } else {
+      localStorage.setItem('cart', JSON.stringify(newCart));
+    }
+  }, [cart, user]);
+
+  const handleUpdateCartQuantity = useCallback(async (productId: number, newQuantity: number) => {
+    let newCart: CartItem[];
+    if (newQuantity < 1) {
+      newCart = cart.filter(item => item.productId !== productId);
+    } else {
+      newCart = cart.map(item =>
+        item.productId === productId ? { ...item, quantity: newQuantity } : item
+      );
+    }
+    setCart(newCart);
+
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
+    } else {
+      localStorage.setItem('cart', JSON.stringify(newCart));
+    }
+  }, [cart, user]);
+
+  const handleRemoveFromCart = useCallback(async (productId: number) => {
+    const newCart = cart.filter(item => item.productId !== productId);
+    setCart(newCart);
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
+    } else {
+      localStorage.setItem('cart', JSON.stringify(newCart));
+    }
+  }, [cart, user]);
 
   const handleProductClick = useCallback((product: Product) => {
     setSelectedProductId(product.id);
     setCurrentPage('productDetail');
-    setQuickViewProduct(null); // Close quick view modal if open
-    setIsWishlistOpen(false); // Close wishlist sidebar if open
+    setQuickViewProduct(null);
+    setIsWishlistOpen(false);
     window.scrollTo(0, 0);
   }, []);
   
@@ -191,7 +260,7 @@ const App: React.FC = () => {
     
     setSearchHistory(prev => {
         const newHistory = [trimmedQuery, ...prev.filter(item => item.toLowerCase() !== trimmedQuery.toLowerCase())];
-        return newHistory.slice(0, 10); // Keep only the last 10 searches
+        return newHistory.slice(0, 10);
     });
 
     setSearchQuery(trimmedQuery);
@@ -209,30 +278,60 @@ const App: React.FC = () => {
     setCurrentPage('shop');
   };
   
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-    setCurrentPage('shop');
+  const handleLogin = async (email: string, password: string) => {
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+        setCurrentPage('shop');
+    } catch (error) {
+        console.error("Login error:", error);
+        alert((error as Error).message);
+    }
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
-    setCurrentPage('shop');
+  const handleLogout = async () => {
+    try {
+        await signOut(auth);
+        setCurrentPage('shop');
+    } catch (error) {
+        console.error("Logout error:", error);
+        alert((error as Error).message);
+    }
   };
   
-  const handleSignup = () => {
-    setIsAuthenticated(true);
-    setCurrentPage('shop');
+  const handleSignup = async (email: string, password: string) => {
+    try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, 'users', userCredential.user.uid), {
+            email: userCredential.user.email,
+            createdAt: new Date(),
+            wishlist: [],
+            cart: [],
+        });
+        setCurrentPage('shop');
+    } catch (error) {
+        console.error("Signup error:", error);
+        alert((error as Error).message);
+    }
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     alert('Thank you for your order! (This is a demo)');
     setCart([]);
+    if (user) {
+      await setDoc(doc(db, 'users', user.uid), { cart: [] }, { merge: true });
+    }
     setCurrentPage('shop');
   };
   
-  const handleForgotPassword = (email: string) => {
-    alert(`If an account with the email "${email}" exists, a password reset link has been sent.`);
-    setCurrentPage('resetPassword');
+  const handleForgotPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      alert(`If an account with the email "${email}" exists, a password reset link has been sent.`);
+      setCurrentPage('login');
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      alert((error as Error).message);
+    }
   };
 
   const handleResetPassword = () => {
@@ -241,6 +340,9 @@ const App: React.FC = () => {
   };
 
   const renderPage = () => {
+    if (isAuthLoading) {
+      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+    }
     switch (currentPage) {
       case 'admin':
         return <AdminDashboard onNavigate={setCurrentPage} />;
@@ -397,7 +499,7 @@ const App: React.FC = () => {
         onCartClick={() => setCurrentPage('cart')}
         onWishlistClick={handleOpenWishlist}
         onHomeClick={handleNavigateHome}
-        isAuthenticated={isAuthenticated}
+        isAuthenticated={user !== null}
         onLogout={handleLogout}
         onNavigate={setCurrentPage}
         searchHistory={searchHistory}

@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Page } from '../types';
 
 interface LoginPageProps {
-  onLogin: () => void;
+  onLogin: (email: string, password: string) => void;
   onNavigate: (page: Page) => void;
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd handle form data and API calls here
-    onLogin();
+    onLogin(email, password);
   };
 
   return (
@@ -43,6 +45,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
               type="email"
               autoComplete="email"
               required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
               placeholder="you@example.com"
             />
@@ -58,6 +62,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
               type="password"
               autoComplete="current-password"
               required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
               placeholder="Your password"
             />

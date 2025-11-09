@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MOCK_CUSTOMERS } from '../../../adminConstants';
 import { AdminCustomer } from '../../../types';
 
 const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ customer, index }) => (
@@ -27,8 +26,12 @@ const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ cus
     </motion.tr>
 );
 
+// FIX: Add props interface to accept customers from parent component
+interface AdminCustomersPageProps {
+    customers: AdminCustomer[];
+}
 
-const AdminCustomersPage: React.FC = () => {
+const AdminCustomersPage: React.FC<AdminCustomersPageProps> = ({ customers }) => {
     return (
         <div>
             <header className="mb-8">
@@ -48,7 +51,8 @@ const AdminCustomersPage: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {MOCK_CUSTOMERS.map((customer, index) => (
+                            {/* FIX: Use `customers` prop instead of hardcoded MOCK_CUSTOMERS */}
+                            {customers.map((customer, index) => (
                                 <CustomerRow key={customer.id} customer={customer} index={index} />
                             ))}
                         </tbody>
