@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MOCK_ORDERS } from '../../../adminConstants';
-import { AdminOrder, OrderStatus } from '../../types';
+import { MOCK_ORDERS } from '@/constants/adminConstants';
+import { AdminOrder, OrderStatus } from '@/types';
 
 const statusColorMap: Record<OrderStatus, string> = {
     Completed: 'bg-green-100 text-green-800',

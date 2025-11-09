@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Promotion } from '../../../types';
+import { Promotion } from '@/types';
 
 const statusColorMap = {
     Active: 'bg-green-100 text-green-800',

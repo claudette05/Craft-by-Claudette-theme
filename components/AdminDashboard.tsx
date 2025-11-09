@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage } from '../types';
-import { PRODUCTS } from '../constants';
-import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_PROMOTIONS } from '../../adminConstants';
+import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage } from '@/types';
+import { PRODUCTS } from '@/constants';
+import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_PROMOTIONS } from '@/constants/adminConstants';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminDashboardHome from './admin/pages/AdminDashboardHome';
 import AdminProductsPage from './admin/pages/AdminProductsPage';
@@ -26,7 +26,8 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
     const [activePage, setActivePage] = useState<AdminPage>('dashboard');
     const [isDarkMode, setIsDarkMode] = useState(false);
-    
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
     // Data states
     const [products, setProducts] = useState<Product[]>(PRODUCTS);
     const [orders, setOrders] = useState<AdminOrder[]>(MOCK_ORDERS);
@@ -59,12 +60,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
         setEditingProduct(null);
         setIsModalOpen(true);
     };
-    
+
     const handleOpenEditModal = (product: Product) => {
         setEditingProduct(product);
         setIsModalOpen(true);
     };
-    
+
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setEditingProduct(null);
@@ -104,15 +105,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onNavigate }) => {
     };
 
     return (
-        <div className={isDarkMode ? 'dark' : ''}>
+        <div className={isDarkMode ? '' : ''}>
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="min-h-screen bg-[var(--bg-tertiary)] text-[var(--text-primary)]"
             >
                 <div className="flex">
-                    <AdminSidebar activePage={activePage} setActivePage={setActivePage} />
-                    <main className="flex-1 p-6 md:p-10 ml-0 sm:ml-64">
+                    <AdminSidebar 
+                        activePage={activePage} 
+                        setActivePage={setActivePage} 
+                        isCollapsed={isCollapsed} 
+                        setIsCollapsed={setIsCollapsed} 
+                    />
+                    <main className={`flex-1 p-6 md:p-10 ml-0 transition-all duration-300 ease-in-out ${isCollapsed ? 'sm:ml-20' : 'sm:ml-64'}`}>
                         <div className="pt-20 sm:pt-0"> {/* Adjust padding for mobile */}
                             <AnimatePresence mode="wait">
                                 <motion.div

@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Product } from '../../../types';
-import { TrashIcon } from '../../../constants';
+import { Product } from '@/types';
+import { TrashIcon } from '@/constants';
 
 interface AdminProductsPageProps {
     products: Product[];

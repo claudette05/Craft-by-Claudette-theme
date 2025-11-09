@@ -1,79 +1,101 @@
 import React from 'react';
-import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, ChartBarIcon, LayoutIcon } from '../../constants';
+import { motion } from 'framer-motion';
+import { HomeIcon } from '@/constants/adminConstants';
+import { PackageIcon } from '@/constants/adminConstants';
+import { ShoppingCartIcon } from '@/constants/adminConstants';
+import { UsersIcon } from '@/constants/adminConstants';
+import { SettingsIcon } from '@/constants/adminConstants';
+import { TagIcon } from '@/constants/adminConstants';
+import { ChartBarIcon } from '@/constants/adminConstants';
+import { LayoutIcon } from '@/constants/adminConstants';
+import { ChevronLeftIcon } from '@/constants/adminConstants';
 
 type AdminPage = 'dashboard' | 'products' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'content' | 'settings';
 
 interface AdminSidebarProps {
     activePage: AdminPage;
     setActivePage: (page: AdminPage) => void;
+    isCollapsed: boolean;
+    setIsCollapsed: (isCollapsed: boolean) => void;
 }
 
-const NavLink: React.FC<{
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-}> = ({ icon: Icon, label, isActive, onClick }) => (
-    <div className="relative group">
-        <button
-            onClick={onClick}
-            className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors text-sm font-medium ${
-                isActive 
-                    ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300' 
-                    : 'text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200'
-            }`}
-        >
-            <Icon className="h-5 w-5 mr-3" />
-            <span>{label}</span>
-        </button>
-        {/* Tooltip */}
-        <div className="absolute left-full top-1/2 -translate-y-1/2 ml-4 px-2 py-1 bg-zinc-800 dark:bg-zinc-900 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50">
-            {label}
-            {/* Arrow */}
-            <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-2 bg-zinc-800 dark:bg-zinc-900 transform rotate-45"></div>
-        </div>
-    </div>
-);
+const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
+    { id: 'products', label: 'Products', icon: PackageIcon },
+    { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
+    { id: 'customers', label: 'Customers', icon: UsersIcon },
+    { id: 'promotions', label: 'Promotions', icon: TagIcon },
+    { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
+    { id: 'content', label: 'Content', icon: LayoutIcon },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+];
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage }) => {
-    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-        { id: 'products', label: 'Products', icon: PackageIcon },
-        { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
-        { id: 'customers', label: 'Customers', icon: UsersIcon },
-        { id: 'promotions', label: 'Promotions', icon: TagIcon },
-        { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
-        { id: 'content', label: 'Site Content', icon: LayoutIcon },
-    ];
+const sidebarVariants = {
+    expanded: { width: '16rem' /* 256px */ },
+    collapsed: { width: '5rem' /* 80px */ },
+};
 
-    const settingsItem = { id: 'settings', label: 'Settings', icon: SettingsIcon };
+const logoVariants = {
+    expanded: { opacity: 1, scale: 1 },
+    collapsed: { opacity: 0, scale: 0.8 },
+}
+
+const navLabelVariants = {
+    expanded: { opacity: 1, x: 0, display: 'block' },
+    collapsed: { opacity: 0, x: -10, transition: { duration: 0.1 }, display: 'none' },
+}
+
+const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, isCollapsed, setIsCollapsed }) => {
     
     return (
-        <aside className="fixed top-0 left-0 h-screen w-64 bg-[var(--bg-secondary)] shadow-md z-40 flex-col hidden sm:flex">
-            <div className="h-20 flex items-center justify-center border-b border-[var(--border-primary)]">
-                <h1 className="text-xl font-bold text-amber-600">Admin Panel</h1>
+        <motion.div
+            initial={false}
+            animate={isCollapsed ? 'collapsed' : 'expanded'}
+            variants={sidebarVariants}
+            transition={{ duration: 0.3, ease: 'easeInOut' }}
+            className="bg-[var(--bg-primary)] text-[var(--text-primary)] hidden sm:flex flex-col h-screen fixed top-0 left-0 z-40 shadow-lg"
+        >
+            <div className="flex items-center justify-between p-4 h-20 border-b border-[var(--border-primary)]">
+                <motion.div variants={logoVariants} transition={{ delay: isCollapsed ? 0 : 0.2}} className="flex items-center">
+                     <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+                    <motion.span variants={navLabelVariants} className="text-xl font-bold ml-2">Admin</motion.span>
+                </motion.div>
+                <button 
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className="p-2 rounded-full bg-[var(--bg-secondary)] hover:bg-[var(--bg-tertiary)] transition-colors duration-200"
+                >
+                    <ChevronLeftIcon />
+                </button>
             </div>
-            <nav className="flex-1 p-4 space-y-2">
-                {navItems.map(item => (
-                    <NavLink
+            <nav className="flex-1 px-4 py-4 space-y-2">
+                {navItems.map((item) => (
+                    <a
                         key={item.id}
-                        label={item.label}
-                        icon={item.icon}
-                        isActive={activePage === item.id}
-                        onClick={() => setActivePage(item.id as AdminPage)}
-                    />
+                        href="#"
+                        onClick={(e) => {
+                            e.preventDefault();
+                            setActivePage(item.id as AdminPage);
+                        }}
+                        className={`flex items-center p-3 rounded-lg transition-colors duration-200 ${ 
+                            activePage === item.id 
+                                ? 'bg-[var(--bg-accent)] text-[var(--text-accent)]' 
+                                : 'hover:bg-[var(--bg-secondary)]'
+                        }`}
+                    >
+                        <item.icon className={`h-6 w-6 ${isCollapsed ? 'mx-auto' : ''}`} />
+                        <motion.span 
+                            variants={navLabelVariants}
+                            className="ml-4 font-medium"
+                        >
+                            {item.label}
+                        </motion.span>
+                    </a>
                 ))}
             </nav>
-            <div className="p-4 border-t border-[var(--border-primary)]">
-                <NavLink
-                    key={settingsItem.id}
-                    label={settingsItem.label}
-                    icon={settingsItem.icon}
-                    isActive={activePage === settingsItem.id}
-                    onClick={() => setActivePage(settingsItem.id as AdminPage)}
-                />
+            <div className="px-4 py-4 border-t border-[var(--border-primary)]">
+                {/* Future footer items can go here */}
             </div>
-        </aside>
+        </motion.div>
     );
 };
 
