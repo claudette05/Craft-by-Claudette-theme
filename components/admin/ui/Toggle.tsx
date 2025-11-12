@@ -1,15 +1,17 @@
-import React from 'react';
+
+
+import * as React from 'react';
 import { motion } from 'framer-motion';
 
 interface ToggleProps {
     enabled: boolean;
-    setEnabled: (enabled: boolean) => void;
+    onToggle: () => void;
 }
 
-const Toggle: React.FC<ToggleProps> = ({ enabled, setEnabled }) => {
+const Toggle: React.FC<ToggleProps> = ({ enabled, onToggle }) => {
     return (
         <div
-            onClick={() => setEnabled(!enabled)}
+            onClick={onToggle}
             className={`flex items-center w-12 h-6 rounded-full p-1 cursor-pointer transition-colors duration-300 ${
                 enabled ? 'bg-amber-500 justify-end' : 'bg-zinc-300 dark:bg-zinc-600 justify-start'
             }`}

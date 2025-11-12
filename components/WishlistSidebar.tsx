@@ -1,15 +1,12 @@
-import React from 'react';
-// FIX: Import Variants from framer-motion to correctly type animation variants.
-import { motion, Variants } from 'framer-motion';
+import * as React from 'react';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { Product } from '../types';
-import { XIcon, HeartIcon, ShoppingCartIcon } from '../constants';
+import { XIcon, HeartIcon, ShoppingCartIcon, CheckIcon } from './Icons';
+import { useAppContext } from '../context/AppContext';
 
 interface WishlistSidebarProps {
+  products: Product[];
   onClose: () => void;
-  wishlistProductIds: number[];
-  allProducts: Product[];
-  onToggleWishlist: (productId: number) => void;
-  onAddToCart: (productId: number, quantity: number) => void;
   onProductClick: (product: Product) => void;
 }
 
@@ -18,22 +15,27 @@ const backdropVariants: Variants = {
   visible: { opacity: 1 },
 };
 
-// FIX: Correctly type the variants object with the `Variants` type from framer-motion.
 const sidebarVariants: Variants = {
   hidden: { x: '100%' },
   visible: { x: 0, transition: { type: 'spring', stiffness: 300, damping: 30 } },
   exit: { x: '100%', transition: { type: 'spring', stiffness: 300, damping: 30 } },
 };
 
-const WishlistSidebar: React.FC<WishlistSidebarProps> = ({
-  onClose,
-  wishlistProductIds,
-  allProducts,
-  onToggleWishlist,
-  onAddToCart,
-  onProductClick,
-}) => {
-  const wishlistProducts = allProducts.filter(p => wishlistProductIds.includes(p.id));
+const WishlistSidebar: React.FC<WishlistSidebarProps> = ({ products, onClose, onProductClick }) => {
+  const { wishlist, toggleWishlist, addToCart } = useAppContext();
+  const [addedId, setAddedId] = React.useState<number | null>(null);
+
+  const wishlistProducts = products.filter(p => wishlist.includes(p.id));
+
+  const handleAddToCartFromWishlist = (product: Product) => {
+    if (addedId) return;
+    addToCart(product.id, 1);
+    toggleWishlist(product.id);
+    setAddedId(product.id);
+    setTimeout(() => {
+        setAddedId(null);
+    }, 2000);
+  };
 
   return (
     <motion.div
@@ -48,15 +50,15 @@ const WishlistSidebar: React.FC<WishlistSidebarProps> = ({
         onClick={onClose}
       />
       <motion.div
-        className="fixed top-0 right-0 h-full w-full max-w-sm bg-pink-50 shadow-lg flex flex-col"
+        className="fixed top-0 right-0 h-full w-full max-w-sm bg-bg-primary shadow-lg flex flex-col"
         variants={sidebarVariants}
         onClick={e => e.stopPropagation()}
       >
-        <header className="flex items-center justify-between p-4 border-b border-pink-200">
-          <h2 className="text-xl font-bold text-amber-700">My Wishlist</h2>
+        <header className="flex items-center justify-between p-4 border-b border-border-primary">
+          <h2 className="text-xl font-bold text-accent-primary">My Wishlist</h2>
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-zinc-500 hover:text-zinc-800 hover:bg-pink-100 transition-colors"
+            className="p-1 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-tertiary transition-colors"
             aria-label="Close wishlist"
           >
             <XIcon />
@@ -65,26 +67,28 @@ const WishlistSidebar: React.FC<WishlistSidebarProps> = ({
 
         {wishlistProducts.length === 0 ? (
           <div className="flex-grow flex flex-col items-center justify-center text-center p-8">
-            <HeartIcon className="w-16 h-16 text-amber-300 mb-4" />
-            <h3 className="text-lg font-semibold text-zinc-700">Your Wishlist is Empty</h3>
-            <p className="text-zinc-500 mt-2">Looks like you haven't added any favorites yet. Explore our collections to find something you'll love!</p>
+            <HeartIcon className="w-16 h-16 text-accent-primary/30 mb-4" />
+            <h3 className="text-lg font-semibold text-text-primary">Your Wishlist is Empty</h3>
+            <p className="text-text-secondary mt-2">Looks like you haven't added any favorites yet. Explore our collections to find something you'll love!</p>
             <button
               onClick={onClose}
-              className="mt-6 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-full transition-colors"
+              className="mt-6 bg-accent-primary hover:opacity-90 text-accent-text font-bold py-2 px-6 rounded-full transition-colors"
             >
               Start Shopping
             </button>
           </div>
         ) : (
           <div className="flex-grow overflow-y-auto p-4 space-y-4">
-            {wishlistProducts.map(product => (
+            {wishlistProducts.map(product => {
+              const isAdded = addedId === product.id;
+              return (
               <motion.div
                 key={product.id}
                 layout
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="flex items-start gap-4 p-3 bg-white rounded-lg shadow-sm"
+                className="flex items-start gap-4 p-3 bg-bg-secondary rounded-lg shadow-sm"
               >
                 <img
                   src={product.imageUrl}
@@ -94,36 +98,57 @@ const WishlistSidebar: React.FC<WishlistSidebarProps> = ({
                 />
                 <div className="flex-grow">
                   <h4
-                    className="font-semibold text-zinc-800 hover:text-amber-600 transition-colors cursor-pointer"
+                    className="font-semibold text-text-primary hover:text-accent-primary transition-colors cursor-pointer"
                     onClick={() => onProductClick(product)}
                   >
                     {product.name}
                   </h4>
-                  <p className="text-amber-600 font-medium mt-1">
+                  <p className="text-accent-primary font-medium mt-1">
                     GH₵{(product.salePrice ?? product.price).toFixed(2)}
                   </p>
                   <div className="mt-2 flex items-center gap-2">
                     <button
-                      onClick={() => {
-                        onAddToCart(product.id, 1);
-                        onToggleWishlist(product.id); // Optionally remove from wishlist after adding to cart
-                      }}
-                      className="text-xs flex items-center gap-1.5 text-amber-600 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded-full transition-colors"
+                      onClick={() => handleAddToCartFromWishlist(product)}
+                      className={`text-xs flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full transition-colors w-[110px] h-7 overflow-hidden ${
+                          isAdded 
+                              ? 'bg-green-100 dark:bg-green-500/10'
+                              : 'text-accent-primary bg-amber-100/60 dark:bg-accent-primary/20 hover:bg-amber-100 dark:hover:bg-accent-primary/30'
+                      }`}
                     >
-                      <ShoppingCartIcon />
-                      <span>Add to Cart</span>
+                      <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                              key={isAdded ? 'added' : 'add'}
+                              initial={{ y: 10, opacity: 0 }}
+                              animate={{ y: 0, opacity: 1 }}
+                              exit={{ y: -10, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                              className="flex items-center gap-1.5"
+                          >
+                              {isAdded ? (
+                                  <>
+                                      <CheckIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                      <span className="font-semibold text-green-600 dark:text-green-400">Added</span>
+                                  </>
+                              ) : (
+                                  <>
+                                      <ShoppingCartIcon className="h-4 w-4" />
+                                      <span>Add to Cart</span>
+                                  </>
+                              )}
+                          </motion.span>
+                      </AnimatePresence>
                     </button>
                   </div>
                 </div>
                 <button
-                  onClick={() => onToggleWishlist(product.id)}
-                  className="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  onClick={() => toggleWishlist(product.id)}
+                  className="p-1 text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-colors"
                   aria-label="Remove from wishlist"
                 >
                   <XIcon />
                 </button>
               </motion.div>
-            ))}
+            )})}
           </div>
         )}
       </motion.div>

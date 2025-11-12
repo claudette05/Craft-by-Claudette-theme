@@ -1,8 +1,11 @@
-
-import React from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 
-const CTA: React.FC = () => {
+interface CTAProps {
+    onShopNowClick: () => void;
+}
+
+const CTA: React.FC<CTAProps> = ({ onShopNowClick }) => {
   return (
     <motion.section 
       className="relative py-20 md:py-24 bg-orange-100 bg-cover bg-center"
@@ -17,6 +20,7 @@ const CTA: React.FC = () => {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">Discover What's New</h2>
             <p className="text-base md:text-lg mb-8 max-w-2xl mx-auto">Freshly crafted pieces have just arrived. Find your next favorite handmade treasure today.</p>
             <motion.button
+                onClick={onShopNowClick}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition-colors text-base md:text-lg"

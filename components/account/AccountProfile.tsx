@@ -1,12 +1,13 @@
-import React from 'react';
+
+import * as React from 'react';
 
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, id, ...props }) => (
     <div>
-        <label htmlFor={id} className="block text-sm font-medium text-zinc-600">{label}</label>
+        <label htmlFor={id} className="block text-sm font-medium text-text-secondary">{label}</label>
         <input 
             id={id} 
             {...props} 
-            className="mt-1 block w-full rounded-md border-zinc-300 bg-zinc-50 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-3" 
+            className="mt-1 block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-bg-tertiary shadow-sm focus:border-accent-primary focus:ring-accent-primary sm:text-sm p-3 text-text-primary" 
         />
     </div>
 );
@@ -19,7 +20,7 @@ const AccountProfile: React.FC = () => {
     
     return (
         <div>
-            <h2 className="text-2xl font-bold text-zinc-800 mb-6">Profile Details</h2>
+            <h2 className="text-2xl font-bold text-text-primary mb-6">Profile Details</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <Input label="First Name" id="first-name" defaultValue="Jane" />
@@ -27,8 +28,8 @@ const AccountProfile: React.FC = () => {
                 </div>
                 <Input label="Email Address" id="email" type="email" defaultValue="jane.doe@example.com" />
                 
-                <div className="pt-6 border-t border-pink-200">
-                    <h3 className="text-lg font-semibold text-zinc-700">Change Password</h3>
+                <div className="pt-6 border-t border-pink-200 dark:border-border-primary">
+                    <h3 className="text-lg font-semibold text-text-primary">Change Password</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-4">
                         <Input label="Current Password" id="current-password" type="password" placeholder="••••••••" />
                         <Input label="New Password" id="new-password" type="password" placeholder="••••••••" />
@@ -38,7 +39,7 @@ const AccountProfile: React.FC = () => {
                 <div className="text-right">
                     <button
                         type="submit"
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-full transition-colors"
+                        className="bg-accent-primary hover:opacity-90 text-accent-text font-bold py-2 px-6 rounded-full transition-colors"
                     >
                         Save Changes
                     </button>

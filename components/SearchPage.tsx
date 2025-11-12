@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
-import { SearchIcon, ClockIcon } from '../constants';
+import { SearchIcon, ClockIcon } from './Icons';
 
 interface SearchPageProps {
   history: string[];
@@ -9,10 +9,10 @@ interface SearchPageProps {
 }
 
 const SearchPage: React.FC<SearchPageProps> = ({ history, onSearch, onClearHistory }) => {
-  const [searchInputValue, setSearchInputValue] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [searchInputValue, setSearchInputValue] = React.useState('');
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
+  React.useEffect(() => {
     searchInputRef.current?.focus();
   }, []);
 
@@ -31,8 +31,8 @@ const SearchPage: React.FC<SearchPageProps> = ({ history, onSearch, onClearHisto
     >
       <div className="max-w-2xl mx-auto">
         <header className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-zinc-800">Search</h1>
-          <p className="mt-2 text-zinc-600">Find your next favorite handmade treasure.</p>
+          <h1 className="text-4xl font-bold text-text-primary">Search</h1>
+          <p className="mt-2 text-text-secondary">Find your next favorite handmade treasure.</p>
         </header>
 
         <form onSubmit={handleSearchSubmit} className="relative mb-12">
@@ -43,7 +43,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ history, onSearch, onClearHisto
             value={searchInputValue}
             onChange={(e) => setSearchInputValue(e.target.value)}
             placeholder="Search for earrings, bracelets, resin art..."
-            className="w-full pl-12 pr-4 py-4 rounded-full border-2 border-amber-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+            className="w-full pl-12 pr-4 py-4 rounded-full border-2 border-accent-primary/40 bg-bg-secondary text-text-primary shadow-sm focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
           />
         </form>
 
@@ -54,10 +54,10 @@ const SearchPage: React.FC<SearchPageProps> = ({ history, onSearch, onClearHisto
             transition={{ delay: 0.2 }}
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-zinc-700">Recent Searches</h2>
+              <h2 className="text-lg font-semibold text-text-primary">Recent Searches</h2>
               <button
                 onClick={onClearHistory}
-                className="text-sm text-amber-600 hover:text-amber-500 hover:underline font-medium"
+                className="text-sm text-accent-primary hover:opacity-80 hover:underline font-medium"
               >
                 Clear
               </button>
@@ -67,7 +67,7 @@ const SearchPage: React.FC<SearchPageProps> = ({ history, onSearch, onClearHisto
                 <motion.button
                   key={index}
                   onClick={() => onSearch(item)}
-                  className="flex items-center gap-2 bg-white hover:bg-amber-50 border border-pink-200 text-zinc-700 px-3 py-1.5 rounded-full text-sm transition-colors"
+                  className="flex items-center gap-2 bg-bg-secondary hover:bg-bg-tertiary border border-border-primary text-text-primary px-3 py-1.5 rounded-full text-sm transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

@@ -1,8 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { HeroSlide } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon } from '../constants';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
 
 interface HeroCarouselProps {
   slides: HeroSlide[];
@@ -26,7 +25,11 @@ const variants = {
 };
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
-  const [[page, direction], setPage] = useState([0, 0]);
+  const [[page, direction], setPage] = React.useState([0, 0]);
+
+  if (!slides || slides.length === 0) {
+    return null; // Don't render anything if there are no slides
+  }
 
   const paginate = (newDirection: number) => {
     setPage([page + newDirection, newDirection]);
@@ -34,7 +37,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
   
   const slideIndex = ((page % slides.length) + slides.length) % slides.length;
 
-  useEffect(() => {
+  React.useEffect(() => {
     const interval = setInterval(() => {
       paginate(1);
     }, 5000);
@@ -43,7 +46,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
 
 
   return (
-    <div className="relative w-full h-[80vh] sm:h-[70vh] overflow-hidden bg-orange-100">
+    <div className="relative w-full h-[80vh] sm:h-[70vh] overflow-hidden bg-bg-primary">
       <AnimatePresence initial={false} custom={direction}>
         <motion.div
           key={page}
@@ -85,7 +88,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.6, duration: 0.5 }}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-8 rounded-full transition-colors"
+                className="bg-accent-primary hover:opacity-90 text-accent-text font-bold py-3 px-8 rounded-full transition-colors"
               >
                 {slides[slideIndex].buttonText}
               </motion.button>
@@ -94,12 +97,12 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
         </motion.div>
       </AnimatePresence>
       <div className="absolute z-10 top-1/2 -translate-y-1/2 left-4">
-        <button onClick={() => paginate(-1)} className="bg-white/50 hover:bg-white/80 rounded-full p-2 text-zinc-800">
+        <button onClick={() => paginate(-1)} className="bg-bg-secondary/50 hover:bg-bg-secondary/80 rounded-full p-2 text-text-primary">
           <ChevronLeftIcon />
         </button>
       </div>
       <div className="absolute z-10 top-1/2 -translate-y-1/2 right-4">
-        <button onClick={() => paginate(1)} className="bg-white/50 hover:bg-white/80 rounded-full p-2 text-zinc-800">
+        <button onClick={() => paginate(1)} className="bg-bg-secondary/50 hover:bg-bg-secondary/80 rounded-full p-2 text-text-primary">
           <ChevronRightIcon />
         </button>
       </div>

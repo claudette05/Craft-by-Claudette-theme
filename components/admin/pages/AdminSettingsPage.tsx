@@ -1,9 +1,10 @@
-import React from 'react';
+
+import * as React from 'react';
 import Toggle from '../ui/Toggle';
 
 interface AdminSettingsPageProps {
     isDarkMode: boolean;
-    setIsDarkMode: (value: boolean) => void;
+    toggleDarkMode: () => void;
 }
 
 const FormInput: React.FC<{ label: string; id: string; type?: string; value: string; }> = 
@@ -22,7 +23,7 @@ const FormInput: React.FC<{ label: string; id: string; type?: string; value: str
     </div>
 );
 
-const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, setIsDarkMode }) => {
+const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggleDarkMode }) => {
     return (
         <div>
             <header className="mb-8">
@@ -49,10 +50,10 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, setIs
                             <label className="text-sm font-medium text-[var(--text-secondary)]">
                                 Dark Mode
                             </label>
-                           <Toggle enabled={isDarkMode} setEnabled={setIsDarkMode} />
+                           <Toggle enabled={isDarkMode} onToggle={toggleDarkMode} />
                         </div>
                          <p className="mt-2 text-xs text-[var(--text-secondary)]">
-                            Toggle dark mode for the admin dashboard.
+                            Toggle dark mode for the entire site.
                         </p>
                     </div>
                 </div>

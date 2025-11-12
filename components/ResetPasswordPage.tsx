@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Page } from '../types';
 import PasswordStrengthMeter from './PasswordStrengthMeter';
@@ -9,8 +10,8 @@ interface ResetPasswordPageProps {
 }
 
 const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, onNavigate }) => {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [newPassword, setNewPassword] = React.useState('');
+  const [confirmPassword, setConfirmPassword] = React.useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,22 +28,22 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen flex items-center justify-center bg-pink-50 pt-20"
+      className="min-h-screen flex items-center justify-center bg-bg-primary pt-20"
     >
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md"
+        className="bg-bg-secondary p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md"
       >
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-amber-600">Reset Your Password</h1>
-          <p className="text-zinc-500 mt-2">Create a new, strong password for your account.</p>
+          <h1 className="text-3xl font-bold text-accent-primary">Reset Your Password</h1>
+          <p className="text-text-secondary mt-2">Create a new, strong password for your account.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
-            <label htmlFor="new-password"className="text-sm font-medium text-zinc-700">
+            <label htmlFor="new-password"className="text-sm font-medium text-text-primary">
               New Password
             </label>
             <input
@@ -53,7 +54,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, 
               required
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 dark:border-zinc-600 bg-bg-tertiary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
               placeholder="Enter your new password"
             />
             <AnimatePresence>
@@ -62,7 +63,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, 
           </div>
 
           <div>
-            <label htmlFor="confirm-password"className="text-sm font-medium text-zinc-700">
+            <label htmlFor="confirm-password"className="text-sm font-medium text-text-primary">
               Confirm New Password
             </label>
             <input
@@ -73,7 +74,7 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, 
               required
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 dark:border-zinc-600 bg-bg-tertiary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
               placeholder="Confirm your new password"
             />
           </div>
@@ -81,16 +82,16 @@ const ResetPasswordPage: React.FC<ResetPasswordPageProps> = ({ onResetPassword, 
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-accent-text bg-accent-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary transition-colors"
             >
               Set New Password
             </button>
           </div>
         </form>
 
-        <p className="mt-8 text-center text-sm text-zinc-600">
+        <p className="mt-8 text-center text-sm text-text-secondary">
           Remembered your password?{' '}
-          <button onClick={() => onNavigate('login')} className="font-medium text-amber-600 hover:text-amber-500">
+          <button onClick={() => onNavigate('login')} className="font-medium text-accent-primary hover:opacity-80">
             Back to Login
           </button>
         </p>

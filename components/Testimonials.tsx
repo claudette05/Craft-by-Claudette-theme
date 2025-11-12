@@ -1,6 +1,4 @@
-
-import React from 'react';
-// FIX: Import Variants from framer-motion to correctly type animation variants.
+import * as React from 'react';
 import { motion, Variants } from 'framer-motion';
 import { Testimonial } from '../types';
 
@@ -28,7 +26,6 @@ const containerVariants: Variants = {
     },
 };
 
-// FIX: Correctly type the variants object with the `Variants` type from framer-motion.
 const itemVariants: Variants = {
     hidden: { y: 20, opacity: 0 },
     visible: {

@@ -1,4 +1,5 @@
-import React from 'react';
+
+import * as React from 'react';
 import { MOCK_SALES_DATA } from '../../../adminConstants';
 
 const SalesChart: React.FC = () => {

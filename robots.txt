@@ -1,0 +1,9 @@
+# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file.
+
+# Allow all web crawlers full access to the site...
+User-agent: *
+Allow: /
+
+# ...except for the admin dashboard area.
+Disallow: /admin
+Disallow: /admin/

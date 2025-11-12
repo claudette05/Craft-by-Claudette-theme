@@ -1,12 +1,42 @@
-import React from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
-import { ADMIN_STATS, MOCK_ORDERS, MOCK_TOP_PRODUCTS } from '../../../adminConstants';
-import StatCard from '../StatCard';
+import { AdminOrder, Product, AdminTopProduct } from '../../../types';
+import StatCard, { AdminStat } from '../StatCard';
 import RecentOrdersTable from '../RecentOrdersTable';
 import TopProductsList from '../TopProductsList';
 import SalesChart from '../charts/SalesChart';
+import { ShoppingCartIcon, DollarSignIcon, UsersIcon, PackageIcon } from '../../Icons';
 
-const AdminDashboardHome: React.FC = () => {
+
+interface AdminDashboardHomeProps {
+    orders: AdminOrder[];
+    products: Product[];
+}
+
+const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, products }) => {
+    
+    const topProducts = React.useMemo((): AdminTopProduct[] => {
+        // This is a placeholder for a real sales calculation
+        return products.slice(0, 4).map(p => ({
+            id: p.id,
+            name: p.name,
+            imageUrl: p.imageUrl,
+            sales: Math.floor(Math.random() * 100) + 50 // Mock sales data
+        })).sort((a,b) => b.sales - a.sales);
+    }, [products]);
+
+    const totalSales = React.useMemo(() => {
+        return orders.reduce((acc, order) => acc + (order.status === 'Completed' ? order.total : 0), 0);
+    }, [orders]);
+
+    const adminStats: AdminStat[] = [
+        { label: 'Total Sales', value: `GH₵${totalSales.toFixed(2)}`, icon: DollarSignIcon },
+        { label: 'Total Orders', value: orders.length.toString(), icon: ShoppingCartIcon },
+        { label: 'New Customers', value: '78', icon: UsersIcon }, // Mocked for now
+        { label: 'Products in Stock', value: products.filter(p=>p.stock > 0).length.toString(), icon: PackageIcon },
+    ];
+
+
     return (
         <div>
             <motion.header 
@@ -19,16 +49,13 @@ const AdminDashboardHome: React.FC = () => {
                 <p className="text-[var(--text-secondary)] mt-1">Welcome back, Admin! Here's a snapshot of your store.</p>
             </motion.header>
 
-            {/* Stat Cards */}
             <motion.div 
                 className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
                 initial="hidden"
                 animate="visible"
-                variants={{
-                    visible: { transition: { staggerChildren: 0.1 } }
-                }}
+                variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
             >
-                {ADMIN_STATS.map((stat) => (
+                {adminStats.map((stat) => (
                     <StatCard key={stat.label} stat={stat} />
                 ))}
             </motion.div>
@@ -44,7 +71,6 @@ const AdminDashboardHome: React.FC = () => {
                     <div className="h-72">
                         <SalesChart />
                     </div>
-                {/* FIX: Corrected closing tag for motion.div */}
                 </motion.div>
                 <motion.div
                     className="lg:col-span-2"
@@ -52,18 +78,17 @@ const AdminDashboardHome: React.FC = () => {
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.3 }}
                 >
-                    <TopProductsList products={MOCK_TOP_PRODUCTS} />
+                    <TopProductsList products={topProducts} />
                 </motion.div>
             </div>
 
-            {/* Recent Orders */}
             <motion.div 
                 className="mt-8"
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 transition={{ delay: 0.4 }}
             >
-                <RecentOrdersTable orders={MOCK_ORDERS.slice(0, 6)} />
+                <RecentOrdersTable orders={orders.slice(0, 6)} />
             </motion.div>
         </div>
     );

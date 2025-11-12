@@ -1,10 +1,10 @@
-import React from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { AdminCustomer } from '../../../types';
 
 const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ customer, index }) => (
     <motion.tr
-        className="bg-white border-b hover:bg-zinc-50"
+        className="bg-[var(--bg-secondary)] border-b border-[var(--border-primary)] hover:bg-[var(--bg-tertiary)]"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.05 }}
@@ -13,11 +13,11 @@ const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ cus
             <div className="flex items-center">
                 <img className="w-10 h-10 rounded-full" src={customer.avatarUrl} alt={customer.name} />
                 <div className="pl-3">
-                    <div className="text-base font-semibold text-zinc-900">{customer.name}</div>
-                    <div className="font-normal text-zinc-500">{customer.email}</div>
+                    <div className="text-base font-semibold text-[var(--text-primary)]">{customer.name}</div>
                 </div>
             </div>
         </td>
+        <td className="px-6 py-4">{customer.email}</td>
         <td className="px-6 py-4">{customer.orders}</td>
         <td className="px-6 py-4 font-semibold">GH₵{customer.totalSpent.toFixed(2)}</td>
         <td className="px-6 py-4 text-right">
@@ -26,7 +26,6 @@ const CustomerRow: React.FC<{ customer: AdminCustomer, index: number }> = ({ cus
     </motion.tr>
 );
 
-// FIX: Add props interface to accept customers from parent component
 interface AdminCustomersPageProps {
     customers: AdminCustomer[];
 }
@@ -35,23 +34,23 @@ const AdminCustomersPage: React.FC<AdminCustomersPageProps> = ({ customers }) =>
     return (
         <div>
             <header className="mb-8">
-                <h1 className="text-3xl font-bold text-zinc-800">Customers</h1>
-                <p className="text-zinc-500 mt-1">Manage your customer database.</p>
+                <h1 className="text-3xl font-bold text-[var(--text-primary)]">Customers</h1>
+                <p className="text-[var(--text-secondary)] mt-1">View and manage your customer list.</p>
             </header>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm">
+            <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left text-zinc-500">
-                        <thead className="text-xs text-zinc-700 uppercase bg-zinc-50">
+                    <table className="w-full text-sm text-left text-[var(--text-secondary)]">
+                        <thead className="text-xs text-[var(--text-primary)] uppercase bg-[var(--bg-tertiary)]">
                             <tr>
                                 <th scope="col" className="px-6 py-3">Customer</th>
+                                <th scope="col" className="px-6 py-3">Email</th>
                                 <th scope="col" className="px-6 py-3">Orders</th>
                                 <th scope="col" className="px-6 py-3">Total Spent</th>
                                 <th scope="col" className="px-6 py-3"><span className="sr-only">Actions</span></th>
                             </tr>
                         </thead>
                         <tbody>
-                            {/* FIX: Use `customers` prop instead of hardcoded MOCK_CUSTOMERS */}
                             {customers.map((customer, index) => (
                                 <CustomerRow key={customer.id} customer={customer} index={index} />
                             ))}

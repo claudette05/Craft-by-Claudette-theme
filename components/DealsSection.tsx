@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
-import { ClockIcon, ChevronLeftIcon, ChevronRightIcon } from '../constants';
+import { ClockIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
 
 interface DealsSectionProps {
   products: Product[];
   onProductClick: (product: Product) => void;
-  onAddToCart: (productId: number, quantity: number) => void;
-  wishlist: number[];
-  onToggleWishlist: (productId: number) => void;
   onQuickView: (product: Product) => void;
 }
 
@@ -30,9 +27,9 @@ const Countdown: React.FC = () => {
         return timeLeft;
     };
 
-    const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+    const [timeLeft, setTimeLeft] = React.useState(calculateTimeLeft());
 
-    useEffect(() => {
+    React.useEffect(() => {
         const timer = setTimeout(() => {
             setTimeLeft(calculateTimeLeft());
         }, 1000);
@@ -49,10 +46,10 @@ const Countdown: React.FC = () => {
 
         timerComponents.push(
             <div key={interval} className="text-center">
-                <div className="text-2xl md:text-4xl font-bold text-white bg-amber-500/80 rounded-lg px-2 sm:px-3 py-2">
+                <div className="text-2xl md:text-4xl font-bold text-accent-text bg-accent-primary/80 rounded-lg px-2 sm:px-3 py-2">
                     {String(timeLeft[interval]).padStart(2, '0')}
                 </div>
-                <div className="text-xs uppercase mt-1 text-zinc-600">{interval}</div>
+                <div className="text-xs uppercase mt-1 text-text-secondary">{interval}</div>
             </div>
         );
     });
@@ -64,13 +61,13 @@ const Countdown: React.FC = () => {
     );
 };
 
-const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, onAddToCart, wishlist, onToggleWishlist, onQuickView }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, onQuickView }) => {
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
+  const [canScrollPrev, setCanScrollPrev] = React.useState(false);
+  const [canScrollNext, setCanScrollNext] = React.useState(false);
 
-  const checkScrollButtons = useCallback(() => {
+  const checkScrollButtons = React.useCallback(() => {
     const el = scrollContainerRef.current;
     if (el) {
       const isScrollable = el.scrollWidth > el.clientWidth;
@@ -79,7 +76,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
     }
   }, []);
 
-  useLayoutEffect(() => {
+  React.useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     checkScrollButtons();
 
@@ -104,7 +101,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
   };
 
   return (
-    <section className="py-12 md:py-16 bg-orange-100">
+    <section className="py-12 md:py-16 bg-amber-100/50 dark:bg-bg-secondary/20">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -113,10 +110,10 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
           transition={{ duration: 0.6 }}
           className="text-center"
         >
-          <h2 className="text-2xl md:text-3xl font-bold text-amber-800 flex items-center justify-center gap-3">
+          <h2 className="text-2xl md:text-3xl font-bold text-text-primary flex items-center justify-center gap-3">
             <ClockIcon /> Deals of the Day
           </h2>
-          <p className="mt-2 mb-8 text-zinc-600">Hurry, these deals won't last long!</p>
+          <p className="mt-2 mb-8 text-text-secondary">Hurry, these deals won't last long!</p>
           <Countdown />
         </motion.div>
       </div>
@@ -125,7 +122,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
           <motion.button
             onClick={() => handleNav('prev')}
             disabled={!canScrollPrev}
-            className="absolute top-1/2 -translate-y-1/2 left-2 z-10 bg-white/70 hover:bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
+            className="absolute top-1/2 -translate-y-1/2 left-2 z-10 bg-bg-secondary/70 hover:bg-bg-secondary/90 text-text-primary backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
             whileTap={{ scale: 0.9 }}
           >
             <ChevronLeftIcon />
@@ -145,7 +142,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
             >
               {products.map((product) => (
                 <div key={product.id} className="flex-shrink-0 w-8/12 sm:w-5/12 md:w-4/12 lg:w-3/12 xl:w-1/5">
-                    <ProductCard product={product} onClick={onProductClick} onAddToCart={onAddToCart} wishlist={wishlist} onToggleWishlist={onToggleWishlist} onQuickView={onQuickView} />
+                    <ProductCard product={product} onClick={onProductClick} onQuickView={onQuickView} />
                 </div>
               ))}
             </div>
@@ -154,7 +151,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
           <motion.button
             onClick={() => handleNav('next')}
             disabled={!canScrollNext}
-            className="absolute top-1/2 -translate-y-1/2 right-2 z-10 bg-white/70 hover:bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
+            className="absolute top-1/2 -translate-y-1/2 right-2 z-10 bg-bg-secondary/70 hover:bg-bg-secondary/90 text-text-primary backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
             whileTap={{ scale: 0.9 }}
           >
             <ChevronRightIcon />

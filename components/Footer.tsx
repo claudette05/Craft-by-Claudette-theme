@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { Page } from '../types';
 
 interface FooterProps {
@@ -6,27 +6,27 @@ interface FooterProps {
 }
 
 const SocialIcon: React.FC<{ href: string, children: React.ReactNode }> = ({ href, children }) => (
-    <a href={href} target="_blank" rel="noopener noreferrer" className="text-zinc-500 hover:text-amber-600 transition-colors">
+    <a href={href} target="_blank" rel="noopener noreferrer" className="text-text-secondary hover:text-accent-primary transition-colors">
         {children}
     </a>
 );
 
 const FooterLink: React.FC<{ children: React.ReactNode, onClick: () => void }> = ({ children, onClick }) => (
-    <button onClick={onClick} className="text-zinc-600 hover:text-amber-600 transition-colors text-sm">
+    <button onClick={onClick} className="text-text-secondary hover:text-accent-primary transition-colors text-sm">
         {children}
     </button>
 );
 
 const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
   return (
-    <footer className="bg-white border-t border-pink-200">
+    <footer className="bg-bg-secondary border-t border-border-primary">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 text-center md:text-left">
+        <div className="text-center">
           {/* Brand Info */}
-          <div className="md:col-span-2">
-            <h3 className="text-xl font-bold text-amber-600 mb-2">Craft by Claudette</h3>
-            <p className="text-zinc-600 mb-4">Handmade with love, just for you.</p>
-            <div className="flex justify-center md:justify-start space-x-6">
+          <div>
+            <h3 className="text-xl font-bold text-accent-primary mb-2">Craft by Claudette</h3>
+            <p className="text-text-secondary mb-4">Handmade with love, just for you.</p>
+            <div className="flex justify-center space-x-6">
               <SocialIcon href="#">
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" /></svg>
               </SocialIcon>
@@ -38,26 +38,10 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
               </SocialIcon>
             </div>
           </div>
-          <div>
-            <h4 className="font-semibold text-zinc-800 mb-4">Company</h4>
-            <div className="flex flex-col items-center md:items-start space-y-2">
-              <FooterLink onClick={() => {}}>About Us</FooterLink>
-              <FooterLink onClick={() => onNavigate('affiliate')}>Affiliate Program</FooterLink>
-              <FooterLink onClick={() => {}}>Careers</FooterLink>
-            </div>
-          </div>
-          <div>
-            <h4 className="font-semibold text-zinc-800 mb-4">Support</h4>
-            <div className="flex flex-col items-center md:items-start space-y-2">
-              <FooterLink onClick={() => {}}>Contact Us</FooterLink>
-              <FooterLink onClick={() => {}}>FAQs</FooterLink>
-              <FooterLink onClick={() => {}}>Shipping & Returns</FooterLink>
-            </div>
-          </div>
         </div>
-        <div className="mt-12 border-t border-pink-200 pt-8 text-center">
-            <p className="text-zinc-500 text-sm">&copy; {new Date().getFullYear()} Craft by Claudette. All rights reserved.</p>
-            <button onClick={() => onNavigate('admin')} className="text-sm text-zinc-400 hover:text-amber-600 transition-colors mt-2">
+        <div className="mt-12 border-t border-border-primary pt-8 text-center">
+            <p className="text-text-secondary text-sm">&copy; {new Date().getFullYear()} Craft by Claudette. All rights reserved.</p>
+            <button onClick={() => onNavigate('admin')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors mt-2">
                 Admin Dashboard
             </button>
         </div>

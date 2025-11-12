@@ -1,16 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
+import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, UserIcon, HeartIcon } from '../constants';
+import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, UserIcon, HeartIcon } from './Icons';
 import { Page } from '../types';
+import ThemeToggle from './ThemeToggle';
+import { useAppContext } from '../context/AppContext';
 
 interface NavbarProps {
-  cartCount: number;
-  wishlistCount: number;
   onCartClick: () => void;
   onWishlistClick: () => void;
   onHomeClick: () => void;
-  isAuthenticated: boolean;
-  onLogout: () => void;
   onNavigate: (page: Page) => void;
   searchHistory: string[];
   onSearch: (query: string) => void;
@@ -21,30 +19,33 @@ const navLinks = [
   { name: 'Contact', href: '#' },
 ];
 
-const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, onWishlistClick, onHomeClick, isAuthenticated, onLogout, onNavigate, searchHistory, onSearch }) => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const [searchInputValue, setSearchInputValue] = useState('');
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
+const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeClick, onNavigate, searchHistory, onSearch }) => {
+  const { cartItemCount, wishlist, user, logout, isDarkMode, toggleDarkMode } = useAppContext();
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
+  const [searchInputValue, setSearchInputValue] = React.useState('');
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const accountMenuRef = React.useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
+  const navBgClass = isScrolled || isMenuOpen
+    ? 'bg-bg-primary/80 backdrop-blur-lg shadow-sm'
+    : 'bg-transparent';
+
+  React.useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
     }
   }, [isSearchOpen]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsSearchOpen(false);
@@ -67,17 +68,11 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   
   const handleLogoutClick = () => {
-    onLogout();
+    logout();
     setIsAccountMenuOpen(false);
-    toggleMenu();
+    if(isMenuOpen) toggleMenu();
   };
   
-  const handleAccountNav = (page: Page) => {
-    onNavigate(page);
-    setIsAccountMenuOpen(false);
-  };
-
-
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchInputValue.trim()) {
@@ -88,9 +83,9 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
   };
 
   const handleSearchIconClick = () => {
-    // If the overlay is already open, clicking again should not navigate.
-    // The `isSearchOpen` state will be toggled by the X button instead.
-    if (searchHistory.length > 0) {
+    if (isSearchOpen) {
+        setIsSearchOpen(false);
+    } else if (searchHistory.length > 0) {
       onNavigate('searchHistory');
     } else {
       setIsSearchOpen(true);
@@ -99,27 +94,13 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
 
   return (
     <>
-      <motion.nav
-        className="fixed top-0 left-0 right-0 z-50 transition-shadow duration-300"
-        initial={false}
-        animate={isScrolled || isMenuOpen ? "scrolled" : "top"}
-        variants={{
-          top: {
-            backgroundColor: 'rgba(254, 249, 241, 0)',
-            backdropFilter: 'blur(0px)',
-            boxShadow: 'none',
-          },
-          scrolled: {
-            backgroundColor: 'rgba(254, 249, 241, 0.7)',
-            backdropFilter: 'blur(12px)',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.05)',
-          }
-        }}
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBgClass}`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex-shrink-0">
-              <button onClick={onHomeClick} className="text-2xl font-bold text-amber-600 transition-colors hover:text-amber-700">
+              <button onClick={onHomeClick} className="text-2xl font-bold text-accent-primary transition-colors hover:opacity-80">
                 Craft by Claudette
               </button>
             </div>
@@ -133,7 +114,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
                       e.preventDefault();
                       if (link.name === 'Home') onHomeClick();
                     }}
-                    className="text-zinc-600 hover:text-amber-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                    className="text-text-secondary hover:text-accent-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
                     {link.name}
                   </a>
@@ -141,68 +122,72 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
               </div>
             </div>
             <div className="flex items-center">
-              <button onClick={handleSearchIconClick} className="p-1 rounded-full text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors hidden md:block">
-                <SearchIcon />
-              </button>
+              <div className="hidden md:flex items-center gap-2">
+                <ThemeToggle isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+                <button onClick={handleSearchIconClick} className="p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors">
+                  <SearchIcon />
+                </button>
 
-              <button onClick={onWishlistClick} className="relative p-1 rounded-full text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors ml-4 hidden md:block">
-                <HeartIcon className="h-6 w-6" />
-                {wishlistCount > 0 && (
-                  <motion.span 
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center transform translate-x-1/2 -translate-y-1/2"
-                  >
-                    {wishlistCount}
-                  </motion.span>
-                )}
-              </button>
+                <button onClick={onWishlistClick} className="relative p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors">
+                  <HeartIcon className="h-6 w-6" />
+                  {wishlist.length > 0 && (
+                    <motion.span 
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-accent-primary text-accent-text text-xs flex items-center justify-center transform translate-x-1/2 -translate-y-1/2"
+                    >
+                      {wishlist.length}
+                    </motion.span>
+                  )}
+                </button>
 
-              <div className="hidden md:block ml-4" ref={accountMenuRef}>
-                 {isAuthenticated ? (
-                  <div className="relative">
-                    <button onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)} className="p-1 rounded-full text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors">
-                      <UserIcon />
+                <div className="ml-2" ref={accountMenuRef}>
+                  {!!user ? (
+                    <div className="relative">
+                      <button onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)} className="p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors">
+                        <UserIcon />
+                      </button>
+                      <AnimatePresence>
+                        {isAccountMenuOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="absolute right-0 mt-2 w-48 bg-bg-secondary rounded-md shadow-lg py-1 z-50 border border-border-primary/50"
+                          >
+                            <a href="#/account" onClick={() => setIsAccountMenuOpen(false)} className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-bg-tertiary">My Account</a>
+                            <button onClick={handleLogoutClick} className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-bg-tertiary">Logout</button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                ) : (
+                    <button onClick={() => onNavigate('login')} className="flex items-center gap-1 text-text-secondary hover:text-accent-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+                        <UserIcon className="h-4 w-4" />
+                        Login
                     </button>
-                    <AnimatePresence>
-                      {isAccountMenuOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
-                        >
-                          <button onClick={() => handleAccountNav('account')} className="block w-full text-left px-4 py-2 text-sm text-zinc-700 hover:bg-pink-50">My Account</button>
-                          <button onClick={onLogout} className="block w-full text-left px-4 py-2 text-sm text-zinc-700 hover:bg-pink-50">Logout</button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-              ) : (
-                  <button onClick={() => onNavigate('login')} className="flex items-center gap-1 text-zinc-600 hover:text-amber-600 px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                      <UserIcon className="h-4 w-4" />
-                      Login
-                  </button>
-              )}
+                )}
+                </div>
               </div>
 
-              <button onClick={onCartClick} className="relative p-1 rounded-full text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors ml-2">
+              <button onClick={onCartClick} className="relative p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors ml-2">
                 <ShoppingCartIcon />
-                {cartCount > 0 && (
+                {cartItemCount > 0 && (
                   <motion.span 
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-amber-500 text-white text-xs flex items-center justify-center transform translate-x-1/2 -translate-y-1/2"
+                    className="absolute top-0 right-0 block h-5 w-5 rounded-full bg-accent-primary text-accent-text text-xs flex items-center justify-center transform translate-x-1/2 -translate-y-1/2"
                   >
-                    {cartCount}
+                    {cartItemCount}
                   </motion.span>
                 )}
               </button>
               <div className="md:hidden ml-2 flex items-center">
-                  <button onClick={handleSearchIconClick} className="p-1 rounded-full text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors">
+                  <ThemeToggle isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+                  <button onClick={handleSearchIconClick} className="p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors">
                     <SearchIcon />
                   </button>
-                  <button onClick={toggleMenu} className="p-1 rounded-md text-zinc-600 hover:text-amber-600 focus:outline-none transition-colors ml-1">
+                  <button onClick={toggleMenu} className="p-1 rounded-md text-text-secondary hover:text-accent-primary focus:outline-none transition-colors ml-1">
                       {isMenuOpen ? <XIcon /> : <HamburgerIcon />}
                   </button>
               </div>
@@ -215,7 +200,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="absolute inset-0 h-20 bg-pink-50/80 backdrop-blur-md"
+              className="absolute inset-0 h-20 bg-bg-primary/80 backdrop-blur-md"
             >
               <form onSubmit={handleSearchSubmit} className="container mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
                 <div className="relative w-full">
@@ -226,13 +211,13 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
                     value={searchInputValue}
                     onChange={(e) => setSearchInputValue(e.target.value)}
                     placeholder="Search for products..."
-                    className="w-full pl-12 pr-4 py-3 rounded-full border border-amber-300 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 transition"
+                    className="w-full pl-12 pr-4 py-3 rounded-full border border-accent-primary/50 bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 transition"
                   />
                 </div>
                 <button 
                   type="button"
                   onClick={() => setIsSearchOpen(false)} 
-                  className="ml-4 p-2 rounded-full text-zinc-600 hover:text-amber-600 hover:bg-white/50 transition-colors"
+                  className="ml-4 p-2 rounded-full text-text-secondary hover:text-accent-primary hover:bg-bg-secondary/50 transition-colors"
                   aria-label="Close search"
                 >
                   <XIcon />
@@ -241,7 +226,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
             </motion.div>
           )}
         </AnimatePresence>
-      </motion.nav>
+      </nav>
       
       <AnimatePresence>
           {isMenuOpen && (
@@ -249,7 +234,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-40 bg-pink-100/80 backdrop-blur-sm md:hidden"
+                  className="fixed inset-0 z-40 bg-bg-primary/80 backdrop-blur-sm md:hidden"
                   onClick={toggleMenu}
               >
                   <motion.div 
@@ -257,7 +242,7 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
                     animate={{ y: 0 }}
                     exit={{ y: "-100%" }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                    className="pt-20 bg-white"
+                    className="pt-20 bg-bg-secondary"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex flex-col items-center space-y-2 pt-8 pb-12">
@@ -270,30 +255,30 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, wishlistCount, onCartClick, 
                               if (link.name === 'Home') onHomeClick();
                               toggleMenu();
                             }}
-                            className="text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors"
+                            className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors"
                           >
                             {link.name}
                           </a>
                         ))}
-                        <div className="border-t border-pink-200 w-3/4 my-4" />
-                        <button onClick={() => { onWishlistClick(); toggleMenu(); }} className="flex items-center gap-2 text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors">
-                          <HeartIcon className="h-5 w-5" /> My Wishlist ({wishlistCount})
+                        <div className="border-t border-border-primary w-3/4 my-4" />
+                        <button onClick={() => { onWishlistClick(); toggleMenu(); }} className="flex items-center gap-2 text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
+                          <HeartIcon className="h-5 w-5" /> My Wishlist ({wishlist.length})
                         </button>
-                        {isAuthenticated ? (
+                        {!!user ? (
                           <>
-                           <button onClick={() => { onNavigate('account'); toggleMenu(); }} className="text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors">
+                           <a href="#/account" onClick={toggleMenu} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
                               My Account
-                           </button>
-                           <button onClick={handleLogoutClick} className="text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors">
+                           </a>
+                           <button onClick={handleLogoutClick} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
                               Logout
                            </button>
                           </>
                         ) : (
                           <>
-                            <button onClick={() => { onNavigate('login'); toggleMenu(); }} className="text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors">
+                            <button onClick={() => { onNavigate('login'); toggleMenu(); }} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
                                 Login
                             </button>
-                             <button onClick={() => { onNavigate('signup'); toggleMenu(); }} className="text-zinc-700 hover:text-amber-600 block px-3 py-2 rounded-md text-base font-medium transition-colors">
+                             <button onClick={() => { onNavigate('signup'); toggleMenu(); }} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
                                 Sign Up
                             </button>
                           </>

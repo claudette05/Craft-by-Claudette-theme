@@ -1,27 +1,23 @@
-import React, { useRef, useState, useLayoutEffect, useCallback } from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
-import { ChevronLeftIcon, ChevronRightIcon } from '../constants';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
 
 interface ProductGridProps {
   products: Product[];
   onProductClick: (product: Product) => void;
-  onAddToCart: (productId: number, quantity: number) => void;
   title: string;
   bgColor?: string;
-  wishlist: number[];
-  onToggleWishlist: (productId: number) => void;
   onQuickView: (product: Product) => void;
 }
 
-const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onAddToCart, title, bgColor = 'bg-pink-50', wishlist, onToggleWishlist, onQuickView }) => {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, title, bgColor = 'bg-bg-primary', onQuickView }) => {
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollPrev, setCanScrollPrev] = React.useState(false);
+  const [canScrollNext, setCanScrollNext] = React.useState(false);
 
-  const [canScrollPrev, setCanScrollPrev] = useState(false);
-  const [canScrollNext, setCanScrollNext] = useState(false);
-
-  const checkScrollButtons = useCallback(() => {
+  const checkScrollButtons = React.useCallback(() => {
     const el = scrollContainerRef.current;
     if (el) {
       const isScrollable = el.scrollWidth > el.clientWidth;
@@ -30,7 +26,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onA
     }
   }, []);
 
-  useLayoutEffect(() => {
+  React.useLayoutEffect(() => {
     const el = scrollContainerRef.current;
     checkScrollButtons();
 
@@ -63,7 +59,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onA
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.5 }}
           transition={{ duration: 0.5 }}
-          className="text-2xl md:text-3xl font-bold text-center mb-10 md:mb-12 text-zinc-800"
+          className="text-2xl md:text-3xl font-bold text-center mb-10 md:mb-12 text-text-primary"
         >
           {title}
         </motion.h2>
@@ -72,7 +68,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onA
         <motion.button
           onClick={() => handleNav('prev')}
           disabled={!canScrollPrev}
-          className="absolute top-1/2 -translate-y-1/2 left-2 z-10 bg-white/70 hover:bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
+          className="absolute top-1/2 -translate-y-1/2 left-2 z-10 bg-bg-secondary/70 hover:bg-bg-secondary/90 text-text-primary backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
           whileTap={{ scale: 0.9 }}
         >
           <ChevronLeftIcon />
@@ -88,7 +84,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onA
             >
               {products.map((product) => (
                 <div key={product.id} className="flex-shrink-0 w-8/12 sm:w-5/12 md:w-4/12 lg:w-3/12 xl:w-1/5">
-                    <ProductCard product={product} onClick={onProductClick} onAddToCart={onAddToCart} wishlist={wishlist} onToggleWishlist={onToggleWishlist} onQuickView={onQuickView} />
+                    <ProductCard product={product} onClick={onProductClick} onQuickView={onQuickView} />
                 </div>
               ))}
             </div>
@@ -97,7 +93,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onProductClick, onA
         <motion.button
           onClick={() => handleNav('next')}
           disabled={!canScrollNext}
-          className="absolute top-1/2 -translate-y-1/2 right-2 z-10 bg-white/70 hover:bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
+          className="absolute top-1/2 -translate-y-1/2 right-2 z-10 bg-bg-secondary/70 hover:bg-bg-secondary/90 text-text-primary backdrop-blur-sm rounded-full p-2 shadow-md transition-opacity duration-300 opacity-0 group-hover:opacity-100 disabled:opacity-0 disabled:cursor-not-allowed hidden md:flex items-center justify-center"
           whileTap={{ scale: 0.9 }}
         >
           <ChevronRightIcon />

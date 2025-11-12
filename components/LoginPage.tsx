@@ -1,19 +1,29 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Page } from '../types';
+import { useAppContext } from '../context/AppContext';
 
 interface LoginPageProps {
-  onLogin: (email: string, password: string) => void;
   onNavigate: (page: Page) => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+const LoginPage: React.FC<LoginPageProps> = ({ onNavigate }) => {
+  const { login } = useAppContext();
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
+  const [isLoading, setIsLoading] = React.useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    setIsLoading(true);
+    try {
+      await login(email, password);
+      // Successful navigation is handled by the App component
+    } catch (error) {
+      console.error('Login failed on page:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -21,22 +31,22 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="min-h-screen flex items-center justify-center bg-pink-50 pt-20"
+      className="min-h-screen flex items-center justify-center bg-bg-primary pt-20"
     >
       <motion.div
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="bg-white p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md"
+        className="bg-bg-secondary p-8 sm:p-12 rounded-2xl shadow-lg w-full max-w-md"
       >
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-amber-600">Welcome Back!</h1>
-          <p className="text-zinc-500 mt-2">Log in to continue your shopping.</p>
+          <h1 className="text-3xl font-bold text-accent-primary">Welcome Back!</h1>
+          <p className="text-text-secondary mt-2">Log in to continue your shopping.</p>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
-            <label htmlFor="email" className="text-sm font-medium text-zinc-700">
+            <label htmlFor="email" className="text-sm font-medium text-text-primary">
               Email address
             </label>
             <input
@@ -47,13 +57,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 dark:border-zinc-600 bg-bg-tertiary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
               placeholder="you@example.com"
             />
           </div>
 
           <div>
-            <label htmlFor="password"className="text-sm font-medium text-zinc-700">
+            <label htmlFor="password"className="text-sm font-medium text-text-primary">
               Password
             </label>
             <input
@@ -64,13 +74,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition"
+              className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 dark:border-zinc-600 bg-bg-tertiary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
               placeholder="Your password"
             />
           </div>
 
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => onNavigate('forgotPassword')} className="text-sm font-medium text-amber-600 hover:text-amber-500">
+            <button type="button" onClick={() => onNavigate('forgotPassword')} className="text-sm font-medium text-accent-primary hover:opacity-80">
               Forgot your password?
             </button>
           </div>
@@ -78,16 +88,27 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin, onNavigate }) => {
           <div>
             <button
               type="submit"
-              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-white bg-amber-500 hover:bg-amber-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
+              disabled={isLoading}
+              className="w-full flex justify-center items-center py-3 px-4 border border-transparent rounded-full shadow-sm text-base font-medium text-accent-text bg-accent-primary hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent-primary transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Log in
+              {isLoading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Logging in...
+                </>
+              ) : (
+                'Log in'
+              )}
             </button>
           </div>
         </form>
 
-        <p className="mt-8 text-center text-sm text-zinc-600">
+        <p className="mt-8 text-center text-sm text-text-secondary">
           Don't have an account?{' '}
-          <button onClick={() => onNavigate('signup')} className="font-medium text-amber-600 hover:text-amber-500">
+          <button onClick={() => onNavigate('signup')} className="font-medium text-accent-primary hover:opacity-80">
             Sign up
           </button>
         </p>

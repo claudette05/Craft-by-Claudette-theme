@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Category } from '../types';
 
@@ -23,10 +23,10 @@ const CategoryCarousel: React.FC<CategoryCarouselProps> = ({ categories, activeC
       whileInView={{ opacity: 1 }}
       viewport={{ once: true, amount: 0.5 }}
       transition={{ duration: 0.5 }}
-      className="py-10 md:py-12 bg-white"
+      className="py-10 md:py-12 bg-bg-secondary"
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-zinc-800">Shop by Category</h2>
+        <h2 className="text-2xl md:text-3xl font-bold text-center mb-8 text-text-primary">Shop by Category</h2>
         <div className="flex space-x-3 overflow-x-auto pb-4 -mx-4 px-4 sm:justify-center hide-scrollbar">
           {allCategories.map((category) => {
             const isActive = activeCategory === category.name;
@@ -41,7 +41,7 @@ const CategoryCarousel: React.FC<CategoryCarouselProps> = ({ categories, activeC
               >
                 <div 
                   className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shadow-md transition-all duration-300 ${
-                    isActive ? 'ring-4 ring-amber-400 ring-offset-2 ring-offset-white' : 'ring-2 ring-transparent'
+                    isActive ? 'ring-4 ring-accent-primary ring-offset-2 ring-offset-bg-secondary' : 'ring-2 ring-transparent'
                   }`}
                 >
                   <img 
@@ -52,7 +52,7 @@ const CategoryCarousel: React.FC<CategoryCarouselProps> = ({ categories, activeC
                 </div>
                 <span 
                   className={`text-xs sm:text-sm font-medium transition-colors duration-300 mt-1 ${
-                    isActive ? 'text-amber-700 font-bold' : 'text-zinc-600'
+                    isActive ? 'text-accent-primary font-bold' : 'text-text-secondary'
                   }`}
                 >
                   {category.name}

@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Product } from '../../../types';
-import { TrashIcon } from '../../../constants';
+import { TrashIcon } from '../../Icons';
 
 interface AdminProductsPageProps {
     products: Product[];
@@ -50,9 +50,9 @@ const ProductRow: React.FC<{ product: Product; index: number; onEdit: () => void
 };
 
 const AdminProductsPage: React.FC<AdminProductsPageProps> = ({ products, onAddProduct, onEditProduct, onDeleteProduct }) => {
-    const [sortKey, setSortKey] = useState('name-asc');
+    const [sortKey, setSortKey] = React.useState('name-asc');
 
-    const sortedProducts = useMemo(() => {
+    const sortedProducts = React.useMemo(() => {
         return [...products].sort((a, b) => {
             switch (sortKey) {
                 case 'name-asc':
@@ -84,21 +84,21 @@ const AdminProductsPage: React.FC<AdminProductsPageProps> = ({ products, onAddPr
 
     return (
         <div>
-            <header className="flex justify-between items-center mb-8">
+            <header className="flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-[var(--text-primary)]">Products</h1>
                     <p className="text-[var(--text-secondary)] mt-1">Manage your inventory and product details.</p>
                 </div>
             </header>
             
-            <div className="flex justify-between items-center mb-4">
-                 <div>
-                    <label htmlFor="sort-products" className="text-sm font-medium text-[var(--text-secondary)] mr-2">Sort by:</label>
+            <div className="flex flex-col gap-4 items-stretch sm:flex-row sm:items-center sm:justify-between mb-4">
+                 <div className="flex items-center">
+                    <label htmlFor="sort-products" className="text-sm font-medium text-[var(--text-secondary)] mr-2 whitespace-nowrap">Sort by:</label>
                     <select
                         id="sort-products"
                         value={sortKey}
                         onChange={(e) => setSortKey(e.target.value)}
-                        className="text-sm rounded-lg border-zinc-300 dark:border-zinc-600 bg-[var(--bg-secondary)] shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 text-[var(--text-primary)]"
+                        className="w-full sm:w-auto text-sm rounded-lg border-zinc-300 dark:border-zinc-600 bg-[var(--bg-secondary)] shadow-sm focus:border-amber-500 focus:ring-amber-500 p-2 text-[var(--text-primary)]"
                     >
                         {sortOptions.map(option => (
                             <option key={option.value} value={option.value}>{option.label}</option>

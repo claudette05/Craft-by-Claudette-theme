@@ -1,4 +1,4 @@
-import React from 'react';
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
@@ -7,9 +7,6 @@ interface SearchResultsPageProps {
   query: string;
   results: Product[];
   onProductClick: (product: Product) => void;
-  onAddToCart: (productId: number, quantity: number) => void;
-  wishlist: number[];
-  onToggleWishlist: (productId: number) => void;
   onQuickView: (product: Product) => void;
 }
 
@@ -23,7 +20,7 @@ const containerVariants = {
     },
 };
 
-const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ query, results, onProductClick, onAddToCart, wishlist, onToggleWishlist, onQuickView }) => {
+const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ query, results, onProductClick, onQuickView }) => {
   return (
     <motion.main
       initial={{ opacity: 0 }}
@@ -49,9 +46,6 @@ const SearchResultsPage: React.FC<SearchResultsPageProps> = ({ query, results, o
               key={product.id}
               product={product}
               onClick={onProductClick}
-              onAddToCart={onAddToCart}
-              wishlist={wishlist}
-              onToggleWishlist={onToggleWishlist}
               onQuickView={onQuickView}
             />
           ))}

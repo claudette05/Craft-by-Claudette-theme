@@ -11,6 +11,7 @@
     <style>
       body {
         font-family: 'Poppins', sans-serif;
+        transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
       }
       /* Hide scrollbar for Chrome, Safari and Opera */
       .hide-scrollbar::-webkit-scrollbar {
@@ -46,22 +47,38 @@
         --accent-text: #18181b;
       }
     </style>
-  <script type="importmap">
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              'bg-primary': 'var(--bg-primary)',
+              'bg-secondary': 'var(--bg-secondary)',
+              'bg-tertiary': 'var(--bg-tertiary)',
+              'text-primary': 'var(--text-primary)',
+              'text-secondary': 'var(--text-secondary)',
+              'border-primary': 'var(--border-primary)',
+              'accent-primary': 'var(--accent-primary)',
+              'accent-text': 'var(--accent-text)',
+            }
+          }
+        }
+      }
+    </script>
+<script type="importmap">
 {
   "imports": {
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
     "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
-    "firebase/app": "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.5.0/"
+    "react-paystack": "https://aistudiocdn.com/react-paystack@^6.0.0"
   }
 }
 </script>
 </head>
-  <body class="bg-pink-50">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

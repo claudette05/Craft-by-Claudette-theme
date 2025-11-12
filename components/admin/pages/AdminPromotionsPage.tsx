@@ -1,4 +1,5 @@
-import React from 'react';
+
+import * as React from 'react';
 import { motion } from 'framer-motion';
 import { Promotion } from '../../../types';
 
@@ -36,7 +37,7 @@ interface AdminPromotionsPageProps {
 const AdminPromotionsPage: React.FC<AdminPromotionsPageProps> = ({ promotions }) => {
     return (
         <div>
-            <header className="flex justify-between items-center mb-8">
+            <header className="flex flex-col gap-4 items-start sm:flex-row sm:items-center sm:justify-between mb-8">
                 <div>
                     <h1 className="text-3xl font-bold text-[var(--text-primary)]">Promotions</h1>
                     <p className="text-[var(--text-secondary)] mt-1">Manage discount codes and promotions.</p>

@@ -1,13 +1,12 @@
-// FIX: Import React to resolve "Cannot find namespace 'React'" error on line 49.
-import React from 'react';
+// types.ts
 
 export interface ProductVariant {
-  id: string; // Unique ID for the variant
+  id: string;
   color: string;
-  colorHex?: string; // For UI swatches
+  colorHex?: string;
+  imageUrl?: string;
   size: string;
   stock: number;
-  imageUrl?: string;
 }
 
 export interface Product {
@@ -38,31 +37,21 @@ export interface HeroSlide {
   buttonText: string;
 }
 
+export type Page = 
+  'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 
+  'checkout' | 'admin' | 'productReviews' | 'search' | 
+  'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 
+  'resetPassword' | 'allProducts';
+
 export interface CartItem {
   productId: number;
   quantity: number;
 }
 
-// FIX: Add Testimonial interface to resolve import error in components/Testimonials.tsx
-export interface Testimonial {
+export interface ToastMessage {
   id: number;
-  name: string;
-  quote: string;
-  rating: number;
-}
-
-// FIX: Add LookbookPost interface to resolve import error in components/Lookbook.tsx
-export interface LookbookPost {
-  id: number;
-  imageUrl: string;
-  caption: string;
-}
-
-// Admin Dashboard Types
-export interface AdminStat {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
+  message: string;
+  type: 'success' | 'error' | 'info';
 }
 
 export type OrderStatus = 'Completed' | 'Processing' | 'Pending' | 'Cancelled';
@@ -75,31 +64,13 @@ export interface AdminOrder {
   status: OrderStatus;
 }
 
-export interface AdminTopProduct {
+export interface AdminCustomer {
   id: number;
   name: string;
-  imageUrl: string;
-  sales: number;
-}
-
-export interface ProductReview {
-  id: number;
-  productId: number;
-  author: string;
-  rating: number; // 1 to 5
-  date: string;
-  title: string;
-  comment: string;
-  verifiedPurchase: boolean;
-}
-
-export interface AdminCustomer {
-    id: number;
-    name: string;
-    email: string;
-    avatarUrl: string;
-    orders: number;
-    totalSpent: number;
+  avatarUrl: string;
+  email: string;
+  orders: number;
+  totalSpent: number;
 }
 
 export interface Promotion {
@@ -108,15 +79,49 @@ export interface Promotion {
     type: 'Percentage' | 'Fixed';
     value: number;
     status: 'Active' | 'Expired' | 'Scheduled';
-    startDate: string;
-    endDate: string;
     usageCount: number;
 }
 
-export type Page = 'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 'checkout' | 'admin' | 'productReviews' | 'search' | 'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 'resetPassword';
-
-export type ToastMessage = {
+export interface ProductReview {
   id: number;
-  message: string;
-  type: 'success' | 'error' | 'info';
-};
+  productId: number;
+  author: string;
+  rating: number;
+  date: string;
+  title: string;
+  comment: string;
+  verifiedPurchase: boolean;
+}
+
+export interface HomepageSections {
+    deals: number[];
+    bestsellers: number[];
+}
+
+export interface HomepageSectionConfig {
+    id: keyof HomepageSections;
+    title: string;
+    description: string;
+}
+
+export interface Testimonial {
+    id: number;
+    name: string;
+    quote: string;
+    rating: number;
+}
+
+export interface LookbookPost {
+    id: number;
+    imageUrl: string;
+    caption: string;
+}
+
+export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist' | 'notifications';
+
+export interface AdminTopProduct {
+    id: number;
+    name: string;
+    imageUrl: string;
+    sales: number;
+}

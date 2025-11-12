@@ -1,7 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
-import { Product, CartItem, Page } from './types';
-import { PRODUCTS, CATEGORIES, HERO_SLIDES, TRENDING_PRODUCTS, DEALS_PRODUCTS, BESTSELLER_PRODUCTS, MOCK_REVIEWS } from './constants';
+
+import * as React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Product, Page, HeroSlide, HomepageSections, Category, AdminOrder, AdminCustomer, Promotion } from './types';
+import { HERO_SLIDES, CATEGORIES, MOCK_REVIEWS } from './constants';
+import MOCK_PRODUCTS from './mockProducts';
+import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_PROMOTIONS } from './adminConstants';
 import Navbar from './components/Navbar';
 import HeroCarousel from './components/HeroCarousel';
 import Features from './components/Features';
@@ -27,507 +30,334 @@ import MyAccountPage from './components/MyAccountPage';
 import WishlistSidebar from './components/WishlistSidebar';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import GlobalToastContainer from './components/GlobalToastContainer';
+import { useAppContext } from './context/AppContext';
+import AllProductsPage from './components/AllProductsPage';
 
-import { auth, db } from './firebase';
-import { User, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+const getRouteFromHash = (): { page: Page; productId: number | null } => {
+    const hash = window.location.hash.slice(1);
+    const [path, param] = hash.split('/').filter(Boolean);
+
+    if (path === 'product' && param) {
+        const productId = parseInt(param, 10);
+        if (!isNaN(productId)) return { page: 'productDetail', productId };
+    }
+    
+    const pageMap: { [key: string]: Page } = {
+        admin: 'admin', affiliate: 'affiliate', account: 'account', login: 'login',
+        signup: 'signup', cart: 'cart', checkout: 'checkout', searchHistory: 'searchHistory',
+        search: 'search', productReviews: 'productReviews', forgotPassword: 'forgotPassword',
+        resetPassword: 'resetPassword', allProducts: 'allProducts'
+    };
+
+    return path in pageMap ? { page: pageMap[path], productId: null } : { page: 'shop', productId: null };
+};
+
+const LoadingSpinner = () => (
+  <div className="fixed inset-0 bg-bg-primary flex items-center justify-center z-[100]">
+    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-accent-primary"></div>
+  </div>
+);
 
 const App: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [currentPage, setCurrentPage] = useState<Page>('shop');
-  const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
-  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
-  const [wishlist, setWishlist] = useState<number[]>([]);
-  const [cart, setCart] = useState<CartItem[]>([]);
-
-  // Auth state listener
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        setIsAuthLoading(true);
-        if (currentUser) {
-            setUser(currentUser);
-            const userDocRef = doc(db, 'users', currentUser.uid);
-            const userDocSnap = await getDoc(userDocRef);
-            
-            let firestoreWishlist: number[] = [];
-            let firestoreCart: CartItem[] = [];
-
-            if (userDocSnap.exists()) {
-                const data = userDocSnap.data();
-                firestoreWishlist = data.wishlist || [];
-                firestoreCart = data.cart || [];
-            }
-
-            const localWishlist: number[] = JSON.parse(localStorage.getItem('wishlist') || '[]');
-            const localCart: CartItem[] = JSON.parse(localStorage.getItem('cart') || '[]');
-
-            const mergedWishlist = [...new Set([...firestoreWishlist, ...localWishlist])];
-            
-            const mergedCartMap = new Map<number, CartItem>();
-            [...firestoreCart, ...localCart].forEach(item => {
-                const existing = mergedCartMap.get(item.productId);
-                if (existing) {
-                    existing.quantity += item.quantity;
-                } else {
-                    mergedCartMap.set(item.productId, { ...item });
-                }
-            });
-            const mergedCart = Array.from(mergedCartMap.values());
-
-            setWishlist(mergedWishlist);
-            setCart(mergedCart);
-
-            await setDoc(userDocRef, { wishlist: mergedWishlist, cart: mergedCart }, { merge: true });
-            localStorage.removeItem('wishlist');
-            localStorage.removeItem('cart');
-
-        } else {
-            setUser(null);
-            const savedWishlist = localStorage.getItem('wishlist');
-            setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
-            const savedCart = localStorage.getItem('cart');
-            setCart(savedCart ? JSON.parse(savedCart) : []);
-        }
-        setIsAuthLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Guest persistence for Wishlist & Cart
-  useEffect(() => {
-    if (!user && !isAuthLoading) {
-      try {
-        localStorage.setItem('wishlist', JSON.stringify(wishlist));
-      } catch (error) {
-        console.error('Error saving guest wishlist to localStorage', error);
-      }
-    }
-  }, [wishlist, user, isAuthLoading]);
-
-  useEffect(() => {
-    if (!user && !isAuthLoading) {
-      try {
-        localStorage.setItem('cart', JSON.stringify(cart));
-      } catch (error) {
-        console.error('Error saving guest cart to localStorage', error);
-      }
-    }
-  }, [cart, user, isAuthLoading]);
+  const { user, isDarkMode, toggleDarkMode, toasts, addToast, setCart } = useAppContext();
   
-  // Search History State & Persistence
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+  // App-wide data state
+  const [products, setProducts] = React.useState<Product[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
+  const [heroSlides, setHeroSlides] = React.useState<HeroSlide[]>([]);
+  const [orders, setOrders] = React.useState<AdminOrder[]>([]);
+  const [customers, setCustomers] = React.useState<AdminCustomer[]>([]);
+  const [promotions, setPromotions] = React.useState<Promotion[]>([]);
+  const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [] });
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  // View/Routing State
+  const initialRoute = getRouteFromHash();
+  const [currentPage, setCurrentPage] = React.useState<Page>(initialRoute.page);
+  const [selectedProductId, setSelectedProductId] = React.useState<number | null>(() => {
+    if (initialRoute.page === 'productDetail' && initialRoute.productId) return initialRoute.productId;
+    const savedId = sessionStorage.getItem('selectedProductId');
+    return savedId ? JSON.parse(savedId) : null;
+  });
+  const [searchQuery, setSearchQuery] = React.useState<string>(() => sessionStorage.getItem('searchQuery') || '');
+  const [activeCategory, setActiveCategory] = React.useState<string>('All');
+  
+  // UI Component State
+  const [quickViewProduct, setQuickViewProduct] = React.useState<Product | null>(null);
+  const [isWishlistOpen, setIsWishlistOpen] = React.useState(false);
+
+  // Search History State
+  const [searchHistory, setSearchHistory] = React.useState<string[]>(() => {
     try {
-      const savedHistory = localStorage.getItem('searchHistory');
-      return savedHistory ? JSON.parse(savedHistory) : [];
-    } catch (error) {
-      console.error('Error parsing search history from localStorage', error);
+      return JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    } catch {
       return [];
     }
   });
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-    } catch (error) {
-      console.error('Error saving search history to localStorage', error);
+  // Load mock data on initial load
+  React.useEffect(() => {
+    const loadMockData = () => {
+        setIsLoading(true);
+        // Simulate network delay for a better loading experience
+        setTimeout(() => {
+            setProducts(MOCK_PRODUCTS);
+            setCategories(CATEGORIES);
+            setHeroSlides(HERO_SLIDES);
+            setOrders(MOCK_ORDERS);
+            setCustomers(MOCK_CUSTOMERS);
+            setPromotions(MOCK_PROMOTIONS);
+            // Setup some initial homepage sections from mock data
+            const dealProduct = MOCK_PRODUCTS.find(p => p.salePrice);
+            setHomepageSections({
+                deals: dealProduct ? [dealProduct.id] : [],
+                bestsellers: [1, 3, 5],
+            });
+            setIsLoading(false);
+        }, 500);
+    };
+    loadMockData();
+  }, []);
+
+  // CRUD Handlers (operate on local state)
+  const handleSaveProduct = (productData: Product, imageFile?: File) => {
+    // Image file is ignored in mock setup
+    if ('id' in productData && productData.id) {
+        setProducts(products.map(p => p.id === productData.id ? { ...productData } : p));
+        addToast('Product updated successfully!');
+    } else {
+        const newProduct = { ...productData, id: Date.now() }; // Use timestamp for unique ID
+        setProducts([newProduct, ...products]);
+        addToast('Product added successfully!');
+    }
+  };
+
+  const handleDeleteProduct = (productId: number) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+        setProducts(products.filter(p => p.id !== productId));
+        addToast('Product deleted!', 'info');
+    }
+  };
+
+  const handleSaveCategory = (categoryData: Category, imageFile?: File) => {
+    if ('id' in categoryData && categoryData.id) {
+        setCategories(categories.map(c => c.id === categoryData.id ? { ...categoryData } : c));
+        addToast('Category updated successfully!');
+    } else {
+        const newCategory = { ...categoryData, id: Date.now() };
+        setCategories([newCategory, ...categories]);
+        addToast('Category added successfully!');
+    }
+  };
+
+  const handleDeleteCategory = (categoryId: number) => {
+    if (window.confirm('Are you sure you want to delete this category?')) {
+        setCategories(categories.filter(c => c.id !== categoryId));
+        addToast('Category deleted!', 'info');
+    }
+  };
+
+  const handleSaveHeroSlide = (slideData: HeroSlide, imageFile?: File) => {
+    if ('id' in slideData && slideData.id) {
+        setHeroSlides(heroSlides.map(s => s.id === slideData.id ? { ...slideData } : s));
+        addToast('Hero slide updated successfully!');
+    } else {
+        const newSlide = { ...slideData, id: Date.now() };
+        setHeroSlides([newSlide, ...heroSlides]);
+        addToast('Hero slide added successfully!');
+    }
+  };
+
+  const handleDeleteHeroSlide = (slideId: number) => {
+    if (window.confirm('Are you sure you want to delete this hero slide?')) {
+        setHeroSlides(heroSlides.filter(s => s.id !== slideId));
+        addToast('Hero slide deleted!', 'info');
+    }
+  };
+
+  const handleSaveHomepageSections = (sections: HomepageSections) => {
+      setHomepageSections(sections);
+      addToast("Homepage sections updated successfully!");
+  };
+
+  React.useEffect(() => {
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+  }, [searchHistory]);
+  
+  React.useEffect(() => {
+    if (selectedProductId) sessionStorage.setItem('selectedProductId', JSON.stringify(selectedProductId));
+    else sessionStorage.removeItem('selectedProductId');
+  }, [selectedProductId]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('searchQuery', searchQuery);
+  }, [searchQuery]);
+
+  React.useEffect(() => {
+    let newHash = currentPage === 'shop' ? '/' : `/${currentPage}`;
+    if (currentPage === 'productDetail' && selectedProductId) {
+        newHash = `/product/${selectedProductId}`;
+    }
+    const currentHash = window.location.hash.slice(1);
+    if (currentHash !== newHash && !(currentHash === '' && newHash === '/')) {
+        window.location.hash = newHash;
+    }
+  }, [currentPage, selectedProductId]);
+
+  React.useEffect(() => {
+    const handleHashChange = () => {
+        const { page, productId } = getRouteFromHash();
+        if (page === 'productDetail' && productId !== null) setSelectedProductId(productId);
+        setCurrentPage(page);
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  React.useEffect(() => {
+    document.body.className = currentPage === 'admin' ? 'bg-bg-tertiary' : 'bg-bg-primary';
+  }, [currentPage]);
+  
+  React.useEffect(() => {
+    if(user && (currentPage === 'login' || currentPage === 'signup')) {
+      setCurrentPage('shop');
+    }
+  }, [user, currentPage]);
+
+
+  const handleProductClick = React.useCallback((product: Product) => {
+    setSelectedProductId(product.id);
+    setCurrentPage('productDetail');
+  }, []);
+
+  const handleSearch = React.useCallback((query: string) => {
+    setSearchQuery(query);
+    setCurrentPage('search');
+    if (query && !searchHistory.includes(query)) {
+      setSearchHistory([query, ...searchHistory.slice(0, 9)]);
     }
   }, [searchHistory]);
 
-
-  const cartItemCount = useMemo(() => {
-    return cart.reduce((total, item) => total + item.quantity, 0);
-  }, [cart]);
-
-
-  const handleToggleWishlist = useCallback(async (productId: number) => {
-    const newWishlist = wishlist.includes(productId)
-        ? wishlist.filter(id => id !== productId)
-        : [...wishlist, productId];
-    
-    setWishlist(newWishlist);
-
-    if (user) {
-        await setDoc(doc(db, 'users', user.uid), { wishlist: newWishlist }, { merge: true });
-    } else {
-        localStorage.setItem('wishlist', JSON.stringify(newWishlist));
-    }
-  }, [wishlist, user]);
-  
-  const handleAddToCart = useCallback(async (productId: number, quantity: number) => {
-    let newCart: CartItem[];
-    const existingItem = cart.find(item => item.productId === productId);
-    if (existingItem) {
-        newCart = cart.map(item =>
-            item.productId === productId
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-        );
-    } else {
-      newCart = [...cart, { productId, quantity }];
-    }
-    setCart(newCart);
-    setQuickViewProduct(null);
-
-    if (user) {
-      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
-    } else {
-      localStorage.setItem('cart', JSON.stringify(newCart));
-    }
-  }, [cart, user]);
-
-  const handleUpdateCartQuantity = useCallback(async (productId: number, newQuantity: number) => {
-    let newCart: CartItem[];
-    if (newQuantity < 1) {
-      newCart = cart.filter(item => item.productId !== productId);
-    } else {
-      newCart = cart.map(item =>
-        item.productId === productId ? { ...item, quantity: newQuantity } : item
-      );
-    }
-    setCart(newCart);
-
-    if (user) {
-      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
-    } else {
-      localStorage.setItem('cart', JSON.stringify(newCart));
-    }
-  }, [cart, user]);
-
-  const handleRemoveFromCart = useCallback(async (productId: number) => {
-    const newCart = cart.filter(item => item.productId !== productId);
-    setCart(newCart);
-    if (user) {
-      await setDoc(doc(db, 'users', user.uid), { cart: newCart }, { merge: true });
-    } else {
-      localStorage.setItem('cart', JSON.stringify(newCart));
-    }
-  }, [cart, user]);
-
-  const handleProductClick = useCallback((product: Product) => {
-    setSelectedProductId(product.id);
-    setCurrentPage('productDetail');
-    setQuickViewProduct(null);
-    setIsWishlistOpen(false);
-    window.scrollTo(0, 0);
-  }, []);
-  
-  const handleSelectCategory = useCallback((category: string) => {
-    setActiveCategory(category);
-    setCurrentPage('shop');
-  }, []);
-  
-  const handleOpenQuickView = useCallback((product: Product) => {
-    setQuickViewProduct(product);
+  const onNavigate = React.useCallback((page: Page) => {
+    setCurrentPage(page);
+    if (page === 'shop') setSelectedProductId(null);
   }, []);
 
-  const handleCloseQuickView = useCallback(() => {
-    setQuickViewProduct(null);
-  }, []);
-  
-  const handleOpenWishlist = useCallback(() => {
-    setIsWishlistOpen(true);
-  }, []);
-  
-  const handleCloseWishlist = useCallback(() => {
-    setIsWishlistOpen(false);
-  }, []);
+  const selectedProduct = React.useMemo(() => {
+    if (currentPage !== 'productDetail' || !selectedProductId) return null;
+    return products.find(p => p.id === selectedProductId) ?? null;
+  }, [currentPage, selectedProductId, products]);
 
-  const filteredProducts = useMemo(() => {
-    if (activeCategory === 'All') {
-      return PRODUCTS;
-    }
-    return PRODUCTS.filter(product => product.category === activeCategory);
-  }, [activeCategory]);
+  const filteredProducts = React.useMemo(() => {
+    return activeCategory === 'All'
+      ? products.filter(p => p.published)
+      : products.filter(p => p.category === activeCategory && p.published);
+  }, [activeCategory, products]);
   
-  const searchedProducts = useMemo(() => {
+  const searchResults = React.useMemo(() => {
     if (!searchQuery) return [];
-    const lowercasedQuery = searchQuery.toLowerCase();
-    return PRODUCTS.filter(product => 
-        product.name.toLowerCase().includes(lowercasedQuery) ||
-        product.description.toLowerCase().includes(lowercasedQuery) ||
-        product.category.toLowerCase().includes(lowercasedQuery)
+    return products.filter(p =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
     );
-  }, [searchQuery]);
+  }, [searchQuery, products]);
 
-  const handleSearch = useCallback((query: string) => {
-    const trimmedQuery = query.trim();
-    if (!trimmedQuery) return;
-    
-    setSearchHistory(prev => {
-        const newHistory = [trimmedQuery, ...prev.filter(item => item.toLowerCase() !== trimmedQuery.toLowerCase())];
-        return newHistory.slice(0, 10);
-    });
+  const dealsProducts = React.useMemo(() => {
+    const dealIds = new Set(homepageSections?.deals || []);
+    return products.filter(p => dealIds.has(p.id));
+  }, [homepageSections, products]);
 
-    setSearchQuery(trimmedQuery);
-    setCurrentPage('search');
-    window.scrollTo(0, 0);
-  }, []);
-
-  const handleClearSearchHistory = useCallback(() => {
-    setSearchHistory([]);
-  }, []);
-
-  const handleNavigateHome = () => {
-    setActiveCategory('All');
-    setSelectedProductId(null);
-    setCurrentPage('shop');
-  };
-  
-  const handleLogin = async (email: string, password: string) => {
-    try {
-        await signInWithEmailAndPassword(auth, email, password);
-        setCurrentPage('shop');
-    } catch (error) {
-        console.error("Login error:", error);
-        alert((error as Error).message);
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-        await signOut(auth);
-        setCurrentPage('shop');
-    } catch (error) {
-        console.error("Logout error:", error);
-        alert((error as Error).message);
-    }
-  };
-  
-  const handleSignup = async (email: string, password: string) => {
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
-            email: userCredential.user.email,
-            createdAt: new Date(),
-            wishlist: [],
-            cart: [],
-        });
-        setCurrentPage('shop');
-    } catch (error) {
-        console.error("Signup error:", error);
-        alert((error as Error).message);
-    }
-  };
-
-  const handlePlaceOrder = async () => {
-    alert('Thank you for your order! (This is a demo)');
-    setCart([]);
-    if (user) {
-      await setDoc(doc(db, 'users', user.uid), { cart: [] }, { merge: true });
-    }
-    setCurrentPage('shop');
-  };
-  
-  const handleForgotPassword = async (email: string) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      alert(`If an account with the email "${email}" exists, a password reset link has been sent.`);
-      setCurrentPage('login');
-    } catch (error) {
-      console.error("Forgot password error:", error);
-      alert((error as Error).message);
-    }
-  };
-
-  const handleResetPassword = () => {
-    alert('Password has been successfully reset! You can now log in with your new password.');
-    setCurrentPage('login');
-  };
+  const bestsellerProducts = React.useMemo(() => {
+    const bestsellerIds = new Set(homepageSections?.bestsellers || []);
+    return products.filter(p => bestsellerIds.has(p.id));
+  }, [homepageSections, products]);
 
   const renderPage = () => {
-    if (isAuthLoading) {
-      return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
-    }
-    switch (currentPage) {
-      case 'admin':
-        return <AdminDashboard onNavigate={setCurrentPage} />;
-      case 'affiliate':
-        return <AffiliatePage />;
-      case 'account':
-        return <MyAccountPage 
-                 wishlist={wishlist}
-                 allProducts={PRODUCTS}
-                 onProductClick={handleProductClick}
-                 onAddToCart={handleAddToCart}
-                 onToggleWishlist={handleToggleWishlist}
-                 onQuickView={handleOpenQuickView}
-               />;
-      case 'login':
-        return <LoginPage onLogin={handleLogin} onNavigate={setCurrentPage} />;
-      case 'signup':
-        return <SignupPage onSignup={handleSignup} onNavigate={setCurrentPage} />;
-      case 'forgotPassword':
-        return <ForgotPasswordPage onSendResetLink={handleForgotPassword} onNavigate={setCurrentPage} />;
-      case 'resetPassword':
-        return <ResetPasswordPage onResetPassword={handleResetPassword} onNavigate={setCurrentPage} />;
-      case 'cart':
-        return (
-          <CartPage
-            cartItems={cart}
-            allProducts={PRODUCTS}
-            onUpdateQuantity={handleUpdateCartQuantity}
-            onRemoveItem={handleRemoveFromCart}
-            onContinueShopping={handleNavigateHome}
-            onNavigateToCheckout={() => setCurrentPage('checkout')}
-          />
-        );
-      case 'checkout':
-        return (
-          <CheckoutPage
-            cartItems={cart}
-            allProducts={PRODUCTS}
-            onBackToCart={() => setCurrentPage('cart')}
-            onPlaceOrder={handlePlaceOrder}
-          />
-        );
-       case 'searchHistory':
-        return (
-            <SearchPage
-                history={searchHistory}
-                onSearch={handleSearch}
-                onClearHistory={handleClearSearchHistory}
-            />
-        );
-      case 'search':
-        return (
-            <SearchResultsPage
-                query={searchQuery}
-                results={searchedProducts}
-                onProductClick={handleProductClick}
-                onAddToCart={handleAddToCart}
-                wishlist={wishlist}
-                onToggleWishlist={handleToggleWishlist}
-                onQuickView={handleOpenQuickView}
-            />
-        );
-      case 'productReviews': {
-        const product = PRODUCTS.find(p => p.id === selectedProductId);
-        if (!product) {
-            setCurrentPage('shop');
-            return null;
+    switch(currentPage) {
+      case 'cart': return <CartPage products={products} onContinueShopping={() => setCurrentPage('shop')} onNavigateToCheckout={() => setCurrentPage('checkout')} />;
+      case 'login': return <LoginPage onNavigate={onNavigate} />;
+      case 'signup': return <SignupPage onNavigate={onNavigate} />;
+      case 'productDetail':
+        if (selectedProduct) {
+          return <ProductDetailPage
+            product={selectedProduct}
+            relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 5)}
+            onBackToShop={() => setCurrentPage('shop')}
+            onProductClick={handleProductClick}
+            onNavigateToReviews={() => setCurrentPage('productReviews')}
+            onQuickView={setQuickViewProduct}
+          />;
         }
-        const reviews = MOCK_REVIEWS.filter(r => r.productId === selectedProductId);
-        return <ProductReviewsPage product={product} reviews={reviews} onBackToProduct={() => setCurrentPage('productDetail')} />;
-      }
-      case 'productDetail': {
-        const product = PRODUCTS.find(p => p.id === selectedProductId);
-        if (!product) {
-            setCurrentPage('shop');
-            return null;
-        }
-        const relatedProducts = PRODUCTS.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
-        return (
-            <ProductDetailPage
-                product={product}
-                relatedProducts={relatedProducts}
-                onAddToCart={handleAddToCart}
-                wishlist={wishlist}
-                onToggleWishlist={handleToggleWishlist}
-                onBackToShop={handleNavigateHome}
-                onProductClick={handleProductClick}
-                onNavigateToReviews={() => setCurrentPage('productReviews')}
-                onQuickView={handleOpenQuickView}
-            />
-        );
-      }
+        return null;
+      case 'checkout': return <CheckoutPage products={products} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={() => { addToast('Order placed successfully!'); setCart([]); setCurrentPage('shop'); }} />;
+      case 'admin': return (
+        <AdminDashboard
+            onNavigate={onNavigate}
+            products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
+            categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
+            heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
+            orders={orders} customers={customers} promotions={promotions}
+            homepageSections={homepageSections} onSaveHomepageSections={handleSaveHomepageSections}
+            isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
+        />
+      );
+      case 'productReviews': return selectedProduct && <ProductReviewsPage product={selectedProduct} reviews={MOCK_REVIEWS.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} />;
+      case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
+      case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
+      case 'affiliate': return <AffiliatePage />;
+      case 'account': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
+      case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
+      case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast("Password reset successfully!"); onNavigate('login'); }} onNavigate={onNavigate} />;
+      case 'allProducts': return <AllProductsPage products={products.filter(p => p.published)} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'shop':
       default:
         return (
-          <main className="pt-20">
-            <HeroCarousel slides={HERO_SLIDES} />
+          <>
+            <HeroCarousel slides={heroSlides} />
             <Features />
-            <DealsSection 
-              products={DEALS_PRODUCTS} 
-              onProductClick={handleProductClick} 
-              onAddToCart={handleAddToCart}
-              wishlist={wishlist}
-              onToggleWishlist={handleToggleWishlist}
-              onQuickView={handleOpenQuickView}
-            />
-            <CategoryCarousel 
-              categories={CATEGORIES}
-              activeCategory={activeCategory}
-              onSelectCategory={handleSelectCategory}
-            />
-            <ProductGrid 
-              key={activeCategory} // Force re-render for animation
-              title={activeCategory === 'All' ? 'New Arrivals' : activeCategory}
-              products={filteredProducts} 
-              onProductClick={handleProductClick}
-              onAddToCart={handleAddToCart}
-              wishlist={wishlist}
-              onToggleWishlist={handleToggleWishlist}
-              onQuickView={handleOpenQuickView}
-            />
-            <ProductGrid 
-              title="Trending Now"
-              products={TRENDING_PRODUCTS} 
-              onProductClick={handleProductClick}
-              onAddToCart={handleAddToCart}
-              bgColor="bg-white"
-              wishlist={wishlist}
-              onToggleWishlist={handleToggleWishlist}
-              onQuickView={handleOpenQuickView}
-            />
-            <Bestsellers 
-              products={BESTSELLER_PRODUCTS}
-              onProductClick={handleProductClick}
-              onAddToCart={handleAddToCart}
-              wishlist={wishlist}
-              onToggleWishlist={handleToggleWishlist}
-              onQuickView={handleOpenQuickView}
-            />
-            <CTA />
+            <CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
+            <ProductGrid products={filteredProducts} onProductClick={handleProductClick} title="Featured Products" onQuickView={setQuickViewProduct} />
+            {dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
+            <CTA onShopNowClick={() => onNavigate('allProducts')} />
+            {bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
             <Newsletter />
-            <Footer onNavigate={setCurrentPage} />
-          </main>
+          </>
         );
     }
   };
 
+  if (isLoading) {
+    return <LoadingSpinner />;
+  }
 
   return (
-    <div className="bg-pink-50 text-zinc-800 min-h-screen selection:bg-amber-200">
-      <Navbar 
-        cartCount={cartItemCount}
-        wishlistCount={wishlist.length}
-        onCartClick={() => setCurrentPage('cart')}
-        onWishlistClick={handleOpenWishlist}
-        onHomeClick={handleNavigateHome}
-        isAuthenticated={user !== null}
-        onLogout={handleLogout}
-        onNavigate={setCurrentPage}
-        searchHistory={searchHistory}
-        onSearch={handleSearch}
-      />
-
-      {renderPage()}
-
-      <AnimatePresence>
-        {isWishlistOpen && (
-           <WishlistSidebar
-              onClose={handleCloseWishlist}
-              wishlistProductIds={wishlist}
-              allProducts={PRODUCTS}
-              onToggleWishlist={handleToggleWishlist}
-              onAddToCart={handleAddToCart}
-              onProductClick={handleProductClick}
-            />
-        )}
-        {quickViewProduct && (
-            <ProductModal 
-                product={quickViewProduct}
-                onClose={handleCloseQuickView}
-                onAddToCart={handleAddToCart}
-                onViewDetails={handleProductClick}
-            />
-        )}
-      </AnimatePresence>
+    <div className={isDarkMode ? 'dark' : ''}>
+        <Navbar 
+          onCartClick={() => setCurrentPage('cart')} 
+          onWishlistClick={() => setIsWishlistOpen(true)}
+          onHomeClick={() => setCurrentPage('shop')}
+          onNavigate={onNavigate}
+          searchHistory={searchHistory}
+          onSearch={handleSearch}
+        />
+        <AnimatePresence mode="wait">
+            <motion.div
+                key={currentPage}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+            >
+                {renderPage()}
+            </motion.div>
+        </AnimatePresence>
+        <Footer onNavigate={onNavigate} />
+        <AnimatePresence>
+          {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
+          {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
+        </AnimatePresence>
+        <GlobalToastContainer toasts={toasts} />
     </div>
   );
 };

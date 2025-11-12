@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Product, ProductVariant } from '../types';
-import { HeartIcon } from '../constants';
+import * as React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Product } from '../types';
+import { HeartIcon } from './Icons';
 import ProductGrid from './ProductGrid';
+import { useAppContext } from '../context/AppContext';
 
 const MinusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -30,16 +31,17 @@ const StarRating: React.FC<{ rating: number, totalStars?: number }> = ({ rating,
 };
 
 const Star: React.FC<{ filled?: boolean; half?: boolean }> = ({ filled = false, half = false }) => {
+    const gradientId = React.useId();
     return (
         <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
             <defs>
-                <linearGradient id="half-fill">
+                <linearGradient id={gradientId}>
                     <stop offset="50%" stopColor="currentColor" />
                     <stop offset="50%" stopColor="#d1d5db" stopOpacity="1" />
                 </linearGradient>
             </defs>
             <path
-                fill={half ? "url(#half-fill)" : (filled ? "currentColor" : "#d1d5db")}
+                fill={half ? `url(#${gradientId})` : (filled ? "currentColor" : "#d1d5db")}
                 d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
             />
         </svg>
@@ -51,19 +53,19 @@ const StockIndicator: React.FC<{ stock: number }> = ({ stock }) => {
 
     if (stock < 0) {
         text = 'Select options for availability';
-        colorClass = 'text-zinc-500';
+        colorClass = 'text-zinc-500 dark:text-zinc-400';
         dotColorClass = 'bg-zinc-400';
     } else if (stock > 10) {
         text = 'In Stock';
-        colorClass = 'text-green-600';
+        colorClass = 'text-green-600 dark:text-green-400';
         dotColorClass = 'bg-green-500';
     } else if (stock > 0) {
         text = `Low Stock - Only ${stock} left!`;
-        colorClass = 'text-orange-600';
+        colorClass = 'text-orange-600 dark:text-orange-400';
         dotColorClass = 'bg-orange-500';
     } else {
         text = 'Out of Stock';
-        colorClass = 'text-red-600';
+        colorClass = 'text-red-600 dark:text-red-400';
         dotColorClass = 'bg-red-500';
     }
 
@@ -79,43 +81,42 @@ const StockIndicator: React.FC<{ stock: number }> = ({ stock }) => {
 interface ProductDetailPageProps {
     product: Product;
     relatedProducts: Product[];
-    onAddToCart: (productId: number, quantity: number) => void;
-    wishlist: number[];
-    onToggleWishlist: (productId: number) => void;
     onBackToShop: () => void;
     onProductClick: (product: Product) => void;
     onNavigateToReviews: () => void;
     onQuickView: (product: Product) => void;
 }
 
-const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, onAddToCart, wishlist, onToggleWishlist, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
-    const [quantity, setQuantity] = useState(1);
-    const [selectedColor, setSelectedColor] = useState<string | null>(null);
-    const [selectedSize, setSelectedSize] = useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = useState(product.imageUrl);
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
+    const { wishlist, toggleWishlist, addToCart } = useAppContext();
+    const [quantity, setQuantity] = React.useState(1);
+    const [isAdded, setIsAdded] = React.useState(false);
+    const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
+    const [selectedSize, setSelectedSize] = React.useState<string | null>(null);
+    const [selectedImage, setSelectedImage] = React.useState(product.imageUrl);
 
     const hasSale = typeof product.salePrice === 'number';
     const isInWishlist = wishlist.includes(product.id);
 
-    useEffect(() => {
-        // Reset state when product changes
+    React.useEffect(() => {
         setQuantity(1);
         setSelectedColor(null);
         setSelectedSize(null);
         setSelectedImage(product.imageUrl);
+        setIsAdded(false);
     }, [product]);
 
     const handleQuantityChange = (amount: number) => {
         setQuantity(prev => Math.max(1, prev + amount));
     };
     
-    const availableColors = useMemo(() => {
+    const availableColors = React.useMemo(() => {
         if (!product.variants) return [];
         const colors = product.variants.map(v => ({ name: v.color, hex: v.colorHex, imageUrl: v.imageUrl }));
         return [...new Map(colors.map(item => [item.name, item])).values()];
     }, [product.variants]);
 
-    const availableSizes = useMemo(() => {
+    const availableSizes = React.useMemo(() => {
         if (!product.variants || !selectedColor) return [];
         return product.variants
             .filter(v => v.color === selectedColor)
@@ -129,65 +130,44 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
             setSelectedImage(color.imageUrl);
         }
     };
-
-    const handleAddToCartClick = () => {
-        let message = `${quantity} x ${product.name} added to cart!`;
-        if (selectedColor) message = `${quantity} x ${product.name} (Color: ${selectedColor}${selectedSize ? `, Size: ${selectedSize}`: ''}) added to cart!`;
-        onAddToCart(product.id, quantity);
-        alert(message);
-    };
     
     const hasVariants = product.variants && product.variants.length > 0;
     const hasColorOptions = availableColors.length > 0;
     const hasSizeOptions = availableSizes.length > 0;
 
-    const stockLevel = useMemo(() => {
-        const hasVariants = product.variants && product.variants.length > 0;
-        
-        if (!hasVariants) {
-            return product.stock;
-        }
-        
-        const hasColorOptions = availableColors.length > 0;
-        const hasSizeOptions = availableSizes.length > 0;
-
-        if (hasColorOptions && !selectedColor) {
-            return -1;
-        }
-        if (hasSizeOptions && !selectedSize) {
-            return -1;
-        }
-
-        const selectedVariant = product.variants.find(v => {
-            const colorMatch = !hasColorOptions || v.color === selectedColor;
-            const sizeMatch = !hasSizeOptions || v.size === selectedSize;
-            return colorMatch && sizeMatch;
-        });
-
+    const stockLevel = React.useMemo(() => {
+        if (!hasVariants) return product.stock;
+        if ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize)) return -1;
+        const selectedVariant = product.variants?.find(v => (!hasColorOptions || v.color === selectedColor) && (!hasSizeOptions || v.size === selectedSize));
         return selectedVariant ? selectedVariant.stock : 0;
-
-    }, [product, selectedColor, selectedSize, availableColors, availableSizes]);
+    }, [product, selectedColor, selectedSize, hasVariants, hasColorOptions, hasSizeOptions]);
 
     const isAddToCartDisabled = (hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) || stockLevel === 0;
+
+    const handleAddToCartClick = () => {
+        if (isAdded || isAddToCartDisabled) return;
+        addToCart(product.id, quantity);
+        setIsAdded(true);
+        setTimeout(() => setIsAdded(false), 2000);
+    };
     
     const addToCartText = stockLevel === 0 ? 'Out of Stock' :
-        ((hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) ? 'Select Options' : 'Add to Cart');
+        (isAddToCartDisabled ? 'Select Options' : 'Add to Cart');
 
     return (
         <motion.main
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-24 pb-16"
+            className="pt-24 pb-16 bg-bg-primary"
         >
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="mb-6 text-sm text-zinc-500">
-                    <button onClick={onBackToShop} className="hover:text-amber-600">Home</button> / <span className="text-zinc-800 font-medium">{product.category}</span>
+                <div className="mb-6 text-sm text-text-secondary">
+                    <button onClick={onBackToShop} className="hover:text-accent-primary">Home</button> / <span className="text-text-primary font-medium">{product.category}</span>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
-                    {/* Product Image */}
                     <motion.div 
-                        className="bg-white p-4 rounded-lg shadow-md"
+                        className="bg-bg-secondary p-4 rounded-lg shadow-md"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
@@ -195,46 +175,44 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         <img src={selectedImage} alt={product.name} className="w-full h-auto object-cover rounded-lg aspect-square" />
                     </motion.div>
 
-                    {/* Product Details */}
                     <motion.div 
                         className="flex flex-col justify-center"
                         initial={{ opacity: 0, x: 50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        <span className="text-sm text-gray-500 uppercase tracking-wider">{product.category}</span>
-                        <h1 className="text-3xl md:text-4xl font-bold my-2 text-zinc-800">{product.name}</h1>
+                        <span className="text-sm text-text-secondary uppercase tracking-wider">{product.category}</span>
+                        <h1 className="text-3xl md:text-4xl font-bold my-2 text-text-primary">{product.name}</h1>
                         
                         <div className="flex items-center gap-2 mb-4">
                             <StarRating rating={4.5} />
-                            <button onClick={onNavigateToReviews} className="text-sm text-zinc-600 hover:text-amber-600 transition-colors">(142 Reviews)</button>
+                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors">(142 Reviews)</button>
                         </div>
                         
                         {hasSale ? (
                             <div className="flex items-baseline space-x-3">
                                 <p className="text-3xl font-light text-red-600">GH₵{product.salePrice?.toFixed(2)}</p>
-                                <p className="text-xl font-light text-gray-500 line-through">GH₵{product.price.toFixed(2)}</p>
+                                <p className="text-xl font-light text-text-secondary line-through">GH₵{product.price.toFixed(2)}</p>
                             </div>
                         ) : (
-                            <p className="text-3xl font-light text-amber-600">GH₵{product.price.toFixed(2)}</p>
+                            <p className="text-3xl font-light text-accent-primary">GH₵{product.price.toFixed(2)}</p>
                         )}
 
                         <StockIndicator stock={stockLevel} />
 
-                        <p className="text-gray-600 mb-6 leading-relaxed">{product.description}</p>
+                        <p className="text-text-secondary mb-6 leading-relaxed">{product.description}</p>
                         
-                        {/* Variant Selection */}
                         {hasVariants && (
                             <div className="space-y-6 mb-6">
                                 {hasColorOptions && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-zinc-700 mb-2">Color: <span className="font-normal">{selectedColor}</span></h3>
+                                        <h3 className="text-sm font-semibold text-text-primary mb-2">Color: <span className="font-normal">{selectedColor}</span></h3>
                                         <div className="flex items-center gap-3">
                                             {availableColors.map(color => (
                                                 <button
                                                     key={color.name}
                                                     onClick={() => handleColorSelect(color)}
-                                                    className={`w-8 h-8 rounded-full border-2 transition ${selectedColor === color.name ? 'ring-2 ring-amber-500 ring-offset-2' : 'border-gray-200'}`}
+                                                    className={`w-8 h-8 rounded-full border-2 transition ${selectedColor === color.name ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-secondary' : 'border-gray-200 dark:border-zinc-600'}`}
                                                     style={{ backgroundColor: color.hex || 'transparent' }}
                                                     aria-label={`Select color ${color.name}`}
                                                 />
@@ -244,7 +222,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 )}
                                 {hasSizeOptions && (
                                      <div>
-                                        <h3 className="text-sm font-semibold text-zinc-700 mb-2">Size: <span className="font-normal">{selectedSize}</span></h3>
+                                        <h3 className="text-sm font-semibold text-text-primary mb-2">Size: <span className="font-normal">{selectedSize}</span></h3>
                                         <div className="flex items-center gap-3">
                                             {availableSizes.map(size => (
                                                 <button
@@ -253,12 +231,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                                     disabled={size.stock === 0}
                                                     className={`px-4 py-2 border rounded-full text-sm font-medium transition ${
                                                         selectedSize === size.name 
-                                                            ? 'bg-amber-600 text-white border-amber-600' 
-                                                            : 'bg-white text-zinc-700 border-gray-300'
+                                                            ? 'bg-accent-primary text-accent-text border-accent-primary' 
+                                                            : 'bg-bg-secondary text-text-primary border-border-primary'
                                                     } ${
                                                         size.stock === 0 
                                                             ? 'opacity-50 cursor-not-allowed line-through' 
-                                                            : 'hover:border-amber-500'
+                                                            : 'hover:border-accent-primary'
                                                     }`}
                                                 >
                                                     {size.name}
@@ -271,30 +249,48 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         )}
 
                         <div className="flex items-center gap-4 mb-6">
-                            <span className="font-semibold text-zinc-700">Quantity:</span>
-                            <div className="flex items-center border border-gray-300 rounded-full bg-white">
-                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="p-2.5 text-zinc-600 hover:text-amber-600 disabled:opacity-50" aria-label="Decrease quantity">
+                            <span className="font-semibold text-text-primary">Quantity:</span>
+                            <div className="flex items-center border border-border-primary rounded-full bg-bg-secondary">
+                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="p-2.5 text-text-secondary hover:text-accent-primary disabled:opacity-50" aria-label="Decrease quantity">
                                     <MinusIcon />
                                 </button>
-                                <span className="px-5 font-semibold text-lg text-zinc-800 tabular-nums">{quantity}</span>
-                                <button onClick={() => handleQuantityChange(1)} className="p-2.5 text-zinc-600 hover:text-amber-600" aria-label="Increase quantity">
+                                <span className="px-5 font-semibold text-lg text-text-primary tabular-nums">{quantity}</span>
+                                <button onClick={() => handleQuantityChange(1)} className="p-2.5 text-text-secondary hover:text-accent-primary" aria-label="Increase quantity">
                                     <PlusIcon />
                                 </button>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <button 
+                            <motion.button 
                                 onClick={handleAddToCartClick} 
-                                className="flex-grow bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-full transition-colors disabled:bg-zinc-400 disabled:cursor-not-allowed"
-                                disabled={isAddToCartDisabled}
+                                className="flex-grow font-bold py-3 px-4 rounded-full disabled:cursor-not-allowed overflow-hidden"
+                                disabled={isAddToCartDisabled && !isAdded}
+                                animate={{ 
+                                    backgroundColor: isAdded ? '#22c55e' : (isAddToCartDisabled ? '#a1a1aa' : '#f59e0b')
+                                }}
+                                whileHover={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 1.05 }}
+                                whileTap={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 0.95 }}
                             >
-                                {addToCartText}
-                            </button>
+                               <span className={`block ${isAdded || !isAddToCartDisabled ? 'text-accent-text' : 'text-white'}`}>
+                                    <AnimatePresence mode="wait" initial={false}>
+                                        <motion.span
+                                            key={isAdded ? 'added' : addToCartText}
+                                            initial={{ y: 10, opacity: 0 }}
+                                            animate={{ y: 0, opacity: 1 }}
+                                            exit={{ y: -10, opacity: 0 }}
+                                            transition={{ duration: 0.2 }}
+                                            className="inline-block"
+                                        >
+                                            {isAdded ? 'Added!' : addToCartText}
+                                        </motion.span>
+                                    </AnimatePresence>
+                                </span>
+                            </motion.button>
                             <motion.button
-                                onClick={() => onToggleWishlist(product.id)}
+                                onClick={() => toggleWishlist(product.id)}
                                 className={`flex-shrink-0 flex items-center justify-center p-3 rounded-full border transition-colors ${
-                                    isInWishlist ? 'bg-red-50 border-red-400 text-red-500' : 'bg-white border-gray-300 text-zinc-600 hover:bg-gray-100 hover:border-gray-400'
+                                    isInWishlist ? 'bg-red-50 dark:bg-red-500/10 border-red-400 dark:border-red-500/30 text-red-500' : 'bg-bg-secondary border-border-primary text-text-secondary hover:bg-bg-tertiary hover:border-zinc-400 dark:hover:border-zinc-500'
                                 }`}
                                 whileTap={{ scale: 0.9 }}
                                 aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
@@ -306,16 +302,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                 </div>
             </div>
 
-            {/* Related Products */}
             {relatedProducts.length > 0 && (
                 <div className="mt-16 md:mt-24">
                     <ProductGrid 
                         title="You Might Also Like"
                         products={relatedProducts}
                         onProductClick={onProductClick}
-                        onAddToCart={onAddToCart}
-                        wishlist={wishlist}
-                        onToggleWishlist={onToggleWishlist}
                         onQuickView={onQuickView}
                         bgColor="bg-transparent"
                     />

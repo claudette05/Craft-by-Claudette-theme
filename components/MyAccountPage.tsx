@@ -1,75 +1,83 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product } from '../types';
+import { Product, AccountPage } from '../types';
 import AccountSidebar from './account/AccountSidebar';
 import AccountDashboard from './account/AccountDashboard';
 import AccountOrderHistory from './account/AccountOrderHistory';
 import AccountProfile from './account/AccountProfile';
 import AccountAddresses from './account/AccountAddresses';
 import AccountWishlist from './account/AccountWishlist';
-
-export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist';
+import AccountNotifications from './account/AccountNotifications';
+import { HamburgerIcon } from './Icons';
 
 interface MyAccountPageProps {
-    wishlist: number[];
-    allProducts: Product[];
+    products: Product[];
     onProductClick: (product: Product) => void;
-    onAddToCart: (productId: number, quantity: number) => void;
-    onToggleWishlist: (productId: number) => void;
     onQuickView: (product: Product) => void;
 }
 
 const MyAccountPage: React.FC<MyAccountPageProps> = (props) => {
-    const [activePage, setActivePage] = useState<AccountPage>('dashboard');
+    const [activePage, setActivePage] = React.useState<AccountPage>('dashboard');
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
 
     const renderContent = () => {
         switch (activePage) {
-            case 'dashboard':
-                return <AccountDashboard setActivePage={setActivePage} />;
-            case 'orders':
-                return <AccountOrderHistory />;
-            case 'profile':
-                return <AccountProfile />;
-            case 'addresses':
-                return <AccountAddresses />;
-            case 'wishlist':
-                return <AccountWishlist {...props} />;
-            default:
-                return <AccountDashboard setActivePage={setActivePage} />;
+            case 'dashboard': return <AccountDashboard setActivePage={setActivePage} />;
+            case 'orders': return <AccountOrderHistory />;
+            case 'profile': return <AccountProfile />;
+            case 'addresses': return <AccountAddresses />;
+            case 'wishlist': return <AccountWishlist {...props} />;
+            case 'notifications': return <AccountNotifications />;
+            default: return <AccountDashboard setActivePage={setActivePage} />;
         }
     };
-
+    
     return (
-        <motion.main
+        <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16"
+            className="pt-20 bg-pink-50 dark:bg-bg-tertiary min-h-screen"
         >
-            <header className="mb-8 text-center md:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold text-zinc-800">My Account</h1>
-                <p className="mt-1 text-zinc-500">Manage your orders, profile, and wishlist.</p>
-            </header>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <header className="mb-8 text-center">
+                    <h1 className="text-3xl font-bold text-text-primary">My Account</h1>
+                </header>
+                <div className="flex flex-col md:flex-row gap-8 items-start">
+                    <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 bg-bg-secondary rounded-md shadow-sm fixed top-24 left-4 z-30">
+                        <HamburgerIcon />
+                    </button>
 
-            <div className="flex flex-col md:flex-row gap-8 lg:gap-12">
-                <div className="w-full md:w-1/4 lg:w-1/5 flex-shrink-0">
-                    <AccountSidebar activePage={activePage} setActivePage={setActivePage} />
-                </div>
-                <main className="flex-1">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={activePage}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.2 }}
-                            className="bg-white/60 p-6 sm:p-8 rounded-lg shadow-md"
-                        >
-                            {renderContent()}
-                        </motion.div>
+                    <AnimatePresence>
+                        {isSidebarOpen && (
+                            <>
+                                <motion.div className="fixed inset-0 bg-black/50 z-40 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsSidebarOpen(false)} />
+                                <motion.div className="fixed top-0 left-0 h-full z-50 md:hidden" initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', stiffness: 300, damping: 30 }}>
+                                    <AccountSidebar activePage={activePage} setActivePage={setActivePage} onLinkClick={() => setIsSidebarOpen(false)} />
+                                </motion.div>
+                            </>
+                        )}
                     </AnimatePresence>
-                </main>
+                    
+                    <div className="hidden md:block">
+                        <AccountSidebar activePage={activePage} setActivePage={setActivePage} />
+                    </div>
+
+                    <main className="flex-1 w-full bg-bg-secondary p-6 sm:p-8 rounded-lg shadow-sm">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activePage}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {renderContent()}
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                </div>
             </div>
-        </motion.main>
+        </motion.div>
     );
 };
 

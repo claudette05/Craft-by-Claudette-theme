@@ -1,4 +1,5 @@
-import React from 'react';
+
+import * as React from 'react';
 import { motion } from 'framer-motion';
 
 const CheckIcon = ({ className }: { className?: string }) => (

@@ -1,12 +1,11 @@
-import React, { ReactNode } from 'react';
-// FIX: Import Variants from framer-motion to correctly type animation variants.
+import * as React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { XIcon } from '../../../constants';
+import { XIcon } from '../../Icons';
 
 interface ModalProps {
     title: string;
     onClose: () => void;
-    children: ReactNode;
+    children: React.ReactNode;
 }
 
 const backdropVariants: Variants = {
@@ -14,7 +13,6 @@ const backdropVariants: Variants = {
     visible: { opacity: 1 },
 };
 
-// FIX: Correctly type the variants object with the `Variants` type from framer-motion.
 const modalVariants: Variants = {
     hidden: { opacity: 0, y: 50, scale: 0.95 },
     visible: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
