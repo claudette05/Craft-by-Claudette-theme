@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '../types';
-import { HeartIcon } from './Icons';
+import { ChevronLeftIcon, HeartIcon, LinkIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
 
@@ -88,7 +88,7 @@ interface ProductDetailPageProps {
 }
 
 const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
-    const { wishlist, toggleWishlist, addToCart } = useAppContext();
+    const { wishlist, toggleWishlist, addToCart, addToast } = useAppContext();
     const [quantity, setQuantity] = React.useState(1);
     const [isAdded, setIsAdded] = React.useState(false);
     const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
@@ -154,6 +154,25 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const addToCartText = stockLevel === 0 ? 'Out of Stock' :
         (isAddToCartDisabled ? 'Select Options' : 'Add to Cart');
 
+    const handleCopyToClipboard = () => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+            addToast('Link copied to clipboard!', 'info');
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            addToast('Failed to copy link', 'error');
+        });
+    };
+    
+    const goBack = () => {
+        // Check if there's a history to go back to
+        if (window.history.length > 1) {
+            window.history.back();
+        } else {
+            // Otherwise, navigate to the shop as a fallback
+            onBackToShop();
+        }
+    };
+
     return (
         <motion.main
             initial={{ opacity: 0 }}
@@ -161,6 +180,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
             className="pt-24 pb-16 bg-bg-primary"
         >
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+                <button
+                    onClick={goBack}
+                    className="flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-accent-primary transition-colors mb-4"
+                    aria-label="Go back to previous page"
+                >
+                    <ChevronLeftIcon className="h-4 w-4" />
+                    <span>Back</span>
+                </button>
                 <div className="mb-6 text-sm text-text-secondary">
                     <button onClick={onBackToShop} className="hover:text-accent-primary">Home</button> / <span className="text-text-primary font-medium">{product.category}</span>
                 </div>
@@ -297,6 +324,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 >
                                 <HeartIcon className="h-6 w-6" filled={isInWishlist} />
                             </motion.button>
+                        </div>
+                        <div className="mt-6 pt-6 border-t border-border-primary">
+                            <button
+                                onClick={handleCopyToClipboard}
+                                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-full bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors"
+                                aria-label="Share this product by copying the link"
+                            >
+                                <LinkIcon className="h-5 w-5" />
+                                <span className="font-semibold">Share</span>
+                            </button>
                         </div>
                     </motion.div>
                 </div>

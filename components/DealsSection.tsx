@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '../types';
 import ProductCard from './ProductCard';
 import { ClockIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
@@ -10,14 +10,47 @@ interface DealsSectionProps {
   onQuickView: (product: Product) => void;
 }
 
+const AnimatedDigit: React.FC<{ digit: string }> = ({ digit }) => (
+    <div className="relative h-[1em] w-[0.6em] overflow-hidden">
+        <AnimatePresence initial={false}>
+            <motion.span
+                key={digit}
+                initial={{ y: '100%' }}
+                animate={{ y: '0%' }}
+                exit={{ y: '-100%' }}
+                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                className="absolute inset-0 flex items-center justify-center"
+            >
+                {digit}
+            </motion.span>
+        </AnimatePresence>
+    </div>
+);
+
+const TimeBlock: React.FC<{ value: number; label: string }> = ({ value, label }) => {
+    const digits = String(value).padStart(2, '0');
+    return (
+        <div className="text-center">
+            <div className="text-2xl md:text-4xl font-bold text-accent-text bg-accent-primary/80 rounded-lg px-2 sm:px-3 py-2 flex items-center justify-center tabular-nums">
+                <AnimatedDigit digit={digits[0]} />
+                <AnimatedDigit digit={digits[1]} />
+            </div>
+            <div className="text-xs uppercase mt-1 text-text-secondary">{label}</div>
+        </div>
+    );
+};
+
 const Countdown: React.FC = () => {
     const calculateTimeLeft = () => {
-        const difference = +new Date("2024-12-31") - +new Date();
-        let timeLeft: { [key: string]: number } = {};
+        const now = new Date();
+        const endOfDay = new Date(now);
+        endOfDay.setHours(23, 59, 59, 999);
+        const difference = +endOfDay - +now;
+
+        let timeLeft = { hours: 0, minutes: 0, seconds: 0 };
 
         if (difference > 0) {
             timeLeft = {
-                days: Math.floor(difference / (1000 * 60 * 60 * 24)),
                 hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
                 minutes: Math.floor((difference / 1000 / 60) % 60),
                 seconds: Math.floor((difference / 1000) % 60)
@@ -37,29 +70,23 @@ const Countdown: React.FC = () => {
         return () => clearTimeout(timer);
     });
 
-    const timerComponents: React.ReactNode[] = [];
-
-    Object.keys(timeLeft).forEach((interval) => {
-        if (!timeLeft[interval] && timeLeft[interval] !== 0) {
-            return;
-        }
-
-        timerComponents.push(
-            <div key={interval} className="text-center">
-                <div className="text-2xl md:text-4xl font-bold text-accent-text bg-accent-primary/80 rounded-lg px-2 sm:px-3 py-2">
-                    {String(timeLeft[interval]).padStart(2, '0')}
-                </div>
-                <div className="text-xs uppercase mt-1 text-text-secondary">{interval}</div>
-            </div>
-        );
-    });
+    const isTimeUp = timeLeft.hours === 0 && timeLeft.minutes === 0 && timeLeft.seconds === 0;
 
     return (
         <div className="flex space-x-2 md:space-x-4 justify-center">
-            {timerComponents.length ? timerComponents : <span>Time's up!</span>}
+            {isTimeUp ? (
+                <span className="text-lg font-semibold text-text-primary">Deals have ended for today!</span>
+            ) : (
+                <>
+                    <TimeBlock value={timeLeft.hours} label="hours" />
+                    <TimeBlock value={timeLeft.minutes} label="minutes" />
+                    <TimeBlock value={timeLeft.seconds} label="seconds" />
+                </>
+            )}
         </div>
     );
 };
+
 
 const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, onQuickView }) => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);

@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { AccountPage } from '../../types';
-import { HomeIcon, ShoppingCartIcon, UserIcon, HeartIcon, LocationMarkerIcon, BellIcon, LogoutIcon } from '../Icons';
+import { HomeIcon, ShoppingCartIcon, UserIcon, HeartIcon, LocationMarkerIcon, BellIcon, LogoutIcon, TruckIcon } from '../Icons';
 import { useAppContext } from '../../context/AppContext';
 
 interface AccountSidebarProps {
@@ -34,6 +34,7 @@ const AccountSidebar: React.FC<AccountSidebarProps> = ({ activePage, setActivePa
     const navItems: { id: AccountPage, label: string, icon: React.ComponentType<{ className?: string }> }[] = [
         { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
         { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
+        { id: 'tracking', label: 'Order Tracking', icon: TruckIcon },
         { id: 'wishlist', label: 'Wishlist', icon: HeartIcon },
         { id: 'profile', label: 'Profile Details', icon: UserIcon },
         { id: 'addresses', label: 'Addresses', icon: LocationMarkerIcon },

@@ -10,6 +10,8 @@ const statusColorMap: Record<OrderStatus, string> = {
     Processing: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
     Pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-400',
     Cancelled: 'bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400',
+    // FIX: Added 'Shipped' to satisfy the OrderStatus type.
+    Shipped: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
 };
 
 const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({ orders }) => {

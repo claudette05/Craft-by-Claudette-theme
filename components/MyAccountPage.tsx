@@ -8,6 +8,7 @@ import AccountProfile from './account/AccountProfile';
 import AccountAddresses from './account/AccountAddresses';
 import AccountWishlist from './account/AccountWishlist';
 import AccountNotifications from './account/AccountNotifications';
+import AccountOrderTracking from './account/AccountOrderTracking';
 import { HamburgerIcon } from './Icons';
 
 interface MyAccountPageProps {
@@ -28,6 +29,7 @@ const MyAccountPage: React.FC<MyAccountPageProps> = (props) => {
             case 'addresses': return <AccountAddresses />;
             case 'wishlist': return <AccountWishlist {...props} />;
             case 'notifications': return <AccountNotifications />;
+            case 'tracking': return <AccountOrderTracking />;
             default: return <AccountDashboard setActivePage={setActivePage} />;
         }
     };

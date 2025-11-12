@@ -1,12 +1,62 @@
 import { AdminOrder, AdminCustomer, Promotion } from './types';
 
 export const MOCK_ORDERS: AdminOrder[] = [
-  { id: '#12548', customerName: 'John Doe', date: '2023-10-26', total: 125.00, status: 'Completed' },
-  { id: '#12547', customerName: 'Jane Smith', date: '2023-10-25', total: 85.50, status: 'Processing' },
-  { id: '#12546', customerName: 'Emily Johnson', date: '2023-10-25', total: 240.00, status: 'Completed' },
-  { id: '#12545', customerName: 'Mike Brown', date: '2023-10-24', total: 45.00, status: 'Pending' },
+  { 
+    id: '#12548', 
+    customerName: 'John Doe', 
+    date: '2023-10-26', 
+    total: 125.00, 
+    status: 'Completed',
+    trackingNumber: '1Z999AA10123456784',
+    trackingHistory: [
+      { status: 'Order Placed', date: '2023-10-26 10:05 AM', location: 'Accra, GH' },
+      { status: 'Shipped', date: '2023-10-26 05:30 PM', location: 'Accra Sorting Center, GH' },
+      { status: 'Out for Delivery', date: '2023-10-27 08:15 AM', location: 'East Legon, GH' },
+      { status: 'Delivered', date: '2023-10-27 01:20 PM', location: 'Delivered to front door.' }
+    ]
+  },
+  { 
+    id: '#12547', 
+    customerName: 'Jane Smith', 
+    date: '2023-10-25', 
+    total: 85.50, 
+    status: 'Shipped',
+    trackingNumber: '1Z999AA10123456785',
+    trackingHistory: [
+      { status: 'Order Placed', date: '2023-10-25 11:30 AM', location: 'Accra, GH' },
+      { status: 'Shipped', date: '2023-10-26 09:00 AM', location: 'Accra Sorting Center, GH' },
+      { status: 'Out for Delivery', date: '2023-10-28 09:00 AM', location: 'Kumasi, GH' },
+    ]
+  },
+  { 
+    id: '#12546', 
+    customerName: 'Emily Johnson', 
+    date: '2023-10-25', 
+    total: 240.00, 
+    status: 'Completed',
+    trackingNumber: '1Z999AA10123456786',
+    trackingHistory: [
+        { status: 'Order Placed', date: '2023-10-25 02:00 PM', location: 'Accra, GH' },
+        { status: 'Shipped', date: '2023-10-25 06:45 PM', location: 'Accra Sorting Center, GH' },
+        { status: 'Delivered', date: '2023-10-26 11:10 AM', location: 'Delivered' }
+    ]
+  },
+  { id: '#12545', customerName: 'Mike Brown', date: '2023-10-24', total: 45.00, status: 'Processing' },
   { id: '#12544', customerName: 'Sarah Wilson', date: '2023-10-23', total: 15.00, status: 'Cancelled' },
-  { id: '#12543', customerName: 'David Lee', date: '2023-10-22', total: 95.00, status: 'Completed' },
+  { 
+    id: '#12543', 
+    customerName: 'David Lee', 
+    date: '2023-10-22', 
+    total: 95.00, 
+    status: 'Completed',
+    trackingNumber: '1Z999AA10123456787',
+    trackingHistory: [
+        { status: 'Order Placed', date: '2023-10-22 09:10 AM', location: 'Accra, GH' },
+        { status: 'Shipped', date: '2023-10-22 04:00 PM', location: 'Accra Sorting Center, GH' },
+        { status: 'Out for Delivery', date: '2023-10-23 08:30 AM', location: 'Tema, GH' },
+        { status: 'Delivered', date: '2023-10-23 12:45 PM', location: 'Left with receptionist.' }
+    ]
+  },
   { id: '#12542', customerName: 'Jessica Garcia', date: '2023-10-22', total: 110.25, status: 'Completed' },
 ];
 

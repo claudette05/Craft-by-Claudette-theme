@@ -1,6 +1,8 @@
 
+
 import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
+import { ChevronLeftIcon } from './components/Icons';
 import { Product, Page, HeroSlide, HomepageSections, Category, AdminOrder, AdminCustomer, Promotion } from './types';
 import { HERO_SLIDES, CATEGORIES, MOCK_REVIEWS } from './constants';
 import MOCK_PRODUCTS from './mockProducts';
@@ -33,6 +35,34 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
 import AllProductsPage from './components/AllProductsPage';
+
+const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
+  const goBack = () => {
+    // Check if there's a history to go back to
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      // Otherwise, navigate to the shop as a fallback
+      onNavigate('shop');
+    }
+  };
+
+  return (
+    <motion.button
+      onClick={goBack}
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: -20 }}
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      className="fixed bottom-5 left-5 z-50 flex items-center gap-2 bg-bg-secondary text-text-primary px-4 py-2 rounded-full shadow-lg border border-border-primary"
+      aria-label="Go back to the previous page"
+    >
+      <ChevronLeftIcon className="h-5 w-5" />
+      <span className="font-medium text-sm">Back</span>
+    </motion.button>
+  );
+};
 
 const getRouteFromHash = (): { page: Page; productId: number | null } => {
     const hash = window.location.hash.slice(1);
@@ -208,7 +238,7 @@ const App: React.FC = () => {
   React.useEffect(() => {
     const handleHashChange = () => {
         const { page, productId } = getRouteFromHash();
-        if (page === 'productDetail' && productId !== null) setSelectedProductId(productId);
+        setSelectedProductId(productId);
         setCurrentPage(page);
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -282,7 +312,7 @@ const App: React.FC = () => {
         if (selectedProduct) {
           return <ProductDetailPage
             product={selectedProduct}
-            relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 5)}
+            relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 8)}
             onBackToShop={() => setCurrentPage('shop')}
             onProductClick={handleProductClick}
             onNavigateToReviews={() => setCurrentPage('productReviews')}
@@ -333,14 +363,21 @@ const App: React.FC = () => {
 
   return (
     <div className={isDarkMode ? 'dark' : ''}>
-        <Navbar 
-          onCartClick={() => setCurrentPage('cart')} 
-          onWishlistClick={() => setIsWishlistOpen(true)}
-          onHomeClick={() => setCurrentPage('shop')}
-          onNavigate={onNavigate}
-          searchHistory={searchHistory}
-          onSearch={handleSearch}
-        />
+        {currentPage !== 'admin' && (
+          <Navbar 
+            onCartClick={() => setCurrentPage('cart')} 
+            onWishlistClick={() => setIsWishlistOpen(true)}
+            onHomeClick={() => setCurrentPage('shop')}
+            onNavigate={onNavigate}
+            searchHistory={searchHistory}
+            onSearch={handleSearch}
+          />
+        )}
+        <AnimatePresence>
+            {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && (
+                <BackButton onNavigate={onNavigate} />
+            )}
+        </AnimatePresence>
         <AnimatePresence mode="wait">
             <motion.div
                 key={currentPage}
@@ -352,7 +389,7 @@ const App: React.FC = () => {
                 {renderPage()}
             </motion.div>
         </AnimatePresence>
-        <Footer onNavigate={onNavigate} />
+        {currentPage !== 'admin' && <Footer onNavigate={onNavigate} />}
         <AnimatePresence>
           {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
           {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}

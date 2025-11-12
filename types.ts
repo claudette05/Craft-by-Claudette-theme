@@ -54,7 +54,15 @@ export interface ToastMessage {
   type: 'success' | 'error' | 'info';
 }
 
-export type OrderStatus = 'Completed' | 'Processing' | 'Pending' | 'Cancelled';
+export type OrderStatus = 'Completed' | 'Processing' | 'Pending' | 'Cancelled' | 'Shipped';
+
+export type TrackingStatus = 'Order Placed' | 'Shipped' | 'Out for Delivery' | 'Delivered';
+
+export interface OrderTrackingEvent {
+    status: TrackingStatus;
+    date: string;
+    location: string;
+}
 
 export interface AdminOrder {
   id: string;
@@ -62,6 +70,8 @@ export interface AdminOrder {
   date: string;
   total: number;
   status: OrderStatus;
+  trackingNumber?: string;
+  trackingHistory?: OrderTrackingEvent[];
 }
 
 export interface AdminCustomer {
@@ -117,7 +127,7 @@ export interface LookbookPost {
     caption: string;
 }
 
-export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist' | 'notifications';
+export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist' | 'notifications' | 'tracking';
 
 export interface AdminTopProduct {
     id: number;
