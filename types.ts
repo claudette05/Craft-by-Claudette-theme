@@ -10,7 +10,7 @@ export interface ProductVariant {
 }
 
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   price: number;
   salePrice?: number;
@@ -24,27 +24,27 @@ export interface Product {
 }
 
 export interface Category {
-  id: number;
+  id: string;
   name: string;
   imageUrl: string;
 }
 
 export interface HeroSlide {
-  id: number;
+  id: string;
   title: string;
   subtitle: string;
   imageUrl: string;
   buttonText: string;
 }
 
-export type Page = 
-  'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 
-  'checkout' | 'admin' | 'productReviews' | 'search' | 
-  'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 
+export type Page =
+  'shop' | 'cart' | 'login' | 'signup' | 'productDetail' |
+  'checkout' | 'admin' | 'productReviews' | 'search' |
+  'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' |
   'resetPassword' | 'allProducts';
 
 export interface CartItem {
-  productId: number;
+  productId: string;
   quantity: number;
 }
 
@@ -75,7 +75,7 @@ export interface AdminOrder {
 }
 
 export interface AdminCustomer {
-  id: number;
+  id: string;
   name: string;
   avatarUrl: string;
   email: string;
@@ -84,7 +84,7 @@ export interface AdminCustomer {
 }
 
 export interface Promotion {
-    id: number;
+    id: string;
     code: string;
     type: 'Percentage' | 'Fixed';
     value: number;
@@ -93,8 +93,8 @@ export interface Promotion {
 }
 
 export interface ProductReview {
-  id: number;
-  productId: number;
+  id: string;
+  productId: string;
   author: string;
   rating: number;
   date: string;
@@ -104,8 +104,8 @@ export interface ProductReview {
 }
 
 export interface HomepageSections {
-    deals: number[];
-    bestsellers: number[];
+    deals: string[];
+    bestsellers: string[];
 }
 
 export interface HomepageSectionConfig {
@@ -130,7 +130,7 @@ export interface LookbookPost {
 export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist' | 'notifications' | 'tracking';
 
 export interface AdminTopProduct {
-    id: number;
+    id: string;
     name: string;
     imageUrl: string;
     sales: number;
