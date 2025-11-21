@@ -1,7 +1,8 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, UserIcon, HeartIcon } from './Icons';
-import { Page } from '../types';
+import { Page, Product } from '../types';
 import ThemeToggle from './ThemeToggle';
 import { useAppContext } from '../context/AppContext';
 
@@ -12,6 +13,7 @@ interface NavbarProps {
   onNavigate: (page: Page) => void;
   searchHistory: string[];
   onSearch: (query: string) => void;
+  products: Product[];
 }
 
 const navLinks = [
@@ -19,7 +21,7 @@ const navLinks = [
   { name: 'Contact', href: '#' },
 ];
 
-const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeClick, onNavigate, searchHistory, onSearch }) => {
+const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeClick, onNavigate, searchHistory, onSearch, products }) => {
   const { cartItemCount, wishlist, user, logout, isDarkMode, toggleDarkMode } = useAppContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
@@ -90,6 +92,24 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
     } else {
       setIsSearchOpen(true);
     }
+  };
+
+  const suggestions = React.useMemo(() => {
+    if (!searchInputValue.trim()) return [];
+    const lowerQuery = searchInputValue.toLowerCase();
+    return products
+      .filter(p => 
+        p.name.toLowerCase().includes(lowerQuery) || 
+        p.category.toLowerCase().includes(lowerQuery) ||
+        p.tags?.some(t => t.toLowerCase().includes(lowerQuery))
+      )
+      .slice(0, 5);
+  }, [searchInputValue, products]);
+
+  const handleSuggestionClick = (productName: string) => {
+    onSearch(productName);
+    setIsSearchOpen(false);
+    setSearchInputValue('');
   };
 
   return (
@@ -213,6 +233,42 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
                     placeholder="Search for products..."
                     className="w-full pl-12 pr-4 py-3 rounded-full border border-accent-primary/50 bg-bg-secondary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 transition"
                   />
+                   <AnimatePresence>
+                    {searchInputValue.length > 0 && suggestions.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="absolute top-full left-0 right-0 mt-4 bg-bg-secondary/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-border-primary/50 overflow-hidden max-h-[60vh] overflow-y-auto z-50"
+                        >
+                            {suggestions.map(product => (
+                                <button
+                                    key={product.id}
+                                    type="button"
+                                    onClick={() => handleSuggestionClick(product.name)}
+                                    className="w-full text-left px-4 py-3 hover:bg-bg-tertiary flex items-center gap-4 transition-colors border-b border-border-primary/50 last:border-0"
+                                >
+                                    <img src={product.imageUrl} alt={product.name} className="w-10 h-10 object-cover rounded-md" />
+                                    <div>
+                                        <p className="text-sm font-medium text-text-primary">{product.name}</p>
+                                        <div className="flex items-center gap-2 text-xs text-text-secondary">
+                                            <span>{product.category}</span>
+                                            {typeof product.salePrice === 'number' && <span className="text-red-500 font-medium">Sale</span>}
+                                        </div>
+                                    </div>
+                                </button>
+                            ))}
+                            {suggestions.length > 0 && (
+                                 <button
+                                    type="submit"
+                                    className="w-full text-center py-3 text-sm font-medium text-accent-primary hover:bg-bg-tertiary transition-colors bg-bg-secondary/50"
+                                >
+                                    View all results for "{searchInputValue}"
+                                </button>
+                            )}
+                        </motion.div>
+                    )}
+                    </AnimatePresence>
                 </div>
                 <button 
                   type="button"

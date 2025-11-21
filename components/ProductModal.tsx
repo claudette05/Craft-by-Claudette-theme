@@ -38,6 +38,16 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
     const [isAdded, setIsAdded] = React.useState(false);
     const hasSale = typeof product.salePrice === 'number';
 
+    const [selectedImage, setSelectedImage] = React.useState(product.imageUrl);
+
+    const allImages = React.useMemo(() => {
+        const imgs = [product.imageUrl];
+        if (product.images) {
+            imgs.push(...product.images);
+        }
+        return Array.from(new Set(imgs));
+    }, [product]);
+
     const handleQuantityChange = (amount: number) => {
         setQuantity(prev => Math.max(1, prev + amount));
     };
@@ -80,8 +90,35 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
                 >
                     <XIcon />
                 </button>
-                <div className="w-full md:w-1/2 p-4">
-                    <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover rounded-lg aspect-square"/>
+                <div className="w-full md:w-1/2 p-4 flex flex-col">
+                    <div className="relative flex-grow overflow-hidden rounded-lg aspect-square mb-4">
+                         <AnimatePresence mode="wait">
+                            <motion.img 
+                                key={selectedImage}
+                                src={selectedImage} 
+                                alt={product.name} 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="w-full h-full object-cover" 
+                            />
+                        </AnimatePresence>
+                    </div>
+                     {allImages.length > 1 && (
+                        <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+                            {allImages.map((img, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => setSelectedImage(img)}
+                                    className={`flex-shrink-0 w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-amber-500 ring-2 ring-amber-500/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                    aria-label={`View image ${index + 1}`}
+                                >
+                                    <img src={img} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
                 <div className="w-full md:w-1/2 p-6 flex flex-col justify-center overflow-y-auto">
                     <span className="text-sm text-gray-500 dark:text-gray-400 uppercase tracking-wider">{product.category}</span>

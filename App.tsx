@@ -1,9 +1,11 @@
 
-
 import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeftIcon } from './components/Icons';
 import { Product, Page, HeroSlide, HomepageSections, Category, AdminOrder, AdminCustomer, Promotion } from './types';
+import { HERO_SLIDES, CATEGORIES } from './constants';
+import MOCK_PRODUCTS from './mockProducts';
+import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_PROMOTIONS } from './adminConstants';
 import Navbar from './components/Navbar';
 import HeroCarousel from './components/HeroCarousel';
 import Features from './components/Features';
@@ -24,6 +26,7 @@ import ProductReviewsPage from './components/ProductReviewsPage';
 import SearchResultsPage from './components/SearchResultsPage';
 import SearchPage from './components/SearchPage';
 import ProductModal from './components/ProductModal';
+import AffiliatePage from './components/AffiliatePage';
 import MyAccountPage from './components/MyAccountPage';
 import WishlistSidebar from './components/WishlistSidebar';
 import ForgotPasswordPage from './components/ForgotPasswordPage';
@@ -31,13 +34,14 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
 import AllProductsPage from './components/AllProductsPage';
-import { getProducts, getCategories, getHeroSlides, getHomepageSections, saveProduct, deleteProduct, saveCategory, deleteCategory, saveHeroSlide, deleteHeroSlide, saveHomepageSections } from './services/firebaseService';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
+    // Check if there's a history to go back to
     if (window.history.length > 1) {
       window.history.back();
     } else {
+      // Otherwise, navigate to the shop as a fallback
       onNavigate('shop');
     }
   };
@@ -59,12 +63,13 @@ const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate
   );
 };
 
-const getRouteFromHash = (): { page: Page; productId: string | null } => {
+const getRouteFromHash = (): { page: Page; productId: number | null } => {
     const hash = window.location.hash.slice(1);
     const [path, param] = hash.split('/').filter(Boolean);
 
     if (path === 'product' && param) {
-        return { page: 'productDetail', productId: param };
+        const productId = parseInt(param, 10);
+        if (!isNaN(productId)) return { page: 'productDetail', productId };
     }
     
     const pageMap: { [key: string]: Page } = {
@@ -84,8 +89,9 @@ const LoadingSpinner = () => (
 );
 
 const App: React.FC = () => {
-  const { user, isDarkMode, toggleDarkMode, toasts, addToast, setCart } = useAppContext();
+  const { user, isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews } = useAppContext();
   
+  // App-wide data state
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [heroSlides, setHeroSlides] = React.useState<HeroSlide[]>([]);
@@ -95,9 +101,10 @@ const App: React.FC = () => {
   const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [] });
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // View/Routing State
   const initialRoute = getRouteFromHash();
   const [currentPage, setCurrentPage] = React.useState<Page>(initialRoute.page);
-  const [selectedProductId, setSelectedProductId] = React.useState<string | null>(() => {
+  const [selectedProductId, setSelectedProductId] = React.useState<number | null>(() => {
     if (initialRoute.page === 'productDetail' && initialRoute.productId) return initialRoute.productId;
     const savedId = sessionStorage.getItem('selectedProductId');
     return savedId ? JSON.parse(savedId) : null;
@@ -105,9 +112,11 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState<string>(() => sessionStorage.getItem('searchQuery') || '');
   const [activeCategory, setActiveCategory] = React.useState<string>('All');
   
+  // UI Component State
   const [quickViewProduct, setQuickViewProduct] = React.useState<Product | null>(null);
   const [isWishlistOpen, setIsWishlistOpen] = React.useState(false);
 
+  // Search History State
   const [searchHistory, setSearchHistory] = React.useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('searchHistory') || '[]');
@@ -116,120 +125,89 @@ const App: React.FC = () => {
     }
   });
 
+  // Load mock data on initial load
   React.useEffect(() => {
-    const loadFirebaseData = async () => {
+    const loadMockData = () => {
         setIsLoading(true);
-        try {
-            const [productsData, categoriesData, heroSlidesData, homepageSectionsData] = await Promise.all([
-                getProducts(),
-                getCategories(),
-                getHeroSlides(),
-                getHomepageSections()
-            ]);
-            setProducts(productsData);
-            setCategories(categoriesData);
-            setHeroSlides(heroSlidesData);
-            if (homepageSectionsData) {
-                setHomepageSections(homepageSectionsData);
-            }
-        } catch (error) {
-            console.error("Error loading data from Firebase:", error);
-            addToast('Failed to load data from server.', 'error');
-        }
-        setIsLoading(false);
+        // Simulate network delay for a better loading experience
+        setTimeout(() => {
+            setProducts(MOCK_PRODUCTS);
+            setCategories(CATEGORIES);
+            setHeroSlides(HERO_SLIDES);
+            setOrders(MOCK_ORDERS);
+            setCustomers(MOCK_CUSTOMERS);
+            setPromotions(MOCK_PROMOTIONS);
+            // Setup some initial homepage sections from mock data
+            const dealProduct = MOCK_PRODUCTS.find(p => p.salePrice);
+            setHomepageSections({
+                deals: dealProduct ? [dealProduct.id] : [],
+                bestsellers: [1, 3, 5],
+            });
+            setIsLoading(false);
+        }, 500);
     };
-    loadFirebaseData();
-  }, [addToast]);
+    loadMockData();
+  }, []);
 
-  const handleSaveProduct = async (productData: Product, imageFile?: File) => {
-    try {
-        const savedProduct = await saveProduct(productData, imageFile);
-        if (productData.id) {
-            setProducts(products.map(p => p.id === savedProduct.id ? savedProduct : p));
-            addToast('Product updated successfully!');
-        } else {
-            setProducts([savedProduct, ...products]);
-            addToast('Product added successfully!');
-        }
-    } catch (error) {
-        addToast('Failed to save product.', 'error');
+  // CRUD Handlers (operate on local state)
+  const handleSaveProduct = (productData: Product, imageFile?: File) => {
+    // Image file is ignored in mock setup
+    if ('id' in productData && productData.id) {
+        setProducts(products.map(p => p.id === productData.id ? { ...productData } : p));
+        addToast('Product updated successfully!');
+    } else {
+        const newProduct = { ...productData, id: Date.now() }; // Use timestamp for unique ID
+        setProducts([newProduct, ...products]);
+        addToast('Product added successfully!');
     }
   };
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleDeleteProduct = (productId: number) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-        try {
-            await deleteProduct(productId);
-            setProducts(products.filter(p => p.id !== productId));
-            addToast('Product deleted!', 'info');
-        } catch (error) {
-            addToast('Failed to delete product.', 'error');
-        }
+        setProducts(products.filter(p => p.id !== productId));
+        addToast('Product deleted!', 'info');
     }
   };
 
-  const handleSaveCategory = async (categoryData: Category, imageFile?: File) => {
-    try {
-        const savedCategory = await saveCategory(categoryData, imageFile);
-        if (categoryData.id) {
-            setCategories(categories.map(c => c.id === savedCategory.id ? savedCategory : c));
-            addToast('Category updated successfully!');
-        } else {
-            setCategories([savedCategory, ...categories]);
-            addToast('Category added successfully!');
-        }
-    } catch (error) {
-        addToast('Failed to save category.', 'error');
+  const handleSaveCategory = (categoryData: Category, imageFile?: File) => {
+    if ('id' in categoryData && categoryData.id) {
+        setCategories(categories.map(c => c.id === categoryData.id ? { ...categoryData } : c));
+        addToast('Category updated successfully!');
+    } else {
+        const newCategory = { ...categoryData, id: Date.now() };
+        setCategories([newCategory, ...categories]);
+        addToast('Category added successfully!');
     }
   };
 
-  const handleDeleteCategory = async (categoryId: string) => {
+  const handleDeleteCategory = (categoryId: number) => {
     if (window.confirm('Are you sure you want to delete this category?')) {
-        try {
-            await deleteCategory(categoryId);
-            setCategories(categories.filter(c => c.id !== categoryId));
-            addToast('Category deleted!', 'info');
-        } catch (error) {
-            addToast('Failed to delete category.', 'error');
-        }
+        setCategories(categories.filter(c => c.id !== categoryId));
+        addToast('Category deleted!', 'info');
     }
   };
 
-  const handleSaveHeroSlide = async (slideData: HeroSlide, imageFile?: File) => {
-    try {
-        const savedSlide = await saveHeroSlide(slideData, imageFile);
-        if (slideData.id) {
-            setHeroSlides(heroSlides.map(s => s.id === savedSlide.id ? savedSlide : s));
-            addToast('Hero slide updated successfully!');
-        } else {
-            setHeroSlides([savedSlide, ...heroSlides]);
-            addToast('Hero slide added successfully!');
-        }
-    } catch (error) {
-        addToast('Failed to save hero slide.', 'error');
+  const handleSaveHeroSlide = (slideData: HeroSlide, imageFile?: File) => {
+    if ('id' in slideData && slideData.id) {
+        setHeroSlides(heroSlides.map(s => s.id === slideData.id ? { ...slideData } : s));
+        addToast('Hero slide updated successfully!');
+    } else {
+        const newSlide = { ...slideData, id: Date.now() };
+        setHeroSlides([newSlide, ...heroSlides]);
+        addToast('Hero slide added successfully!');
     }
   };
 
-  const handleDeleteHeroSlide = async (slideId: string) => {
+  const handleDeleteHeroSlide = (slideId: number) => {
     if (window.confirm('Are you sure you want to delete this hero slide?')) {
-        try {
-            await deleteHeroSlide(slideId);
-            setHeroSlides(heroSlides.filter(s => s.id !== slideId));
-            addToast('Hero slide deleted!', 'info');
-        } catch (error) {
-            addToast('Failed to delete hero slide.', 'error');
-        }
+        setHeroSlides(heroSlides.filter(s => s.id !== slideId));
+        addToast('Hero slide deleted!', 'info');
     }
   };
 
-  const handleSaveHomepageSections = async (sections: HomepageSections) => {
-      try {
-        await saveHomepageSections(sections);
-        setHomepageSections(sections);
-        addToast("Homepage sections updated successfully!");
-      } catch (error) {
-        addToast('Failed to save homepage sections.', 'error');
-      }
+  const handleSaveHomepageSections = (sections: HomepageSections) => {
+      setHomepageSections(sections);
+      addToast("Homepage sections updated successfully!");
   };
 
   React.useEffect(() => {
@@ -306,6 +284,13 @@ const App: React.FC = () => {
       : products.filter(p => p.category === activeCategory && p.published);
   }, [activeCategory, products]);
   
+  const newArrivals = React.useMemo(() => {
+    return [...products]
+        .filter(p => p.published)
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 8);
+  }, [products]);
+
   const searchResults = React.useMemo(() => {
     if (!searchQuery) return [];
     return products.filter(p =>
@@ -334,6 +319,7 @@ const App: React.FC = () => {
           return <ProductDetailPage
             product={selectedProduct}
             relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 8)}
+            reviews={reviews.filter(r => r.productId === selectedProduct.id)}
             onBackToShop={() => setCurrentPage('shop')}
             onProductClick={handleProductClick}
             onNavigateToReviews={() => setCurrentPage('productReviews')}
@@ -353,9 +339,10 @@ const App: React.FC = () => {
             isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
         />
       );
-      case 'productReviews': return selectedProduct && <ProductReviewsPage product={selectedProduct} reviews={[]} onBackToProduct={() => setCurrentPage('productDetail')} />;
+      case 'productReviews': return selectedProduct && <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} />;
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
+      case 'affiliate': return <AffiliatePage />;
       case 'account': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
       case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast("Password reset successfully!"); onNavigate('login'); }} onNavigate={onNavigate} />;
@@ -367,7 +354,20 @@ const App: React.FC = () => {
             <HeroCarousel slides={heroSlides} />
             <Features />
             <CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
-            <ProductGrid products={filteredProducts} onProductClick={handleProductClick} title="Featured Products" onQuickView={setQuickViewProduct} />
+            <ProductGrid 
+              products={newArrivals} 
+              onProductClick={handleProductClick} 
+              title="New Arrivals" 
+              onQuickView={setQuickViewProduct} 
+              bgColor="bg-bg-primary"
+            />
+            <ProductGrid 
+              products={filteredProducts} 
+              onProductClick={handleProductClick} 
+              title="Featured Products" 
+              onQuickView={setQuickViewProduct} 
+              bgColor="bg-bg-secondary"
+            />
             {dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
             <CTA onShopNowClick={() => onNavigate('allProducts')} />
             {bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
@@ -391,6 +391,7 @@ const App: React.FC = () => {
             onNavigate={onNavigate}
             searchHistory={searchHistory}
             onSearch={handleSearch}
+            products={products}
           />
         )}
         <AnimatePresence>

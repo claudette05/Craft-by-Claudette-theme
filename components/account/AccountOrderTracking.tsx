@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_ORDERS } from '../../adminConstants';
-import { AdminOrder, TrackingStatus, OrderTrackingEvent } from '../../types';
+import { AdminOrder, TrackingStatus, OrderTrackingEvent, OrderStatus } from '../../types';
 import { ClipboardListIcon, BoxIcon, TruckIcon, CheckCircleIcon } from '../Icons';
 
 const trackingIcons: Record<TrackingStatus, React.ComponentType<{ className?: string }>> = {
@@ -11,13 +11,18 @@ const trackingIcons: Record<TrackingStatus, React.ComponentType<{ className?: st
   'Delivered': CheckCircleIcon,
 };
 
+const statusColorMap: Record<OrderStatus, string> = {
+    Completed: 'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
+    Processing: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
+    Pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-400',
+    Cancelled: 'bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400',
+    Shipped: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
+};
+
 const TrackingTimeline: React.FC<{ order: AdminOrder }> = ({ order }) => {
     const history = order.trackingHistory || [];
     const latestStatus = history.length > 0 ? history[history.length - 1].status : 'Order Placed';
 
-    const statusOrder: TrackingStatus[] = ['Order Placed', 'Shipped', 'Out for Delivery', 'Delivered'];
-    const latestStatusIndex = statusOrder.indexOf(latestStatus);
-    
     return (
         <div className="mt-6">
             <ol className="relative border-l border-zinc-200 dark:border-zinc-700">
@@ -91,10 +96,30 @@ const AccountOrderTracking: React.FC = () => {
                                 exit={{ opacity: 0, y: -10 }}
                                 transition={{ duration: 0.3 }}
                             >
-                                <h3 className="font-semibold text-text-primary">Tracking Details for Order {selectedOrder.id}</h3>
-                                <p className="text-sm text-text-secondary mt-1">
-                                    Tracking Number: <span className="font-mono text-accent-primary">{selectedOrder.trackingNumber}</span>
-                                </p>
+                                <div className="bg-bg-secondary border border-border-primary rounded-lg p-6 mb-8 shadow-sm">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 border-b border-border-primary pb-6">
+                                        <div>
+                                            <h1 className="text-2xl font-bold text-text-primary">Order {selectedOrder.id}</h1>
+                                            <p className="text-text-secondary mt-1">Placed on {selectedOrder.date}</p>
+                                        </div>
+                                        <span className={`px-4 py-2 rounded-full text-sm font-bold ${statusColorMap[selectedOrder.status]}`}>
+                                            {selectedOrder.status}
+                                        </span>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                        <div>
+                                            <p className="text-sm text-text-secondary mb-1">Total Amount</p>
+                                            <p className="text-xl font-bold text-text-primary">GH₵{selectedOrder.total.toFixed(2)}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-text-secondary mb-1">Tracking Number</p>
+                                            <p className="text-base font-mono font-medium text-accent-primary">{selectedOrder.trackingNumber}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <h3 className="text-lg font-semibold text-text-primary mb-4">Tracking History</h3>
                                 <TrackingTimeline order={selectedOrder} />
                             </motion.div>
                         </AnimatePresence>

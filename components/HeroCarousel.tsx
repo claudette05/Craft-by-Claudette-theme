@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { HeroSlide } from '../types';
 import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
 
@@ -26,6 +26,8 @@ const variants = {
 
 const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
   const [[page, direction], setPage] = React.useState([0, 0]);
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 500], [0, 150]);
 
   if (!slides || slides.length === 0) {
     return null; // Don't render anything if there are no slides
@@ -61,7 +63,8 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
           }}
           className="absolute w-full h-full"
         >
-          <img
+          <motion.img
+            style={{ y, scale: 1.1 }}
             src={slides[slideIndex].imageUrl}
             alt={slides[slideIndex].title}
             className="w-full h-full object-cover"

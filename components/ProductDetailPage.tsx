@@ -1,6 +1,7 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product } from '../types';
+import { Product, ProductReview } from '../types';
 import { ChevronLeftIcon, HeartIcon, LinkIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
@@ -81,13 +82,14 @@ const StockIndicator: React.FC<{ stock: number }> = ({ stock }) => {
 interface ProductDetailPageProps {
     product: Product;
     relatedProducts: Product[];
+    reviews: ProductReview[];
     onBackToShop: () => void;
     onProductClick: (product: Product) => void;
     onNavigateToReviews: () => void;
     onQuickView: (product: Product) => void;
 }
 
-const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
+const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, reviews, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
     const { wishlist, toggleWishlist, addToCart, addToast } = useAppContext();
     const [quantity, setQuantity] = React.useState(1);
     const [isAdded, setIsAdded] = React.useState(false);
@@ -98,12 +100,26 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const hasSale = typeof product.salePrice === 'number';
     const isInWishlist = wishlist.includes(product.id);
 
+    const averageRating = React.useMemo(() => {
+        if (reviews.length === 0) return 0;
+        const total = reviews.reduce((acc, review) => acc + review.rating, 0);
+        return total / reviews.length;
+    }, [reviews]);
+
     React.useEffect(() => {
         setQuantity(1);
         setSelectedColor(null);
         setSelectedSize(null);
         setSelectedImage(product.imageUrl);
         setIsAdded(false);
+    }, [product]);
+
+    const allImages = React.useMemo(() => {
+        const imgs = [product.imageUrl];
+        if (product.images) {
+            imgs.push(...product.images);
+        }
+        return Array.from(new Set(imgs));
     }, [product]);
 
     const handleQuantityChange = (amount: number) => {
@@ -199,7 +215,35 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <img src={selectedImage} alt={product.name} className="w-full h-auto object-cover rounded-lg aspect-square" />
+                        <div className="relative overflow-hidden rounded-lg aspect-square">
+                            <AnimatePresence mode="wait">
+                                <motion.img 
+                                    key={selectedImage}
+                                    src={selectedImage} 
+                                    alt={product.name} 
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="w-full h-full object-cover" 
+                                />
+                            </AnimatePresence>
+                        </div>
+
+                        {allImages.length > 1 && (
+                            <div className="flex gap-2 mt-4 overflow-x-auto pb-2 hide-scrollbar">
+                                {allImages.map((img, index) => (
+                                    <button
+                                        key={index}
+                                        onClick={() => setSelectedImage(img)}
+                                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                        aria-label={`View image ${index + 1}`}
+                                    >
+                                        <img src={img} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </motion.div>
 
                     <motion.div 
@@ -212,8 +256,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         <h1 className="text-3xl md:text-4xl font-bold my-2 text-text-primary">{product.name}</h1>
                         
                         <div className="flex items-center gap-2 mb-4">
-                            <StarRating rating={4.5} />
-                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors">(142 Reviews)</button>
+                            <StarRating rating={averageRating} />
+                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors">
+                                {reviews.length > 0 ? `(${reviews.length} Review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
+                            </button>
                         </div>
                         
                         {hasSale ? (

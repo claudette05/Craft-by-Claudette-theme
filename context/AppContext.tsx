@@ -1,6 +1,7 @@
 
 import * as React from 'react';
-import { CartItem, ToastMessage } from '../types';
+import { CartItem, ToastMessage, ProductReview } from '../types';
+import { MOCK_REVIEWS } from '../constants';
 
 // Define a local User type since Firebase is removed
 export type User = {
@@ -14,6 +15,7 @@ interface AppContextType {
     cart: CartItem[];
     setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
     wishlist: number[];
+    reviews: ProductReview[];
     isDarkMode: boolean;
     toasts: ToastMessage[];
     cartItemCount: number;
@@ -25,6 +27,7 @@ interface AppContextType {
     updateCartQuantity: (productId: number, newQuantity: number) => void;
     removeFromCart: (productId: number) => void;
     toggleWishlist: (productId: number) => void;
+    addReview: (review: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => void;
     addToast: (message: string, type?: ToastMessage['type']) => void;
     toggleDarkMode: () => void;
 }
@@ -36,6 +39,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [isAuthLoading, setIsAuthLoading] = React.useState(false); // No longer loading from Firebase
     const [cart, setCart] = React.useState<CartItem[]>([]);
     const [wishlist, setWishlist] = React.useState<number[]>([]);
+    const [reviews, setReviews] = React.useState<ProductReview[]>(MOCK_REVIEWS);
     const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
     const [isDarkMode, setIsDarkMode] = React.useState(() => {
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -56,6 +60,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
             const savedCart = localStorage.getItem('cart');
             setCart(savedCart ? JSON.parse(savedCart) : []);
+            const savedReviews = localStorage.getItem('reviews');
+            if (savedReviews) {
+                setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
+            }
         } catch (e) {
             console.error("Failed to load data from localStorage", e);
             setWishlist([]);
@@ -81,6 +89,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             console.error('Error saving cart to localStorage', error);
         }
     }, [cart]);
+    
+    // Persist custom reviews (simplified: only saving new ones would be better in real app, but here we assume persistence of state)
+    React.useEffect(() => {
+         try {
+             // Filter out mock reviews to save only new ones to avoid duplicates on reload if we merge
+             const newReviews = reviews.filter(r => !MOCK_REVIEWS.find(mr => mr.id === r.id));
+             localStorage.setItem('reviews', JSON.stringify(newReviews));
+        } catch (error) {
+            console.error('Error saving reviews to localStorage', error);
+        }
+    }, [reviews]);
 
     React.useEffect(() => {
         const root = window.document.documentElement;
@@ -132,6 +151,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCart(prevCart => prevCart.filter(item => item.productId !== productId));
     };
 
+    const addReview = (reviewData: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => {
+        const newReview: ProductReview = {
+            ...reviewData,
+            id: Date.now(),
+            date: new Date().toISOString().split('T')[0],
+            verifiedPurchase: true // Simulating verified purchase for now
+        };
+        setReviews(prev => [newReview, ...prev]);
+        addToast('Review submitted successfully!', 'success');
+    };
+
     const login = async (email: string, password: string) => {
         if (email === 'admin@test.com' && password === 'password') {
             const mockUser: User = { uid: 'mock-admin-uid', email: 'admin@test.com' };
@@ -163,8 +193,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const cartItemCount = React.useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
     const value = {
-        user, isAuthLoading, cart, setCart, wishlist, isDarkMode, toasts, cartItemCount,
-        login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addToast, toggleDarkMode
+        user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount,
+        login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
