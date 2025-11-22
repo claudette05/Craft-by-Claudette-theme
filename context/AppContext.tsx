@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig } from '../types';
 import { MOCK_REVIEWS } from '../constants';
 
 // Define a local User type since Firebase is removed
@@ -19,6 +19,8 @@ interface AppContextType {
     isDarkMode: boolean;
     toasts: ToastMessage[];
     cartItemCount: number;
+    popupConfig: PopupConfig;
+    updatePopupConfig: (config: PopupConfig) => void;
     login: (email: string, password: string) => Promise<void>;
     signup: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
@@ -45,6 +47,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     });
 
+    // Initial Popup Configuration
+    const [popupConfig, setPopupConfig] = React.useState<PopupConfig>({
+        enabled: true,
+        type: 'standard',
+        content: {
+            title: "Get 10% Off",
+            description: "Join the Craft by Claudette family! Subscribe to our newsletter and receive a special discount code for your first order.",
+            imageUrl: "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?q=80&w=1000&auto=format&fit=crop",
+            buttonText: "Unlock My 10% Off",
+            successTitle: "You're In!",
+            successMessage: "Use the code below at checkout to save on your first order.",
+            discountCode: "WELCOME10",
+            placeholderText: "Enter your email address",
+            disclaimerText: "No spam, unsubscribe anytime."
+        },
+        style: {
+            layout: 'image-left',
+            width: 'md',
+            backgroundColor: '#ffffff',
+            textColor: '#18181b',
+            buttonColor: '#F59E0B',
+            buttonTextColor: '#ffffff',
+            overlayColor: 'rgba(0,0,0,0.6)',
+            borderRadius: 'lg',
+            fontFamily: 'sans',
+            position: 'center',
+            entranceAnimation: 'scale',
+            exitAnimation: 'fade',
+        },
+        behavior: {
+            delay: 5,
+            showOnExit: true,
+            showOnScroll: false,
+            scrollPercentage: 50,
+        },
+        spinnerSegments: [
+            { id: '1', label: '10% OFF', value: 'SPIN10', color: '#F59E0B', textColor: '#ffffff', probability: 20 },
+            { id: '2', label: 'Free Shipping', value: 'FREESHIP', color: '#18181b', textColor: '#ffffff', probability: 20 },
+            { id: '3', label: '5% OFF', value: 'SPIN5', color: '#F59E0B', textColor: '#ffffff', probability: 40 },
+            { id: '4', label: 'No Luck', value: 'TRYAGAIN', color: '#71717a', textColor: '#ffffff', probability: 10 },
+            { id: '5', label: '20% OFF', value: 'JACKPOT20', color: '#18181b', textColor: '#F59E0B', probability: 5 },
+            { id: '6', label: 'Free Gift', value: 'GIFT', color: '#F59E0B', textColor: '#ffffff', probability: 5 },
+        ]
+    });
+
     const addToast = React.useCallback((message: string, type: ToastMessage['type'] = 'success') => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type }]);
@@ -63,6 +110,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             const savedReviews = localStorage.getItem('reviews');
             if (savedReviews) {
                 setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
+            }
+            const savedPopupConfig = localStorage.getItem('popupConfig');
+            if (savedPopupConfig) {
+                const parsed = JSON.parse(savedPopupConfig);
+                // Simple migration check: ensure new fields exist
+                if (!parsed.type) parsed.type = 'standard';
+                if (!parsed.style.entranceAnimation) parsed.style.entranceAnimation = 'scale';
+                if (!parsed.spinnerSegments) parsed.spinnerSegments = popupConfig.spinnerSegments;
+                
+                setPopupConfig(prev => ({ ...prev, ...parsed }));
             }
         } catch (e) {
             console.error("Failed to load data from localStorage", e);
@@ -90,16 +147,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [cart]);
     
-    // Persist custom reviews (simplified: only saving new ones would be better in real app, but here we assume persistence of state)
+    // Persist custom reviews
     React.useEffect(() => {
          try {
-             // Filter out mock reviews to save only new ones to avoid duplicates on reload if we merge
              const newReviews = reviews.filter(r => !MOCK_REVIEWS.find(mr => mr.id === r.id));
              localStorage.setItem('reviews', JSON.stringify(newReviews));
         } catch (error) {
             console.error('Error saving reviews to localStorage', error);
         }
     }, [reviews]);
+
+    // Persist popup config
+    React.useEffect(() => {
+        try {
+            localStorage.setItem('popupConfig', JSON.stringify(popupConfig));
+        } catch (error) {
+            console.error('Error saving popup config to localStorage', error);
+        }
+    }, [popupConfig]);
 
     React.useEffect(() => {
         const root = window.document.documentElement;
@@ -162,6 +227,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast('Review submitted successfully!', 'success');
     };
 
+    const updatePopupConfig = (config: PopupConfig) => {
+        setPopupConfig(config);
+        addToast("Popup settings updated!", "success");
+    };
+
     const login = async (email: string, password: string) => {
         if (email === 'admin@test.com' && password === 'password') {
             const mockUser: User = { uid: 'mock-admin-uid', email: 'admin@test.com' };
@@ -194,7 +264,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const value = {
         user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount,
-        login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode
+        login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode,
+        popupConfig, updatePopupConfig
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

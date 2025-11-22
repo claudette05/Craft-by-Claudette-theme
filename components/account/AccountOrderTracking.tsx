@@ -1,8 +1,10 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_ORDERS } from '../../adminConstants';
-import { AdminOrder, TrackingStatus, OrderTrackingEvent, OrderStatus } from '../../types';
+import { AdminOrder, TrackingStatus, OrderStatus } from '../../types';
 import { ClipboardListIcon, BoxIcon, TruckIcon, CheckCircleIcon } from '../Icons';
+import { useAppContext } from '../../context/AppContext';
 
 const trackingIcons: Record<TrackingStatus, React.ComponentType<{ className?: string }>> = {
   'Order Placed': ClipboardListIcon,
@@ -21,8 +23,7 @@ const statusColorMap: Record<OrderStatus, string> = {
 
 const TrackingTimeline: React.FC<{ order: AdminOrder }> = ({ order }) => {
     const history = order.trackingHistory || [];
-    const latestStatus = history.length > 0 ? history[history.length - 1].status : 'Order Placed';
-
+    
     return (
         <div className="mt-6">
             <ol className="relative border-l border-zinc-200 dark:border-zinc-700">
@@ -56,8 +57,20 @@ const TrackingTimeline: React.FC<{ order: AdminOrder }> = ({ order }) => {
 
 
 const AccountOrderTracking: React.FC = () => {
-    const trackableOrders = MOCK_ORDERS.filter(o => o.trackingNumber);
-    const [selectedOrder, setSelectedOrder] = React.useState<AdminOrder | null>(trackableOrders.length > 0 ? trackableOrders[0] : null);
+    const { user } = useAppContext();
+    const trackableOrders = React.useMemo(() => {
+        return MOCK_ORDERS.filter(o => o.trackingNumber && o.customerEmail === user?.email);
+    }, [user]);
+
+    const [selectedOrder, setSelectedOrder] = React.useState<AdminOrder | null>(null);
+
+    React.useEffect(() => {
+        if (trackableOrders.length > 0 && !selectedOrder) {
+            setSelectedOrder(trackableOrders[0]);
+        } else if (trackableOrders.length === 0) {
+            setSelectedOrder(null);
+        }
+    }, [trackableOrders, selectedOrder]);
 
     return (
         <div>

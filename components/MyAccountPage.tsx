@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, AccountPage } from '../types';
@@ -10,6 +11,7 @@ import AccountWishlist from './account/AccountWishlist';
 import AccountNotifications from './account/AccountNotifications';
 import AccountOrderTracking from './account/AccountOrderTracking';
 import { HamburgerIcon } from './Icons';
+import { useAppContext } from '../context/AppContext';
 
 interface MyAccountPageProps {
     products: Product[];
@@ -18,8 +20,17 @@ interface MyAccountPageProps {
 }
 
 const MyAccountPage: React.FC<MyAccountPageProps> = (props) => {
+    const { user } = useAppContext();
     const [activePage, setActivePage] = React.useState<AccountPage>('dashboard');
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!user) {
+            window.location.hash = '#/login';
+        }
+    }, [user]);
+
+    if (!user) return null;
 
     const renderContent = () => {
         switch (activePage) {

@@ -18,7 +18,7 @@ const AccountAddresses: React.FC = () => {
                 animate={{ opacity: 1, y: 0 }}
             >
                 <p className="font-semibold text-text-primary">No addresses found</p>
-                <p className="mt-1 text-text-secondary text-sm">You have not saved any shipping or billing addresses yet.</p>
+                <p className="mt-1 text-text-secondary text-sm">You have not saved any delivery or billing addresses yet.</p>
             </motion.div>
         </div>
     );

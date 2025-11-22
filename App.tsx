@@ -14,7 +14,6 @@ import ProductGrid from './components/ProductGrid';
 import CTA from './components/CTA';
 import Footer from './components/Footer';
 import DealsSection from './components/DealsSection';
-import Newsletter from './components/Newsletter';
 import Bestsellers from './components/Bestsellers';
 import CartPage from './components/CartPage';
 import LoginPage from './components/LoginPage';
@@ -34,6 +33,7 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
 import AllProductsPage from './components/AllProductsPage';
+import PromotionalPopup from './components/PromotionalPopup';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
@@ -205,6 +205,24 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSavePromotion = (promotion: Promotion) => {
+    if (promotion.id) {
+        setPromotions(promotions.map(p => p.id === promotion.id ? promotion : p));
+        addToast('Promotion updated successfully!');
+    } else {
+        const newPromo = { ...promotion, id: Date.now(), usageCount: 0 };
+        setPromotions([newPromo, ...promotions]);
+        addToast('Promotion created successfully!');
+    }
+  };
+
+  const handleDeletePromotion = (id: number) => {
+      if (window.confirm('Delete this promotion?')) {
+          setPromotions(promotions.filter(p => p.id !== id));
+          addToast('Promotion deleted!', 'info');
+      }
+  };
+
   const handleSaveHomepageSections = (sections: HomepageSections) => {
       setHomepageSections(sections);
       addToast("Homepage sections updated successfully!");
@@ -309,6 +327,14 @@ const App: React.FC = () => {
     return products.filter(p => bestsellerIds.has(p.id));
   }, [homepageSections, products]);
 
+  const resinProducts = React.useMemo(() => {
+    return products.filter(p => p.category === 'Resin' && p.published).slice(0, 8);
+  }, [products]);
+
+  const jewelryProducts = React.useMemo(() => {
+    return products.filter(p => ['Earrings', 'Necklaces', 'Bracelets', 'Beads'].includes(p.category) && p.published).slice(0, 8);
+  }, [products]);
+
   const renderPage = () => {
     switch(currentPage) {
       case 'cart': return <CartPage products={products} onContinueShopping={() => setCurrentPage('shop')} onNavigateToCheckout={() => setCurrentPage('checkout')} />;
@@ -327,14 +353,15 @@ const App: React.FC = () => {
           />;
         }
         return null;
-      case 'checkout': return <CheckoutPage products={products} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={() => { addToast('Order placed successfully!'); setCart([]); setCurrentPage('shop'); }} />;
+      case 'checkout': return <CheckoutPage products={products} promotions={promotions} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={() => { addToast('Order placed successfully!'); setCart([]); setCurrentPage('shop'); }} />;
       case 'admin': return (
         <AdminDashboard
             onNavigate={onNavigate}
             products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
             categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
             heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
-            orders={orders} customers={customers} promotions={promotions}
+            orders={orders} customers={customers} 
+            promotions={promotions} onSavePromotion={handleSavePromotion} onDeletePromotion={handleDeletePromotion}
             homepageSections={homepageSections} onSaveHomepageSections={handleSaveHomepageSections}
             isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
         />
@@ -371,7 +398,20 @@ const App: React.FC = () => {
             {dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
             <CTA onShopNowClick={() => onNavigate('allProducts')} />
             {bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
-            <Newsletter />
+            <ProductGrid 
+              products={resinProducts} 
+              onProductClick={handleProductClick} 
+              title="Resin Art Collection" 
+              onQuickView={setQuickViewProduct} 
+              bgColor="bg-bg-secondary"
+            />
+             <ProductGrid 
+              products={jewelryProducts} 
+              onProductClick={handleProductClick} 
+              title="Handmade Jewelry" 
+              onQuickView={setQuickViewProduct} 
+              bgColor="bg-bg-primary"
+            />
           </>
         );
     }
@@ -415,6 +455,7 @@ const App: React.FC = () => {
           {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
           {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
         </AnimatePresence>
+        {currentPage !== 'admin' && <PromotionalPopup />}
         <GlobalToastContainer toasts={toasts} />
     </div>
   );

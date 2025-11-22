@@ -1,8 +1,9 @@
+
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCartIcon, HeartIcon } from '../Icons';
 import { AccountPage } from '../../types';
-import { MOCK_ORDERS } from '../../adminConstants'; // Using for demo data
+import { MOCK_ORDERS } from '../../adminConstants';
 import { useAppContext } from '../../context/AppContext';
 
 interface AccountDashboardProps {
@@ -24,21 +25,24 @@ const StatCard: React.FC<{ icon: React.ReactNode, title: string, value: string |
 );
 
 const AccountDashboard: React.FC<AccountDashboardProps> = ({ setActivePage }) => {
-    const { wishlist } = useAppContext();
-    // In a real app, this data would come from props or a state manager
-    const totalOrders = MOCK_ORDERS.length; 
+    const { wishlist, user } = useAppContext();
+    
+    const userOrdersCount = React.useMemo(() => {
+        return MOCK_ORDERS.filter(order => order.customerEmail === user?.email).length;
+    }, [user]);
+
     const wishlistItems = wishlist.length;
 
     return (
         <div>
             <h2 className="text-2xl font-bold text-text-primary mb-2">Welcome Back!</h2>
-            <p className="text-text-secondary mb-8">From your dashboard, you can view your recent orders, manage your shipping addresses, and edit your password and account details.</p>
+            <p className="text-text-secondary mb-8">From your dashboard, you can view your recent orders, manage your delivery addresses, and edit your password and account details.</p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <StatCard 
                     icon={<ShoppingCartIcon className="h-8 w-8 text-accent-primary" />} 
                     title="Total Orders" 
-                    value={totalOrders} 
+                    value={userOrdersCount} 
                     onClick={() => setActivePage('orders')}
                 />
                 <StatCard 

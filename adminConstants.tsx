@@ -1,9 +1,11 @@
+
 import { AdminOrder, AdminCustomer, Promotion } from './types';
 
 export const MOCK_ORDERS: AdminOrder[] = [
   { 
     id: '#12548', 
     customerName: 'John Doe', 
+    customerEmail: 'admin@test.com',
     date: '2023-10-26', 
     total: 125.00, 
     status: 'Completed',
@@ -18,6 +20,7 @@ export const MOCK_ORDERS: AdminOrder[] = [
   { 
     id: '#12547', 
     customerName: 'Jane Smith', 
+    customerEmail: 'jane.s@example.com',
     date: '2023-10-25', 
     total: 85.50, 
     status: 'Shipped',
@@ -31,6 +34,7 @@ export const MOCK_ORDERS: AdminOrder[] = [
   { 
     id: '#12546', 
     customerName: 'Emily Johnson', 
+    customerEmail: 'admin@test.com',
     date: '2023-10-25', 
     total: 240.00, 
     status: 'Completed',
@@ -41,11 +45,12 @@ export const MOCK_ORDERS: AdminOrder[] = [
         { status: 'Delivered', date: '2023-10-26 11:10 AM', location: 'Delivered' }
     ]
   },
-  { id: '#12545', customerName: 'Mike Brown', date: '2023-10-24', total: 45.00, status: 'Processing' },
-  { id: '#12544', customerName: 'Sarah Wilson', date: '2023-10-23', total: 15.00, status: 'Cancelled' },
+  { id: '#12545', customerName: 'Mike Brown', customerEmail: 'mike.b@example.com', date: '2023-10-24', total: 45.00, status: 'Processing' },
+  { id: '#12544', customerName: 'Sarah Wilson', customerEmail: 'sarah.w@example.com', date: '2023-10-23', total: 15.00, status: 'Cancelled' },
   { 
     id: '#12543', 
     customerName: 'David Lee', 
+    customerEmail: 'admin@test.com',
     date: '2023-10-22', 
     total: 95.00, 
     status: 'Completed',
@@ -57,7 +62,7 @@ export const MOCK_ORDERS: AdminOrder[] = [
         { status: 'Delivered', date: '2023-10-23 12:45 PM', location: 'Left with receptionist.' }
     ]
   },
-  { id: '#12542', customerName: 'Jessica Garcia', date: '2023-10-22', total: 110.25, status: 'Completed' },
+  { id: '#12542', customerName: 'Jessica Garcia', customerEmail: 'jessica.g@example.com', date: '2023-10-22', total: 110.25, status: 'Completed' },
 ];
 
 export const MOCK_CUSTOMERS: AdminCustomer[] = [

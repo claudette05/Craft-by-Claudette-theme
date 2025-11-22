@@ -1,3 +1,4 @@
+
 // types.ts
 
 export interface ProductVariant {
@@ -68,6 +69,7 @@ export interface OrderTrackingEvent {
 export interface AdminOrder {
   id: string;
   customerName: string;
+  customerEmail?: string;
   date: string;
   total: number;
   status: OrderStatus;
@@ -135,4 +137,61 @@ export interface AdminTopProduct {
     name: string;
     imageUrl: string;
     sales: number;
+}
+
+export interface PopupContent {
+    title: string;
+    description: string;
+    imageUrl: string;
+    buttonText: string;
+    successTitle: string;
+    successMessage: string;
+    discountCode: string;
+    placeholderText: string;
+    disclaimerText: string;
+    timerDurationMinutes?: number;
+}
+
+export type PopupPosition = 'center' | 'bottom-right' | 'bottom-left' | 'top-center';
+export type AnimationType = 'fade' | 'scale' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'rotate';
+export type PopupType = 'standard' | 'spinner' | 'countdown';
+
+export interface SpinnerSegment {
+    id: string;
+    label: string;
+    value: string; // The code or text to display on win
+    color: string;
+    textColor: string;
+    probability: number; // 0-100 (relative weight)
+}
+
+export interface PopupStyle {
+    layout: 'image-left' | 'image-right' | 'image-top' | 'no-image' | 'background-image';
+    width: 'sm' | 'md' | 'lg';
+    backgroundColor: string;
+    textColor: string;
+    buttonColor: string;
+    buttonTextColor: string;
+    overlayColor: string;
+    borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+    fontFamily: 'sans' | 'serif' | 'mono';
+    position: PopupPosition;
+    entranceAnimation: AnimationType;
+    exitAnimation: AnimationType;
+}
+
+export interface PopupBehavior {
+    delay: number; // seconds
+    showOnExit: boolean;
+    showOnScroll: boolean;
+    scrollPercentage: number; // 0-100
+}
+
+export interface PopupConfig {
+    enabled: boolean;
+    type: PopupType;
+    content: PopupContent;
+    style: PopupStyle;
+    behavior: PopupBehavior;
+    spinnerSegments?: SpinnerSegment[];
 }

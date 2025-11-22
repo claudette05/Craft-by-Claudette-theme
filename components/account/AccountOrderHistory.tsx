@@ -1,16 +1,15 @@
 
-
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { MOCK_ORDERS } from '../../adminConstants';
 import { AdminOrder, OrderStatus } from '../../types';
+import { useAppContext } from '../../context/AppContext';
 
 const statusColorMap: Record<OrderStatus, string> = {
     Completed: 'bg-green-100 text-green-800 dark:bg-green-500/10 dark:text-green-400',
     Processing: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
     Pending: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-500/10 dark:text-yellow-400',
     Cancelled: 'bg-red-100 text-red-800 dark:bg-red-500/10 dark:text-red-400',
-    // FIX: Added 'Shipped' to satisfy the OrderStatus type requirement.
     Shipped: 'bg-blue-100 text-blue-800 dark:bg-blue-500/10 dark:text-blue-400',
 };
 
@@ -38,10 +37,16 @@ const OrderRow: React.FC<{ order: AdminOrder, index: number }> = ({ order, index
 );
 
 const AccountOrderHistory: React.FC = () => {
+    const { user } = useAppContext();
+    
+    const userOrders = React.useMemo(() => {
+        return MOCK_ORDERS.filter(order => order.customerEmail === user?.email);
+    }, [user]);
+
     return (
         <div>
             <h2 className="text-2xl font-bold text-text-primary mb-6">Order History</h2>
-            {MOCK_ORDERS.length > 0 ? (
+            {userOrders.length > 0 ? (
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left text-text-secondary">
                         <thead className="text-xs text-text-primary uppercase bg-pink-100/50 dark:bg-bg-tertiary">
@@ -54,14 +59,21 @@ const AccountOrderHistory: React.FC = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {MOCK_ORDERS.map((order, index) => (
+                            {userOrders.map((order, index) => (
                                 <OrderRow key={order.id} order={order} index={index} />
                             ))}
                         </tbody>
                     </table>
                 </div>
             ) : (
-                <p className="text-text-secondary">You haven't placed any orders yet.</p>
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center py-12 px-6 bg-pink-100/50 dark:bg-bg-tertiary rounded-lg"
+                >
+                    <p className="font-semibold text-text-primary">You haven't placed any orders yet.</p>
+                    <p className="mt-1 text-text-secondary text-sm">Start shopping to see your orders here!</p>
+                </motion.div>
             )}
         </div>
     );
