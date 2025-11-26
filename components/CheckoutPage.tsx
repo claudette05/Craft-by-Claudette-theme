@@ -1,4 +1,8 @@
 
+
+
+
+
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { usePaystackPayment } from 'react-paystack';
@@ -42,7 +46,7 @@ const FormInput: React.FC<{
 );
 
 const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, promotions, onBackToCart, onPlaceOrder }) => {
-    const { cart, addToast } = useAppContext();
+    const { cart, addToast, sendFakeEmail, user } = useAppContext();
     const [isLoading, setIsLoading] = React.useState(false);
     const [couponCode, setCouponCode] = React.useState('');
     const [discountAmount, setDiscountAmount] = React.useState(0);
@@ -53,7 +57,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, promotions, onBac
         address: '',
         city: '',
         region: '',
+        email: user?.email || '', // Prefill email if user is logged in
     });
+
+    React.useEffect(() => {
+        if (user?.email) {
+            setFormData(prev => ({ ...prev, email: user.email || '' }));
+        }
+    }, [user]);
 
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const { name, value } = e.target;
@@ -104,7 +115,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, promotions, onBac
 
     const config = {
         reference: (new Date()).getTime().toString(),
-        email: `${formData.phone}@craftbyclaudette.com`, // Generated email from phone
+        email: formData.email || `${formData.phone}@craftbyclaudette.com`, 
         amount: Math.round(total * 100), 
         publicKey: PAYSTACK_PUBLIC_KEY,
         metadata: {
@@ -118,6 +129,16 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, promotions, onBac
 
     const onSuccess = () => {
         setIsLoading(false);
+        
+        // Send confirmation email
+        const emailRecipient = formData.email || 'customer@example.com';
+        sendFakeEmail(emailRecipient, 'Order Confirmation', 'order_confirmation', {
+            name: formData.firstName,
+            total: total.toFixed(2),
+            items: cartDetails.map(item => ({ name: item.product?.name, quantity: item.quantity }))
+        });
+
+        addToast('Order confirmation email sent!', 'success');
         onPlaceOrder();
     };
 
@@ -150,7 +171,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, promotions, onBac
                 <div className="bg-bg-secondary/60 p-6 sm:p-8 rounded-lg shadow-md space-y-6">
                     <div>
                         <h2 className="text-xl font-semibold text-text-primary">Contact Information</h2>
-                        <div className="mt-4">
+                        <div className="mt-4 space-y-4">
+                             <FormInput label="Email Address" id="email" name="email" type="email" placeholder="you@example.com" value={formData.email} onChange={handleInputChange} />
                              <FormInput label="Phone Number" id="phone" name="phone" type="tel" placeholder="024 123 4567" value={formData.phone} onChange={handleInputChange} />
                         </div>
                     </div>

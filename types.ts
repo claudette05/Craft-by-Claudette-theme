@@ -195,3 +195,13 @@ export interface PopupConfig {
     behavior: PopupBehavior;
     spinnerSegments?: SpinnerSegment[];
 }
+
+export interface EmailLog {
+    id: string;
+    recipient: string;
+    subject: string;
+    template: 'welcome' | 'order_confirmation' | 'password_reset' | 'marketing';
+    status: 'Sent' | 'Failed' | 'Queued';
+    date: string;
+    content: string; // HTML string simulation
+}

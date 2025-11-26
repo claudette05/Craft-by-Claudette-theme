@@ -1,12 +1,17 @@
 
+
+
+
+
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview, PopupConfig } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog } from '../types';
 import { MOCK_REVIEWS } from '../constants';
 
 // Define a local User type since Firebase is removed
 export type User = {
     uid: string;
     email: string | null;
+    displayName?: string;
 };
 
 interface AppContextType {
@@ -20,11 +25,13 @@ interface AppContextType {
     toasts: ToastMessage[];
     cartItemCount: number;
     popupConfig: PopupConfig;
+    emailLogs: EmailLog[];
     updatePopupConfig: (config: PopupConfig) => void;
     login: (email: string, password: string) => Promise<void>;
-    signup: (email: string, password: string) => Promise<void>;
+    signup: (email: string, password: string, name?: string) => Promise<void>;
     logout: () => Promise<void>;
     sendResetLink: (email: string) => Promise<void>;
+    sendFakeEmail: (recipient: string, subject: string, template: EmailLog['template'], data?: any) => void;
     addToCart: (productId: number, quantity: number) => void;
     updateCartQuantity: (productId: number, newQuantity: number) => void;
     removeFromCart: (productId: number) => void;
@@ -43,6 +50,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [wishlist, setWishlist] = React.useState<number[]>([]);
     const [reviews, setReviews] = React.useState<ProductReview[]>(MOCK_REVIEWS);
     const [toasts, setToasts] = React.useState<ToastMessage[]>([]);
+    const [emailLogs, setEmailLogs] = React.useState<EmailLog[]>([]);
     const [isDarkMode, setIsDarkMode] = React.useState(() => {
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     });
@@ -100,7 +108,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }, 5000);
     }, []);
     
-    // Load cart and wishlist from localStorage on initial load
+    // Load cart, wishlist, emails from localStorage on initial load
     React.useEffect(() => {
         try {
             const savedWishlist = localStorage.getItem('wishlist');
@@ -111,14 +119,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (savedReviews) {
                 setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
             }
+            const savedEmails = localStorage.getItem('emailLogs');
+            if (savedEmails) {
+                setEmailLogs(JSON.parse(savedEmails));
+            }
             const savedPopupConfig = localStorage.getItem('popupConfig');
             if (savedPopupConfig) {
                 const parsed = JSON.parse(savedPopupConfig);
-                // Simple migration check: ensure new fields exist
                 if (!parsed.type) parsed.type = 'standard';
                 if (!parsed.style.entranceAnimation) parsed.style.entranceAnimation = 'scale';
                 if (!parsed.spinnerSegments) parsed.spinnerSegments = popupConfig.spinnerSegments;
-                
                 setPopupConfig(prev => ({ ...prev, ...parsed }));
             }
         } catch (e) {
@@ -128,23 +138,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, []);
 
-    // Persist wishlist to localStorage whenever it changes
+    // Persist wishlist
     React.useEffect(() => {
-        try {
-            localStorage.setItem('wishlist', JSON.stringify(wishlist));
-        } catch (error) {
-            console.error('Error saving wishlist to localStorage', error);
-        }
+        try { localStorage.setItem('wishlist', JSON.stringify(wishlist)); } catch {}
     }, [wishlist]);
 
-    // Persist cart to localStorage whenever it changes
+    // Persist cart
     React.useEffect(() => {
-        try {
-            localStorage.setItem('cart', JSON.stringify(cart));
-        }
-        catch (error) {
-            console.error('Error saving cart to localStorage', error);
-        }
+        try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
     }, [cart]);
     
     // Persist custom reviews
@@ -152,19 +153,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
          try {
              const newReviews = reviews.filter(r => !MOCK_REVIEWS.find(mr => mr.id === r.id));
              localStorage.setItem('reviews', JSON.stringify(newReviews));
-        } catch (error) {
-            console.error('Error saving reviews to localStorage', error);
-        }
+        } catch {}
     }, [reviews]);
 
     // Persist popup config
     React.useEffect(() => {
-        try {
-            localStorage.setItem('popupConfig', JSON.stringify(popupConfig));
-        } catch (error) {
-            console.error('Error saving popup config to localStorage', error);
-        }
+        try { localStorage.setItem('popupConfig', JSON.stringify(popupConfig)); } catch {}
     }, [popupConfig]);
+
+    // Persist email logs
+    React.useEffect(() => {
+        try { localStorage.setItem('emailLogs', JSON.stringify(emailLogs)); } catch {}
+    }, [emailLogs]);
 
     React.useEffect(() => {
         const root = window.document.documentElement;
@@ -176,6 +176,74 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             localStorage.setItem('theme', 'light');
         }
     }, [isDarkMode]);
+
+    // --- EMAIL SYSTEM SIMULATION ---
+    const sendFakeEmail = (recipient: string, subject: string, template: EmailLog['template'], data: any = {}) => {
+        let content = '';
+        
+        // Simple HTML generators for preview
+        if (template === 'welcome') {
+            content = `
+                <div style="font-family: sans-serif; color: #333; padding: 20px;">
+                    <h1 style="color: #d97706;">Welcome to Craft by Claudette, ${data.name || 'Friend'}!</h1>
+                    <p>We are so excited to have you join our community of handmade jewelry lovers.</p>
+                    <p>As a thank you, use code <strong>WELCOME10</strong> for 10% off your first order.</p>
+                    <br/>
+                    <a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Shop Now</a>
+                </div>
+            `;
+        } else if (template === 'password_reset') {
+            content = `
+                <div style="font-family: sans-serif; color: #333; padding: 20px;">
+                    <h2>Reset Your Password</h2>
+                    <p>We received a request to reset your password.</p>
+                    <p>Click the button below to choose a new one:</p>
+                    <br/>
+                    <a href="#" style="background-color: #333; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
+                    <p style="font-size: 12px; color: #777; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
+                </div>
+            `;
+        } else if (template === 'order_confirmation') {
+            content = `
+                <div style="font-family: sans-serif; color: #333; padding: 20px;">
+                    <h1 style="color: #d97706;">Order Confirmed!</h1>
+                    <p>Hi ${data.name}, thanks for your order!</p>
+                    <p>Order ID: <strong>#${Date.now().toString().slice(-6)}</strong></p>
+                    <p>Total: <strong>GH₵${data.total}</strong></p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <h3>Items:</h3>
+                    <ul>
+                        ${data.items?.map((item: any) => `<li>${item.quantity}x ${item.name}</li>`).join('')}
+                    </ul>
+                    <p>We'll let you know when it ships!</p>
+                </div>
+            `;
+        } else if (template === 'marketing') {
+             content = `
+                <div style="font-family: sans-serif; color: #333; padding: 20px;">
+                    <h1 style="color: #d97706;">${subject}</h1>
+                    <p>Check out our latest collection!</p>
+                    <br/>
+                    <a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Collection</a>
+                </div>
+            `;
+        }
+
+        const logEntry: EmailLog = {
+            id: Date.now().toString(),
+            recipient,
+            subject,
+            template,
+            status: 'Sent',
+            date: new Date().toLocaleString(),
+            content
+        };
+
+        setEmailLogs(prev => [logEntry, ...prev]);
+        
+        // Optional: Toast for admin visibility or general feedback
+        console.log(`[Email System] Sent '${template}' email to ${recipient}`);
+    };
 
     const toggleWishlist = (productId: number) => {
         setWishlist(prevWishlist =>
@@ -221,7 +289,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...reviewData,
             id: Date.now(),
             date: new Date().toISOString().split('T')[0],
-            verifiedPurchase: true // Simulating verified purchase for now
+            verifiedPurchase: true 
         };
         setReviews(prev => [newReview, ...prev]);
         addToast('Review submitted successfully!', 'success');
@@ -234,7 +302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const login = async (email: string, password: string) => {
         if (email === 'admin@test.com' && password === 'password') {
-            const mockUser: User = { uid: 'mock-admin-uid', email: 'admin@test.com' };
+            const mockUser: User = { uid: 'mock-admin-uid', email: 'admin@test.com', displayName: 'Admin User' };
             setUser(mockUser);
             addToast('Login successful!', 'success');
         } else {
@@ -243,10 +311,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     };
 
-    const signup = async (email: string, password: string) => {
-        const mockUser: User = { uid: `mock-user-${Date.now()}`, email };
+    const signup = async (email: string, password: string, name: string = 'User') => {
+        const mockUser: User = { uid: `mock-user-${Date.now()}`, email, displayName: name };
         setUser(mockUser);
-        addToast('Account created successfully!', 'success');
+        sendFakeEmail(email, 'Welcome to Craft by Claudette!', 'welcome', { name });
+        addToast('Account created & welcome email sent!', 'success');
     };
 
     const logout = async () => {
@@ -255,7 +324,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const sendResetLink = async (email: string) => {
-        addToast(`Password reset link sent to ${email}! (This is a demo)`, 'success');
+        sendFakeEmail(email, 'Reset Your Password', 'password_reset', {});
+        addToast(`Reset link sent to ${email}`, 'success');
     };
 
     const toggleDarkMode = React.useCallback(() => setIsDarkMode(prev => !prev), []);
@@ -265,7 +335,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const value = {
         user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount,
         login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode,
-        popupConfig, updatePopupConfig
+        popupConfig, updatePopupConfig, emailLogs, sendFakeEmail
     };
 
     return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

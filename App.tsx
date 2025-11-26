@@ -331,8 +331,8 @@ const App: React.FC = () => {
     return products.filter(p => p.category === 'Resin' && p.published).slice(0, 8);
   }, [products]);
 
-  const jewelryProducts = React.useMemo(() => {
-    return products.filter(p => ['Earrings', 'Necklaces', 'Bracelets', 'Beads'].includes(p.category) && p.published).slice(0, 8);
+  const giftProducts = React.useMemo(() => {
+    return products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8);
   }, [products]);
 
   const renderPage = () => {
@@ -406,9 +406,9 @@ const App: React.FC = () => {
               bgColor="bg-bg-secondary"
             />
              <ProductGrid 
-              products={jewelryProducts} 
+              products={giftProducts} 
               onProductClick={handleProductClick} 
-              title="Handmade Jewelry" 
+              title="Perfect Gifts Under GH₵50" 
               onQuickView={setQuickViewProduct} 
               bgColor="bg-bg-primary"
             />

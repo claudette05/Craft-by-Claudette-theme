@@ -1,3 +1,8 @@
+
+
+
+
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Page } from '../types';
@@ -10,6 +15,7 @@ interface SignupPageProps {
 
 const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
   const { signup } = useAppContext();
+  const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
@@ -23,7 +29,10 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
     }
     setIsLoading(true);
     try {
-        await signup(email, password);
+        await signup(email, password, name);
+        // Navigation is typically handled by the auth state change in App.tsx, 
+        // but we can explicitly redirect if needed for smoother UX in mock mode
+        // onNavigate('shop'); 
     } catch (error) {
         console.error('Signup failed on page:', error);
     } finally {
@@ -60,6 +69,8 @@ const SignupPage: React.FC<SignupPageProps> = ({ onNavigate }) => {
               type="text"
               autoComplete="name"
               required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               className="mt-1 block w-full px-4 py-3 rounded-lg border-zinc-300 dark:border-zinc-600 bg-bg-tertiary text-text-primary focus:outline-none focus:ring-2 focus:ring-accent-primary/80 focus:border-accent-primary/80 transition"
               placeholder="Your Name"
             />

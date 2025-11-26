@@ -1,4 +1,8 @@
 
+
+
+
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections } from '../types';
@@ -14,6 +18,7 @@ import AdminHeroPage from './admin/pages/AdminHeroPage';
 import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminHomepagePage from './admin/pages/AdminHomepagePage';
 import AdminPopupSettingsPage from './admin/pages/AdminPopupSettingsPage';
+import AdminEmailsPage from './admin/pages/AdminEmailsPage'; // Import new page
 import Modal from './admin/ui/Modal';
 import ProductForm from './admin/ui/ProductForm';
 import CategoryForm from './admin/ui/CategoryForm';
@@ -23,7 +28,7 @@ import Toast from './admin/ui/Toast';
 import { HamburgerIcon } from './Icons';
 
 type Page = 'shop' | 'cart' | 'login' | 'signup' | 'admin';
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
 
 interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
@@ -65,6 +70,7 @@ const adminPageTitles: Record<AdminPage, string> = {
     homepage: 'Homepage Sections',
     settings: 'Settings',
     popup: 'Popup Manager',
+    emails: 'Email Logs',
 };
 
 const AdminMobileHeader: React.FC<{ onMenuClick: () => void, title: string }> = ({ onMenuClick, title }) => (
@@ -148,6 +154,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
             case 'popup': return <AdminPopupSettingsPage />;
+            case 'emails': return <AdminEmailsPage />; // Add email logs page
             default: return <AdminDashboardHome orders={orders} products={products}/>;
         }
     };

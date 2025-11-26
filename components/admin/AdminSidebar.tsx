@@ -1,8 +1,12 @@
 
-import * as React from 'react';
-import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, ChartBarIcon, LayoutIcon, ExternalLinkIcon, SparklesIcon } from '../Icons';
 
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup';
+
+
+
+import * as React from 'react';
+import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, ChartBarIcon, LayoutIcon, ExternalLinkIcon, SparklesIcon, MailIcon } from '../Icons';
+
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
 
 interface AdminSidebarProps {
     activePage: AdminPage;
@@ -38,6 +42,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, 
         { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
         { id: 'customers', label: 'Customers', icon: UsersIcon },
         { id: 'promotions', label: 'Promotions', icon: TagIcon },
+        { id: 'emails', label: 'Emails', icon: MailIcon }, // Added emails
         { id: 'popup', label: 'Popup Manager', icon: SparklesIcon },
         { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
         { id: 'hero', label: 'Hero Section', icon: LayoutIcon },
