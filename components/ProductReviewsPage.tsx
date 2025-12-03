@@ -3,6 +3,7 @@ import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductReview } from '../types';
 import { useAppContext } from '../context/AppContext';
+import { CheckBadgeIcon, PhotoIcon } from './Icons';
 
 const StarRating: React.FC<{ rating: number, totalStars?: number, className?: string }> = ({ rating, totalStars = 5, className = "w-5 h-5" }) => {
     const fullStars = Math.floor(rating);
@@ -60,12 +61,6 @@ const Star: React.FC<{ filled?: boolean; half?: boolean, className?: string }> =
     );
 };
 
-const CheckBadgeIcon = ({ className }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={className}>
-        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clipRule="evenodd" />
-    </svg>
-);
-
 interface ProductReviewsPageProps {
     product: Product;
     reviews: ProductReview[];
@@ -80,10 +75,19 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
     const [author, setAuthor] = React.useState('');
     const [title, setTitle] = React.useState('');
     const [comment, setComment] = React.useState('');
+    const [images, setImages] = React.useState<string[]>([]);
+    const [expandedImage, setExpandedImage] = React.useState<string | null>(null);
 
     const averageRating = reviews.length > 0 
         ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
         : 0;
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const newImages = Array.from(e.target.files).map((file: File) => URL.createObjectURL(file));
+            setImages(prev => [...prev, ...newImages]);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -98,6 +102,7 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
             rating,
             title,
             comment,
+            images,
         });
 
         // Reset form
@@ -105,6 +110,7 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
         setAuthor('');
         setTitle('');
         setComment('');
+        setImages([]);
         setIsFormOpen(false);
     };
 
@@ -186,13 +192,28 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
                                     <label htmlFor="comment" className="block text-sm font-medium text-text-secondary mb-1">Review</label>
                                     <textarea 
                                         id="comment" 
-                                        rows={6}
+                                        rows={4}
                                         required
                                         value={comment}
                                         onChange={(e) => setComment(e.target.value)}
                                         placeholder="Tell us what you liked or didn't like..."
-                                        className="w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-bg-tertiary p-2.5 text-text-primary focus:ring-2 focus:ring-accent-primary focus:border-transparent outline-none resize-none"
+                                        className="w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-bg-tertiary p-2.5 text-text-primary focus:ring-2 focus:ring-accent-primary focus:border-transparent outline-none resize-none mb-4"
                                     ></textarea>
+                                    
+                                    {/* Photo Upload */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-text-secondary mb-2">Add Photos</label>
+                                        <div className="flex gap-2 mb-2 flex-wrap">
+                                            {images.map((img, idx) => (
+                                                <img key={idx} src={img} className="w-16 h-16 object-cover rounded-md border border-border-primary" />
+                                            ))}
+                                            <label className="w-16 h-16 flex items-center justify-center border-2 border-dashed border-zinc-300 dark:border-zinc-600 rounded-md cursor-pointer hover:border-accent-primary transition-colors">
+                                                <PhotoIcon className="w-6 h-6 text-text-secondary" />
+                                                <input type="file" accept="image/*" multiple onChange={handleImageChange} className="hidden" />
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     <div className="mt-4 text-right">
                                         <button 
                                             type="submit"
@@ -231,31 +252,70 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
                                     visible: { opacity: 1, y: 0 }
                                 }}
                             >
-                                <div className="flex items-center mb-2">
+                                <div className="flex items-start mb-2">
                                     <div className="flex-shrink-0 w-10 h-10 rounded-full bg-accent-primary/20 flex items-center justify-center font-bold text-accent-primary">
                                         {review.author.charAt(0).toUpperCase()}
                                     </div>
-                                    <div className="ml-4">
-                                        <p className="font-semibold text-text-primary">{review.author}</p>
+                                    <div className="ml-4 flex-grow">
+                                        <div className="flex items-center flex-wrap gap-2">
+                                            <p className="font-semibold text-text-primary">{review.author}</p>
+                                            {review.verifiedPurchase && (
+                                                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
+                                                    <CheckBadgeIcon className="w-3 h-3" />
+                                                    <span>Verified Purchase</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-text-secondary">{review.date}</p>
                                     </div>
-                                    {review.verifiedPurchase && (
-                                        <div className="ml-auto flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
-                                            <CheckBadgeIcon className="w-4 h-4" />
-                                            <span className="hidden sm:inline">Verified Purchase</span>
-                                        </div>
-                                    )}
                                 </div>
                                 <div className="flex items-center my-3">
                                     <StarRating rating={review.rating} />
                                     <h3 className="ml-3 font-semibold text-text-primary">{review.title}</h3>
                                 </div>
-                                <p className="text-text-secondary leading-relaxed">{review.comment}</p>
+                                <p className="text-text-secondary leading-relaxed mb-4">{review.comment}</p>
+                                
+                                {review.images && review.images.length > 0 && (
+                                    <div className="flex gap-2">
+                                        {review.images.map((img, idx) => (
+                                            <img 
+                                                key={idx} 
+                                                src={img} 
+                                                alt={`Review attachment ${idx}`}
+                                                className="w-20 h-20 object-cover rounded-md cursor-pointer hover:opacity-80 transition-opacity border border-border-primary"
+                                                onClick={() => setExpandedImage(img)}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
                             </motion.div>
                         ))
                     )}
                 </motion.div>
             </div>
+
+            {/* Lightbox for review images */}
+            <AnimatePresence>
+                {expandedImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+                        onClick={() => setExpandedImage(null)}
+                    >
+                        <motion.img 
+                            src={expandedImage} 
+                            className="max-w-full max-h-full rounded-lg shadow-2xl" 
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                        />
+                        <button className="absolute top-4 right-4 text-white/80 hover:text-white p-2 transition-colors">
+                            <span className="text-4xl">&times;</span>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.main>
     );
 };

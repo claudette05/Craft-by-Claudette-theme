@@ -1,6 +1,7 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrashIcon } from './Icons';
+import { TrashIcon, GiftIcon } from './Icons';
 import { useAppContext } from '../context/AppContext';
 import { Product } from '../types';
 
@@ -15,6 +16,36 @@ const PlusIcon = () => (
     </svg>
 );
 
+const FreeGiftProgress: React.FC<{ subtotal: number, config: any }> = ({ subtotal, config }) => {
+    const { enabled, threshold, message, successMessage } = config;
+    
+    if (!enabled) return null;
+
+    const progress = Math.min((subtotal / threshold) * 100, 100);
+    const isUnlocked = subtotal >= threshold;
+    const remaining = Math.max(0, threshold - subtotal);
+    
+    const displayMessage = isUnlocked 
+        ? successMessage 
+        : message.replace('{amount}', `GH₵${remaining.toFixed(2)}`);
+
+    return (
+        <div className="mb-8 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2 mb-2 font-medium text-amber-800 dark:text-amber-200 text-sm">
+                <GiftIcon className="w-5 h-5" />
+                <span>{displayMessage}</span>
+            </div>
+            <div className="w-full bg-amber-200 dark:bg-amber-800 rounded-full h-2.5 overflow-hidden">
+                <motion.div 
+                    className="h-2.5 rounded-full bg-gradient-to-r from-amber-400 to-amber-600"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${progress}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                />
+            </div>
+        </div>
+    );
+};
 
 interface CartPageProps {
   products: Product[];
@@ -23,7 +54,7 @@ interface CartPageProps {
 }
 
 const CartPage: React.FC<CartPageProps> = ({ products, onContinueShopping, onNavigateToCheckout }) => {
-  const { cart, updateCartQuantity, removeFromCart } = useAppContext();
+  const { cart, updateCartQuantity, removeFromCart, freeGiftConfig } = useAppContext();
 
   const cartDetails = cart.map(item => {
     const product = products.find(p => p.id === item.productId);
@@ -76,6 +107,7 @@ const CartPage: React.FC<CartPageProps> = ({ products, onContinueShopping, onNav
       className="container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16"
     >
       <h1 className="text-3xl md:text-4xl font-bold text-text-primary mb-8 text-center">Shopping Cart</h1>
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
         {/* Cart Items */}
@@ -85,6 +117,8 @@ const CartPage: React.FC<CartPageProps> = ({ products, onContinueShopping, onNav
           initial="hidden"
           animate="visible"
         >
+          <FreeGiftProgress subtotal={subtotal} config={freeGiftConfig} />
+
           <AnimatePresence>
             {cartDetails.map(({ product, quantity }) => product && (
               <motion.div

@@ -1,10 +1,15 @@
 
+
+
+
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductReview } from '../types';
-import { ChevronLeftIcon, HeartIcon, LinkIcon } from './Icons';
+import { ChevronLeftIcon, HeartIcon, LinkIcon, CheckBadgeIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
+import SizeGuideModal from './SizeGuideModal';
 
 const MinusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -17,24 +22,24 @@ const PlusIcon = () => (
     </svg>
 );
 
-const StarRating: React.FC<{ rating: number, totalStars?: number }> = ({ rating, totalStars = 5 }) => {
+const StarRating: React.FC<{ rating: number, totalStars?: number, className?: string }> = ({ rating, totalStars = 5, className = "w-5 h-5" }) => {
     const fullStars = Math.floor(rating);
     const halfStar = rating % 1 !== 0;
     const emptyStars = totalStars - fullStars - (halfStar ? 1 : 0);
 
     return (
         <div className="flex items-center">
-            {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} filled />)}
-            {halfStar && <Star half />}
-            {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} />)}
+            {[...Array(fullStars)].map((_, i) => <Star key={`full-${i}`} filled className={className} />)}
+            {halfStar && <Star half className={className} />}
+            {[...Array(emptyStars)].map((_, i) => <Star key={`empty-${i}`} className={className} />)}
         </div>
     );
 };
 
-const Star: React.FC<{ filled?: boolean; half?: boolean }> = ({ filled = false, half = false }) => {
+const Star: React.FC<{ filled?: boolean; half?: boolean, className?: string }> = ({ filled = false, half = false, className }) => {
     const gradientId = React.useId();
     return (
-        <svg className="w-5 h-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">
+        <svg className={`${className} ${filled || half ? 'text-amber-400' : 'text-zinc-300 dark:text-zinc-600'}`} fill="currentColor" viewBox="0 0 20 20">
             <defs>
                 <linearGradient id={gradientId}>
                     <stop offset="50%" stopColor="currentColor" />
@@ -42,7 +47,7 @@ const Star: React.FC<{ filled?: boolean; half?: boolean }> = ({ filled = false, 
                 </linearGradient>
             </defs>
             <path
-                fill={half ? `url(#${gradientId})` : (filled ? "currentColor" : "#d1d5db")}
+                fill={half ? `url(#${gradientId})` : "currentColor"}
                 d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
             />
         </svg>
@@ -78,6 +83,41 @@ const StockIndicator: React.FC<{ stock: number }> = ({ stock }) => {
     );
 };
 
+const ReviewCard: React.FC<{ review: ProductReview, onImageClick: (src: string) => void }> = ({ review, onImageClick }) => (
+    <div className="border-b border-border-primary py-6 last:border-0 first:pt-0">
+        <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-3">
+                <div className="font-bold text-text-primary">{review.author}</div>
+                {review.verifiedPurchase && (
+                    <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
+                        <CheckBadgeIcon className="w-3 h-3" />
+                        Verified
+                    </div>
+                )}
+            </div>
+            <div className="text-xs text-text-secondary">{review.date}</div>
+        </div>
+        <div className="flex items-center mb-3">
+            <StarRating rating={review.rating} className="w-4 h-4" />
+            <h4 className="ml-2 font-semibold text-text-primary text-sm">{review.title}</h4>
+        </div>
+        <p className="text-text-secondary text-sm leading-relaxed mb-4">{review.comment}</p>
+        {review.images && review.images.length > 0 && (
+            <div className="flex gap-3 mt-2">
+                {review.images.map((img, idx) => (
+                    <img
+                        key={idx}
+                        src={img}
+                        alt="Review attachment"
+                        className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 border border-border-primary transition-opacity"
+                        onClick={() => onImageClick(img)}
+                    />
+                ))}
+            </div>
+        )}
+    </div>
+);
+
 
 interface ProductDetailPageProps {
     product: Product;
@@ -96,6 +136,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
     const [selectedSize, setSelectedSize] = React.useState<string | null>(null);
     const [selectedImage, setSelectedImage] = React.useState(product.imageUrl);
+    const [isSizeGuideOpen, setIsSizeGuideOpen] = React.useState(false);
+    const [expandedReviewImage, setExpandedReviewImage] = React.useState<string | null>(null);
 
     const hasSale = typeof product.salePrice === 'number';
     const isInWishlist = wishlist.includes(product.id);
@@ -210,7 +252,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     <motion.div 
-                        className="bg-bg-secondary p-4 rounded-lg shadow-md"
+                        className="bg-bg-secondary p-4 rounded-lg shadow-md h-fit sticky top-24"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
@@ -257,7 +299,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         
                         <div className="flex items-center gap-2 mb-4">
                             <StarRating rating={averageRating} />
-                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors">
+                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors underline decoration-dotted">
                                 {reviews.length > 0 ? `(${reviews.length} Review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
                             </button>
                         </div>
@@ -295,7 +337,15 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 )}
                                 {hasSizeOptions && (
                                      <div>
-                                        <h3 className="text-sm font-semibold text-text-primary mb-2">Size: <span className="font-normal">{selectedSize}</span></h3>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <h3 className="text-sm font-semibold text-text-primary">Size: <span className="font-normal">{selectedSize}</span></h3>
+                                            <button 
+                                                onClick={() => setIsSizeGuideOpen(true)}
+                                                className="text-xs text-accent-primary hover:underline font-medium"
+                                            >
+                                                Size Guide
+                                            </button>
+                                        </div>
                                         <div className="flex items-center gap-3">
                                             {availableSizes.map(size => (
                                                 <button
@@ -381,6 +431,35 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 <span className="font-semibold">Share</span>
                             </button>
                         </div>
+
+                        {/* Customer Reviews Section */}
+                        <div className="mt-12 border-t border-border-primary pt-12">
+                            <div className="flex justify-between items-end mb-6">
+                                <h2 className="text-2xl font-bold text-text-primary">Customer Reviews</h2>
+                                <button onClick={onNavigateToReviews} className="text-sm font-medium text-accent-primary hover:underline">See All</button>
+                            </div>
+                            
+                            {reviews.length > 0 ? (
+                                <div className="space-y-2">
+                                    {reviews.slice(0, 3).map(review => (
+                                        <ReviewCard key={review.id} review={review} onImageClick={setExpandedReviewImage} />
+                                    ))}
+                                    <div className="pt-4 text-center">
+                                        <button 
+                                            onClick={onNavigateToReviews} 
+                                            className="px-6 py-2.5 bg-bg-secondary border border-border-primary rounded-full text-sm font-medium text-text-primary hover:bg-bg-tertiary transition-colors shadow-sm"
+                                        >
+                                            View all {reviews.length} reviews or Write a Review
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-8 bg-bg-secondary/50 rounded-lg">
+                                    <p className="text-text-secondary mb-3">No reviews yet.</p>
+                                    <button onClick={onNavigateToReviews} className="text-accent-primary font-medium hover:underline">Be the first to write a review!</button>
+                                </div>
+                            )}
+                        </div>
                     </motion.div>
                 </div>
             </div>
@@ -396,6 +475,29 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                     />
                 </div>
             )}
+            
+            <AnimatePresence>
+                {isSizeGuideOpen && <SizeGuideModal onClose={() => setIsSizeGuideOpen(false)} category={product.category} />}
+                {expandedReviewImage && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[70] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+                        onClick={() => setExpandedReviewImage(null)}
+                    >
+                        <motion.img 
+                            src={expandedReviewImage} 
+                            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl" 
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                        />
+                        <button className="absolute top-4 right-4 text-white/80 hover:text-white p-2 transition-colors">
+                            <span className="text-4xl">&times;</span>
+                        </button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </motion.main>
     );
 };

@@ -43,7 +43,7 @@ export type Page =
   'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 
   'checkout' | 'admin' | 'productReviews' | 'search' | 
   'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 
-  'resetPassword' | 'allProducts';
+  'resetPassword' | 'allProducts' | 'reportBug' | 'notFound';
 
 export interface CartItem {
   productId: number;
@@ -104,6 +104,7 @@ export interface ProductReview {
   title: string;
   comment: string;
   verifiedPurchase: boolean;
+  images?: string[];
 }
 
 export interface HomepageSections {
@@ -204,4 +205,11 @@ export interface EmailLog {
     status: 'Sent' | 'Failed' | 'Queued';
     date: string;
     content: string; // HTML string simulation
+}
+
+export interface FreeGiftConfig {
+    enabled: boolean;
+    threshold: number;
+    message: string;
+    successMessage: string;
 }

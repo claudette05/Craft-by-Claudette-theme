@@ -1,10 +1,6 @@
 
-
-
-
-
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig } from '../types';
 import { MOCK_REVIEWS } from '../constants';
 
 // Define a local User type since Firebase is removed
@@ -26,7 +22,9 @@ interface AppContextType {
     cartItemCount: number;
     popupConfig: PopupConfig;
     emailLogs: EmailLog[];
+    freeGiftConfig: FreeGiftConfig;
     updatePopupConfig: (config: PopupConfig) => void;
+    updateFreeGiftConfig: (config: FreeGiftConfig) => void;
     login: (email: string, password: string) => Promise<void>;
     signup: (email: string, password: string, name?: string) => Promise<void>;
     logout: () => Promise<void>;
@@ -45,7 +43,7 @@ const AppContext = React.createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [user, setUser] = React.useState<User | null>(null);
-    const [isAuthLoading, setIsAuthLoading] = React.useState(false); // No longer loading from Firebase
+    const [isAuthLoading, setIsAuthLoading] = React.useState(false); 
     const [cart, setCart] = React.useState<CartItem[]>([]);
     const [wishlist, setWishlist] = React.useState<number[]>([]);
     const [reviews, setReviews] = React.useState<ProductReview[]>(MOCK_REVIEWS);
@@ -53,6 +51,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [emailLogs, setEmailLogs] = React.useState<EmailLog[]>([]);
     const [isDarkMode, setIsDarkMode] = React.useState(() => {
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    });
+
+    // Free Gift Configuration
+    const [freeGiftConfig, setFreeGiftConfig] = React.useState<FreeGiftConfig>({
+        enabled: true,
+        threshold: 200,
+        message: "Spend {amount} more to get a Mystery Gift!",
+        successMessage: "🎉 You've unlocked a Free Gift!",
     });
 
     // Initial Popup Configuration
@@ -108,7 +114,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }, 5000);
     }, []);
     
-    // Load cart, wishlist, emails from localStorage on initial load
+    // Load data from localStorage
     React.useEffect(() => {
         try {
             const savedWishlist = localStorage.getItem('wishlist');
@@ -131,6 +137,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (!parsed.spinnerSegments) parsed.spinnerSegments = popupConfig.spinnerSegments;
                 setPopupConfig(prev => ({ ...prev, ...parsed }));
             }
+            const savedFreeGiftConfig = localStorage.getItem('freeGiftConfig');
+            if (savedFreeGiftConfig) {
+                setFreeGiftConfig(JSON.parse(savedFreeGiftConfig));
+            }
         } catch (e) {
             console.error("Failed to load data from localStorage", e);
             setWishlist([]);
@@ -138,15 +148,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, []);
 
-    // Persist wishlist
-    React.useEffect(() => {
-        try { localStorage.setItem('wishlist', JSON.stringify(wishlist)); } catch {}
-    }, [wishlist]);
-
-    // Persist cart
-    React.useEffect(() => {
-        try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {}
-    }, [cart]);
+    // Persist data
+    React.useEffect(() => { try { localStorage.setItem('wishlist', JSON.stringify(wishlist)); } catch {} }, [wishlist]);
+    React.useEffect(() => { try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {} }, [cart]);
+    React.useEffect(() => { try { localStorage.setItem('popupConfig', JSON.stringify(popupConfig)); } catch {} }, [popupConfig]);
+    React.useEffect(() => { try { localStorage.setItem('emailLogs', JSON.stringify(emailLogs)); } catch {} }, [emailLogs]);
+    React.useEffect(() => { try { localStorage.setItem('freeGiftConfig', JSON.stringify(freeGiftConfig)); } catch {} }, [freeGiftConfig]);
     
     // Persist custom reviews
     React.useEffect(() => {
@@ -155,16 +162,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
              localStorage.setItem('reviews', JSON.stringify(newReviews));
         } catch {}
     }, [reviews]);
-
-    // Persist popup config
-    React.useEffect(() => {
-        try { localStorage.setItem('popupConfig', JSON.stringify(popupConfig)); } catch {}
-    }, [popupConfig]);
-
-    // Persist email logs
-    React.useEffect(() => {
-        try { localStorage.setItem('emailLogs', JSON.stringify(emailLogs)); } catch {}
-    }, [emailLogs]);
 
     React.useEffect(() => {
         const root = window.document.documentElement;
@@ -177,56 +174,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
     }, [isDarkMode]);
 
-    // --- EMAIL SYSTEM SIMULATION ---
     const sendFakeEmail = (recipient: string, subject: string, template: EmailLog['template'], data: any = {}) => {
         let content = '';
-        
-        // Simple HTML generators for preview
         if (template === 'welcome') {
-            content = `
-                <div style="font-family: sans-serif; color: #333; padding: 20px;">
-                    <h1 style="color: #d97706;">Welcome to Craft by Claudette, ${data.name || 'Friend'}!</h1>
-                    <p>We are so excited to have you join our community of handmade jewelry lovers.</p>
-                    <p>As a thank you, use code <strong>WELCOME10</strong> for 10% off your first order.</p>
-                    <br/>
-                    <a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Shop Now</a>
-                </div>
-            `;
+            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">Welcome to Craft by Claudette, ${data.name || 'Friend'}!</h1><p>We are so excited to have you join our community.</p><p>As a thank you, use code <strong>WELCOME10</strong> for 10% off.</p><br/><a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Shop Now</a></div>`;
         } else if (template === 'password_reset') {
-            content = `
-                <div style="font-family: sans-serif; color: #333; padding: 20px;">
-                    <h2>Reset Your Password</h2>
-                    <p>We received a request to reset your password.</p>
-                    <p>Click the button below to choose a new one:</p>
-                    <br/>
-                    <a href="#" style="background-color: #333; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-                    <p style="font-size: 12px; color: #777; margin-top: 20px;">If you didn't request this, please ignore this email.</p>
-                </div>
-            `;
+            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h2>Reset Your Password</h2><p>Click the button below to choose a new one:</p><br/><a href="#" style="background-color: #333; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></div>`;
         } else if (template === 'order_confirmation') {
-            content = `
-                <div style="font-family: sans-serif; color: #333; padding: 20px;">
-                    <h1 style="color: #d97706;">Order Confirmed!</h1>
-                    <p>Hi ${data.name}, thanks for your order!</p>
-                    <p>Order ID: <strong>#${Date.now().toString().slice(-6)}</strong></p>
-                    <p>Total: <strong>GH₵${data.total}</strong></p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-                    <h3>Items:</h3>
-                    <ul>
-                        ${data.items?.map((item: any) => `<li>${item.quantity}x ${item.name}</li>`).join('')}
-                    </ul>
-                    <p>We'll let you know when it ships!</p>
-                </div>
-            `;
+            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">Order Confirmed!</h1><p>Hi ${data.name}, thanks for your order!</p><p>Total: <strong>GH₵${data.total}</strong></p><h3>Items:</h3><ul>${data.items?.map((item: any) => `<li>${item.quantity}x ${item.name}</li>`).join('')}</ul></div>`;
         } else if (template === 'marketing') {
-             content = `
-                <div style="font-family: sans-serif; color: #333; padding: 20px;">
-                    <h1 style="color: #d97706;">${subject}</h1>
-                    <p>Check out our latest collection!</p>
-                    <br/>
-                    <a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">View Collection</a>
-                </div>
-            `;
+             content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">${subject}</h1><p>Check out our latest collection!</p></div>`;
         }
 
         const logEntry: EmailLog = {
@@ -238,59 +195,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             date: new Date().toLocaleString(),
             content
         };
-
         setEmailLogs(prev => [logEntry, ...prev]);
-        
-        // Optional: Toast for admin visibility or general feedback
-        console.log(`[Email System] Sent '${template}' email to ${recipient}`);
     };
 
     const toggleWishlist = (productId: number) => {
-        setWishlist(prevWishlist =>
-            prevWishlist.includes(productId)
-                ? prevWishlist.filter(id => id !== productId)
-                : [...prevWishlist, productId]
-        );
+        setWishlist(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
     };
 
     const addToCart = (productId: number, quantity: number) => {
         setCart(prevCart => {
             const existingItem = prevCart.find(item => item.productId === productId);
             if (existingItem) {
-                return prevCart.map(item =>
-                    item.productId === productId
-                        ? { ...item, quantity: item.quantity + quantity }
-                        : item
-                );
+                return prevCart.map(item => item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item);
             }
             return [...prevCart, { productId, quantity }];
         });
     };
 
     const updateCartQuantity = (productId: number, newQuantity: number) => {
-        setCart(prevCart => {
-            if (newQuantity <= 0) {
-                return prevCart.filter(item => item.productId !== productId);
-            }
-            return prevCart.map(item =>
-                item.productId === productId
-                    ? { ...item, quantity: newQuantity }
-                    : item
-            );
-        });
+        setCart(prevCart => newQuantity <= 0 ? prevCart.filter(item => item.productId !== productId) : prevCart.map(item => item.productId === productId ? { ...item, quantity: newQuantity } : item));
     };
 
-    const removeFromCart = (productId: number) => {
-        setCart(prevCart => prevCart.filter(item => item.productId !== productId));
-    };
+    const removeFromCart = (productId: number) => setCart(prev => prev.filter(item => item.productId !== productId));
 
     const addReview = (reviewData: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => {
-        const newReview: ProductReview = {
-            ...reviewData,
-            id: Date.now(),
-            date: new Date().toISOString().split('T')[0],
-            verifiedPurchase: true 
-        };
+        const newReview: ProductReview = { ...reviewData, id: Date.now(), date: new Date().toISOString().split('T')[0], verifiedPurchase: true };
         setReviews(prev => [newReview, ...prev]);
         addToast('Review submitted successfully!', 'success');
     };
@@ -300,27 +229,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast("Popup settings updated!", "success");
     };
 
+    const updateFreeGiftConfig = (config: FreeGiftConfig) => {
+        setFreeGiftConfig(config);
+        addToast("Free Gift settings updated!", "success");
+    };
+
     const login = async (email: string, password: string) => {
         if (email === 'admin@test.com' && password === 'password') {
-            const mockUser: User = { uid: 'mock-admin-uid', email: 'admin@test.com', displayName: 'Admin User' };
-            setUser(mockUser);
+            setUser({ uid: 'mock-admin-uid', email: 'admin@test.com', displayName: 'Admin User' });
             addToast('Login successful!', 'success');
         } else {
-            addToast('Invalid credentials (use admin@test.com / password)', 'error');
+            addToast('Invalid credentials', 'error');
             throw new Error('Invalid credentials');
         }
     };
 
     const signup = async (email: string, password: string, name: string = 'User') => {
-        const mockUser: User = { uid: `mock-user-${Date.now()}`, email, displayName: name };
-        setUser(mockUser);
+        setUser({ uid: `mock-user-${Date.now()}`, email, displayName: name });
         sendFakeEmail(email, 'Welcome to Craft by Claudette!', 'welcome', { name });
-        addToast('Account created & welcome email sent!', 'success');
+        addToast('Account created!', 'success');
     };
 
     const logout = async () => {
         setUser(null);
-        addToast('You have been logged out.', 'info');
+        addToast('Logged out.', 'info');
     };
 
     const sendResetLink = async (email: string) => {
@@ -329,22 +261,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const toggleDarkMode = React.useCallback(() => setIsDarkMode(prev => !prev), []);
-
     const cartItemCount = React.useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
-    const value = {
-        user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount,
-        login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode,
-        popupConfig, updatePopupConfig, emailLogs, sendFakeEmail
-    };
-
-    return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+    return <AppContext.Provider value={{ user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount, login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode, popupConfig, updatePopupConfig, emailLogs, sendFakeEmail, freeGiftConfig, updateFreeGiftConfig }}>{children}</AppContext.Provider>;
 };
 
 export const useAppContext = () => {
     const context = React.useContext(AppContext);
-    if (context === undefined) {
-        throw new Error('useAppContext must be used within an AppProvider');
-    }
+    if (context === undefined) throw new Error('useAppContext must be used within an AppProvider');
     return context;
 };

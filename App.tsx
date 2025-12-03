@@ -20,7 +20,8 @@ import LoginPage from './components/LoginPage';
 import SignupPage from './components/SignupPage';
 import ProductDetailPage from './components/ProductDetailPage';
 import CheckoutPage from './components/CheckoutPage';
-import AdminDashboard from './components/AdminDashboard';
+// Lazy load AdminDashboard
+const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 import ProductReviewsPage from './components/ProductReviewsPage';
 import SearchResultsPage from './components/SearchResultsPage';
 import SearchPage from './components/SearchPage';
@@ -34,6 +35,10 @@ import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
 import AllProductsPage from './components/AllProductsPage';
 import PromotionalPopup from './components/PromotionalPopup';
+import { HomeSkeleton } from './components/Skeleton';
+import ReportBugPage from './components/ReportBugPage';
+import ErrorBoundary from './components/ErrorBoundary';
+import NotFoundPage from './components/NotFoundPage';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
@@ -76,17 +81,22 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
         admin: 'admin', affiliate: 'affiliate', account: 'account', login: 'login',
         signup: 'signup', cart: 'cart', checkout: 'checkout', searchHistory: 'searchHistory',
         search: 'search', productReviews: 'productReviews', forgotPassword: 'forgotPassword',
-        resetPassword: 'resetPassword', allProducts: 'allProducts'
+        resetPassword: 'resetPassword', allProducts: 'allProducts', reportBug: 'reportBug',
+        shop: 'shop'
     };
 
-    return path in pageMap ? { page: pageMap[path], productId: null } : { page: 'shop', productId: null };
+    if (hash === '' || hash === '/') return { page: 'shop', productId: null };
+
+    return path in pageMap ? { page: pageMap[path], productId: null } : { page: 'notFound', productId: null };
 };
 
-const LoadingSpinner = () => (
-  <div className="fixed inset-0 bg-bg-primary flex items-center justify-center z-[100]">
-    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-accent-primary"></div>
-  </div>
-);
+const ScrollToTop = () => {
+    const { pathname, hash } = window.location;
+    React.useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [pathname, hash]);
+    return null;
+};
 
 const App: React.FC = () => {
   const { user, isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews } = useAppContext();
@@ -144,14 +154,13 @@ const App: React.FC = () => {
                 bestsellers: [1, 3, 5],
             });
             setIsLoading(false);
-        }, 500);
+        }, 1200);
     };
     loadMockData();
   }, []);
 
   // CRUD Handlers (operate on local state)
   const handleSaveProduct = (productData: Product, imageFile?: File) => {
-    // Image file is ignored in mock setup
     if ('id' in productData && productData.id) {
         setProducts(products.map(p => p.id === productData.id ? { ...productData } : p));
         addToast('Product updated successfully!');
@@ -245,6 +254,9 @@ const App: React.FC = () => {
     let newHash = currentPage === 'shop' ? '/' : `/${currentPage}`;
     if (currentPage === 'productDetail' && selectedProductId) {
         newHash = `/product/${selectedProductId}`;
+    } else if (currentPage === 'notFound') {
+        // Do not update hash for 404 to preserve the wrong URL for user context
+        return; 
     }
     const currentHash = window.location.hash.slice(1);
     if (currentHash !== newHash && !(currentHash === '' && newHash === '/')) {
@@ -352,21 +364,23 @@ const App: React.FC = () => {
             onQuickView={setQuickViewProduct}
           />;
         }
-        return null;
+        return <NotFoundPage onNavigate={onNavigate} />;
       case 'checkout': return <CheckoutPage products={products} promotions={promotions} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={() => { addToast('Order placed successfully!'); setCart([]); setCurrentPage('shop'); }} />;
       case 'admin': return (
-        <AdminDashboard
-            onNavigate={onNavigate}
-            products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
-            categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
-            heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
-            orders={orders} customers={customers} 
-            promotions={promotions} onSavePromotion={handleSavePromotion} onDeletePromotion={handleDeletePromotion}
-            homepageSections={homepageSections} onSaveHomepageSections={handleSaveHomepageSections}
-            isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
-        />
+        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Loading Admin...</div>}>
+            <AdminDashboard
+                onNavigate={onNavigate}
+                products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
+                categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
+                heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
+                orders={orders} customers={customers} 
+                promotions={promotions} onSavePromotion={handleSavePromotion} onDeletePromotion={handleDeletePromotion}
+                homepageSections={homepageSections} onSaveHomepageSections={handleSaveHomepageSections}
+                isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
+            />
+        </React.Suspense>
       );
-      case 'productReviews': return selectedProduct && <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} />;
+      case 'productReviews': return selectedProduct ? <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} /> : <NotFoundPage onNavigate={onNavigate} />;
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
       case 'affiliate': return <AffiliatePage />;
@@ -374,6 +388,8 @@ const App: React.FC = () => {
       case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
       case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast("Password reset successfully!"); onNavigate('login'); }} onNavigate={onNavigate} />;
       case 'allProducts': return <AllProductsPage products={products.filter(p => p.published)} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
+      case 'reportBug': return <ReportBugPage onNavigate={onNavigate} />;
+      case 'notFound': return <NotFoundPage onNavigate={onNavigate} />;
       case 'shop':
       default:
         return (
@@ -418,46 +434,49 @@ const App: React.FC = () => {
   };
 
   if (isLoading) {
-    return <LoadingSpinner />;
+    return <HomeSkeleton />;
   }
 
   return (
-    <div className={isDarkMode ? 'dark' : ''}>
-        {currentPage !== 'admin' && (
-          <Navbar 
-            onCartClick={() => setCurrentPage('cart')} 
-            onWishlistClick={() => setIsWishlistOpen(true)}
-            onHomeClick={() => setCurrentPage('shop')}
-            onNavigate={onNavigate}
-            searchHistory={searchHistory}
-            onSearch={handleSearch}
-            products={products}
-          />
-        )}
-        <AnimatePresence>
-            {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && (
-                <BackButton onNavigate={onNavigate} />
+    <ErrorBoundary>
+        <div className={isDarkMode ? 'dark' : ''}>
+            <ScrollToTop />
+            {currentPage !== 'admin' && currentPage !== 'notFound' && (
+            <Navbar 
+                onCartClick={() => setCurrentPage('cart')} 
+                onWishlistClick={() => setIsWishlistOpen(true)}
+                onHomeClick={() => setCurrentPage('shop')}
+                onNavigate={onNavigate}
+                searchHistory={searchHistory}
+                onSearch={handleSearch}
+                products={products}
+            />
             )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-            <motion.div
-                key={currentPage}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-            >
-                {renderPage()}
-            </motion.div>
-        </AnimatePresence>
-        {currentPage !== 'admin' && <Footer onNavigate={onNavigate} />}
-        <AnimatePresence>
-          {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
-          {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
-        </AnimatePresence>
-        {currentPage !== 'admin' && <PromotionalPopup />}
-        <GlobalToastContainer toasts={toasts} />
-    </div>
+            <AnimatePresence>
+                {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'notFound' && (
+                    <BackButton onNavigate={onNavigate} />
+                )}
+            </AnimatePresence>
+            <AnimatePresence mode="wait">
+                <motion.div
+                    key={currentPage}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    {renderPage()}
+                </motion.div>
+            </AnimatePresence>
+            {currentPage !== 'admin' && currentPage !== 'notFound' && <Footer onNavigate={onNavigate} />}
+            <AnimatePresence>
+            {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
+            {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
+            </AnimatePresence>
+            {currentPage !== 'admin' && currentPage !== 'notFound' && <PromotionalPopup />}
+            <GlobalToastContainer toasts={toasts} />
+        </div>
+    </ErrorBoundary>
   );
 };
 

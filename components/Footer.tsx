@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { Page } from '../types';
 
@@ -39,11 +40,16 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
             </div>
           </div>
         </div>
-        <div className="mt-12 border-t border-border-primary pt-8 text-center">
+        <div className="mt-12 border-t border-border-primary pt-8 text-center flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-text-secondary text-sm">&copy; {new Date().getFullYear()} Craft by Claudette. All rights reserved.</p>
-            <button onClick={() => onNavigate('admin')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors mt-2">
-                Admin Dashboard
-            </button>
+            <div className="flex gap-4">
+                <button onClick={() => onNavigate('reportBug')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors">
+                    Report a Bug
+                </button>
+                <button onClick={() => onNavigate('admin')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors">
+                    Internal
+                </button>
+            </div>
         </div>
       </div>
     </footer>
