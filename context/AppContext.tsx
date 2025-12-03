@@ -219,7 +219,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const removeFromCart = (productId: number) => setCart(prev => prev.filter(item => item.productId !== productId));
 
     const addReview = (reviewData: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => {
-        const newReview: ProductReview = { ...reviewData, id: Date.now(), date: new Date().toISOString().split('T')[0], verifiedPurchase: true };
+        // Automatically verify purchase if the user is logged in (simulated logic)
+        const isVerified = !!user;
+        const newReview: ProductReview = { 
+            ...reviewData, 
+            id: Date.now(), 
+            date: new Date().toISOString().split('T')[0], 
+            verifiedPurchase: isVerified 
+        };
         setReviews(prev => [newReview, ...prev]);
         addToast('Review submitted successfully!', 'success');
     };

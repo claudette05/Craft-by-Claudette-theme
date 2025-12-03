@@ -260,7 +260,7 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
                                         <div className="flex items-center flex-wrap gap-2">
                                             <p className="font-semibold text-text-primary">{review.author}</p>
                                             {review.verifiedPurchase && (
-                                                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-green-600 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
+                                                <div className="flex items-center gap-1 text-[10px] sm:text-xs text-green-700 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
                                                     <CheckBadgeIcon className="w-3 h-3" />
                                                     <span>Verified Purchase</span>
                                                 </div>

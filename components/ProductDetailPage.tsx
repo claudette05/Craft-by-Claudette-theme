@@ -1,8 +1,4 @@
 
-
-
-
-
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductReview } from '../types';
@@ -91,7 +87,7 @@ const ReviewCard: React.FC<{ review: ProductReview, onImageClick: (src: string) 
                 {review.verifiedPurchase && (
                     <div className="flex items-center gap-1 text-[10px] text-green-700 dark:text-green-400 font-bold bg-green-100 dark:bg-green-900/30 px-2 py-0.5 rounded-full border border-green-200 dark:border-green-800">
                         <CheckBadgeIcon className="w-3 h-3" />
-                        Verified
+                        Verified Purchase
                     </div>
                 )}
             </div>
@@ -168,18 +164,35 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         setQuantity(prev => Math.max(1, prev + amount));
     };
     
+    // Logic for available colors: Filter out empty strings
     const availableColors = React.useMemo(() => {
         if (!product.variants) return [];
-        const colors = product.variants.map(v => ({ name: v.color, hex: v.colorHex, imageUrl: v.imageUrl }));
+        const colors = product.variants
+            .filter(v => v.color && v.color.trim() !== '')
+            .map(v => ({ name: v.color, hex: v.colorHex, imageUrl: v.imageUrl }));
         return [...new Map(colors.map(item => [item.name, item])).values()];
     }, [product.variants]);
 
+    const hasVariants = product.variants && product.variants.length > 0;
+    const hasColorOptions = availableColors.length > 0;
+
+    // Logic for available sizes: If colors exist, filter by selected color. If not, show all sizes (assuming variants are size-only).
     const availableSizes = React.useMemo(() => {
-        if (!product.variants || !selectedColor) return [];
-        return product.variants
-            .filter(v => v.color === selectedColor)
+        if (!product.variants) return [];
+        
+        let variants = product.variants;
+        if (hasColorOptions) {
+            if (!selectedColor) return []; // Must select color first if colors exist
+            variants = variants.filter(v => v.color === selectedColor);
+        }
+        
+        // Filter out empty sizes just in case, though size usually required
+        return variants
+            .filter(v => v.size && v.size.trim() !== '')
             .map(v => ({ name: v.size, stock: v.stock }));
-    }, [product.variants, selectedColor]);
+    }, [product.variants, selectedColor, hasColorOptions]);
+
+    const hasSizeOptions = availableSizes.length > 0;
 
     const handleColorSelect = (color: { name: string, imageUrl?: string }) => {
         setSelectedColor(color.name);
@@ -188,15 +201,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
             setSelectedImage(color.imageUrl);
         }
     };
-    
-    const hasVariants = product.variants && product.variants.length > 0;
-    const hasColorOptions = availableColors.length > 0;
-    const hasSizeOptions = availableSizes.length > 0;
 
     const stockLevel = React.useMemo(() => {
         if (!hasVariants) return product.stock;
-        if ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize)) return -1;
-        const selectedVariant = product.variants?.find(v => (!hasColorOptions || v.color === selectedColor) && (!hasSizeOptions || v.size === selectedSize));
+        
+        // Validation: If options exist, they must be selected
+        if (hasColorOptions && !selectedColor) return -1;
+        if (hasSizeOptions && !selectedSize) return -1;
+
+        // Find the variant
+        const selectedVariant = product.variants?.find(v => {
+            const colorMatch = !hasColorOptions || v.color === selectedColor;
+            const sizeMatch = !hasSizeOptions || v.size === selectedSize;
+            return colorMatch && sizeMatch;
+        });
+
         return selectedVariant ? selectedVariant.stock : 0;
     }, [product, selectedColor, selectedSize, hasVariants, hasColorOptions, hasSizeOptions]);
 
@@ -222,11 +241,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     };
     
     const goBack = () => {
-        // Check if there's a history to go back to
         if (window.history.length > 1) {
             window.history.back();
         } else {
-            // Otherwise, navigate to the shop as a fallback
             onBackToShop();
         }
     };
@@ -346,7 +363,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                                 Size Guide
                                             </button>
                                         </div>
-                                        <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-3 flex-wrap">
                                             {availableSizes.map(size => (
                                                 <button
                                                     key={size.name}

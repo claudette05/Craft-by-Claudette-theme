@@ -1,3 +1,4 @@
+
 import { Product } from './types';
 
 const MOCK_PRODUCTS: Product[] = [
@@ -16,6 +17,11 @@ const MOCK_PRODUCTS: Product[] = [
     stock: 15,
     tags: ['resin', 'earrings', 'pastel', 'handmade'],
     published: true,
+    variants: [
+      { id: 'v1', color: 'Pink Swirl', colorHex: '#FBCFE8', size: 'One Size', stock: 5, imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=200&auto=format&fit=crop' },
+      { id: 'v2', color: 'Blue Swirl', colorHex: '#BFDBFE', size: 'One Size', stock: 8, imageUrl: 'https://images.unsplash.com/photo-1611151923205-3333575303a1?q=80&w=200&auto=format&fit=crop' },
+      { id: 'v3', color: 'Purple Swirl', colorHex: '#E9D5FF', size: 'One Size', stock: 2, imageUrl: 'https://images.unsplash.com/photo-1635767798638-3e25273a8236?q=80&w=200&auto=format&fit=crop' }
+    ]
   },
   {
     id: 2,
@@ -27,6 +33,11 @@ const MOCK_PRODUCTS: Product[] = [
     stock: 25,
     tags: ['beads', 'bracelet', 'blue', 'ocean'],
     published: true,
+    variants: [
+        { id: 'v4', color: '', size: 'Small (6")', stock: 10 },
+        { id: 'v5', color: '', size: 'Medium (6.5")', stock: 10 },
+        { id: 'v6', color: '', size: 'Large (7")', stock: 5 }
+    ]
   },
   {
     id: 3,

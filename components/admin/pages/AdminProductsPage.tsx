@@ -19,8 +19,15 @@ const ProductRow: React.FC<{
     isSelected: boolean;
     onToggleSelect: () => void;
 }> = ({ product, index, onEdit, onDelete, isSelected, onToggleSelect }) => {
-    const stockStatus = product.stock > 10 ? 'In Stock' : (product.stock > 0 ? 'Low Stock' : 'Out of Stock');
-    const stockColor = product.stock > 10 ? 'bg-green-100 text-green-800' : (product.stock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
+    
+    // Calculate total stock if variants exist, otherwise use main stock
+    const hasVariants = product.variants && product.variants.length > 0;
+    const currentStock = hasVariants 
+        ? product.variants!.reduce((acc, v) => acc + v.stock, 0)
+        : product.stock;
+
+    const stockStatus = currentStock > 10 ? 'In Stock' : (currentStock > 0 ? 'Low Stock' : 'Out of Stock');
+    const stockColor = currentStock > 10 ? 'bg-green-100 text-green-800' : (currentStock > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800');
     const publishedStatus = product.published ? 'Published' : 'Draft';
     const publishedColor = product.published ? 'bg-blue-100 text-blue-800' : 'bg-zinc-200 text-zinc-800';
 
@@ -47,9 +54,16 @@ const ProductRow: React.FC<{
             </th>
             <td className="px-6 py-4 font-semibold">GH₵{(product.salePrice ?? product.price).toFixed(2)}</td>
             <td className="px-6 py-4">
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${stockColor}`}>
-                    {stockStatus} ({product.stock})
-                </span>
+                <div className="flex flex-col items-start">
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${stockColor}`}>
+                        {stockStatus} ({currentStock})
+                    </span>
+                    {hasVariants && (
+                        <span className="text-xs text-[var(--text-secondary)] mt-1 ml-1">
+                            in {product.variants!.length} variants
+                        </span>
+                    )}
+                </div>
             </td>
              <td className="px-6 py-4">
                 <span className={`px-2 py-1 text-xs font-medium rounded-full ${publishedColor}`}>

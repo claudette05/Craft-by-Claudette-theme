@@ -64,7 +64,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     };
 
     const addVariant = () => {
-        const newVariant: ProductVariant = { id: `new-${Date.now()}`, color: '', colorHex: '#000000', size: '', stock: 0 };
+        const newVariant: ProductVariant = { id: `new-${Date.now()}`, color: '', colorHex: '#000000', size: '', stock: 0, imageUrl: '' };
         setFormData(prev => ({ ...prev, variants: [...(prev.variants || []), newVariant] }));
     };
     
@@ -162,10 +162,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  
                  {formData.variants && formData.variants.length > 0 && (
                      <div className="grid grid-cols-12 gap-2 mb-2 px-1 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
-                         <div className="col-span-4">Color Name</div>
+                         <div className="col-span-3">Color</div>
                          <div className="col-span-1">Hex</div>
-                         <div className="col-span-4">Size</div>
+                         <div className="col-span-3">Size</div>
                          <div className="col-span-2">Stock</div>
+                         <div className="col-span-2">Image URL</div>
                          <div className="col-span-1 text-center">Action</div>
                      </div>
                  )}
@@ -174,11 +175,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                      {formData.variants?.map(variant => (
                          <div key={variant.id} className="grid grid-cols-12 gap-2 items-center">
                             {/* Color Name */}
-                            <div className="col-span-4">
+                            <div className="col-span-3">
                                 <input 
                                     value={variant.color} 
                                     onChange={e => handleVariantChange(variant.id, 'color', e.target.value)} 
-                                    placeholder="Color (e.g. Ocean Blue)" 
+                                    placeholder="Color" 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
                             </div>
@@ -195,11 +196,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                             </div>
 
                             {/* Size */}
-                            <div className="col-span-4">
+                            <div className="col-span-3">
                                 <input 
                                     value={variant.size} 
                                     onChange={e => handleVariantChange(variant.id, 'size', e.target.value)} 
-                                    placeholder="Size (e.g. Small)" 
+                                    placeholder="Size" 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
                             </div>
@@ -213,6 +214,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                     placeholder="Qty" 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
+                            </div>
+
+                            {/* Image URL with Preview */}
+                            <div className="col-span-2 relative group">
+                                <input 
+                                    value={variant.imageUrl || ''} 
+                                    onChange={e => handleVariantChange(variant.id, 'imageUrl', e.target.value)} 
+                                    placeholder="https://..." 
+                                    className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)] pr-8" 
+                                />
+                                {variant.imageUrl && (
+                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white">
+                                        <img src={variant.imageUrl} alt="Variant" className="w-full h-full object-cover" />
+                                    </div>
+                                )}
                             </div>
 
                             {/* Delete Button */}
