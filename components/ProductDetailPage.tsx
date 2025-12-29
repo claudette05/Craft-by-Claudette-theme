@@ -1,11 +1,13 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product, ProductReview } from '../types';
-import { ChevronLeftIcon, HeartIcon, LinkIcon, CheckBadgeIcon } from './Icons';
+import { Product, ProductReview, ProductVariant } from '../types';
+// Fixed missing XIcon import
+import { ChevronLeftIcon, HeartIcon, LinkIcon, CheckBadgeIcon, MailIcon, XIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
 import SizeGuideModal from './SizeGuideModal';
+import { optimizeCloudinaryUrl } from '../utils/cloudinaryUtils';
 
 const MinusIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -103,7 +105,7 @@ const ReviewCard: React.FC<{ review: ProductReview, onImageClick: (src: string) 
                 {review.images.map((img, idx) => (
                     <img
                         key={idx}
-                        src={img}
+                        src={optimizeCloudinaryUrl(img, 200)}
                         alt="Review attachment"
                         className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 border border-border-primary transition-opacity"
                         onClick={() => onImageClick(img)}
@@ -126,7 +128,7 @@ interface ProductDetailPageProps {
 }
 
 const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedProducts, reviews, onBackToShop, onProductClick, onNavigateToReviews, onQuickView }) => {
-    const { wishlist, toggleWishlist, addToCart, addToast } = useAppContext();
+    const { wishlist, toggleWishlist, addToCart, addToast, shopInfo } = useAppContext();
     const [quantity, setQuantity] = React.useState(1);
     const [isAdded, setIsAdded] = React.useState(false);
     const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
@@ -152,6 +154,22 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         setIsAdded(false);
     }, [product]);
 
+    // Logic: Find the image for the current selection
+    React.useEffect(() => {
+        if (!product.variants) return;
+        
+        // Try to find a variant that matches BOTH or either selection and has an image
+        const matchingVariant = product.variants.find(v => {
+            const colorMatch = !selectedColor || v.color === selectedColor;
+            const sizeMatch = !selectedSize || v.size === selectedSize;
+            return colorMatch && sizeMatch && v.imageUrl;
+        });
+
+        if (matchingVariant?.imageUrl) {
+            setSelectedImage(matchingVariant.imageUrl);
+        }
+    }, [selectedColor, selectedSize, product.variants]);
+
     const allImages = React.useMemo(() => {
         const imgs = [product.imageUrl];
         if (product.images) {
@@ -164,7 +182,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         setQuantity(prev => Math.max(1, prev + amount));
     };
     
-    // Logic for available colors: Filter out empty strings
     const availableColors = React.useMemo(() => {
         if (!product.variants) return [];
         const colors = product.variants
@@ -176,17 +193,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const hasVariants = product.variants && product.variants.length > 0;
     const hasColorOptions = availableColors.length > 0;
 
-    // Logic for available sizes: If colors exist, filter by selected color. If not, show all sizes (assuming variants are size-only).
     const availableSizes = React.useMemo(() => {
         if (!product.variants) return [];
-        
         let variants = product.variants;
-        if (hasColorOptions) {
-            if (!selectedColor) return []; // Must select color first if colors exist
+        if (hasColorOptions && selectedColor) {
             variants = variants.filter(v => v.color === selectedColor);
         }
-        
-        // Filter out empty sizes just in case, though size usually required
         return variants
             .filter(v => v.size && v.size.trim() !== '')
             .map(v => ({ name: v.size, stock: v.stock }));
@@ -194,22 +206,22 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
     const hasSizeOptions = availableSizes.length > 0;
 
-    const handleColorSelect = (color: { name: string, imageUrl?: string }) => {
-        setSelectedColor(color.name);
-        setSelectedSize(null); // Reset size when color changes
-        if (color.imageUrl) {
-            setSelectedImage(color.imageUrl);
-        }
+    const handleColorSelect = (colorName: string) => {
+        setSelectedColor(colorName);
+        // We don't reset size if the new color also has that size available
+        const sizeStillValid = availableSizes.some(s => s.name === selectedSize && s.stock > 0);
+        if (!sizeStillValid) setSelectedSize(null);
+    };
+
+    const handleSizeSelect = (sizeName: string) => {
+        setSelectedSize(sizeName);
     };
 
     const stockLevel = React.useMemo(() => {
         if (!hasVariants) return product.stock;
-        
-        // Validation: If options exist, they must be selected
         if (hasColorOptions && !selectedColor) return -1;
         if (hasSizeOptions && !selectedSize) return -1;
 
-        // Find the variant
         const selectedVariant = product.variants?.find(v => {
             const colorMatch = !hasColorOptions || v.color === selectedColor;
             const sizeMatch = !hasSizeOptions || v.size === selectedSize;
@@ -248,6 +260,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     };
 
+    const emailInquiryUrl = `mailto:${shopInfo.email}?subject=Inquiry: ${product.name}&body=Hello, I'm interested in the ${product.name}. Could you please provide more details? %0AProduct link: ${window.location.href}`;
+
     return (
         <motion.main
             initial={{ opacity: 0 }}
@@ -269,21 +283,21 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     <motion.div 
-                        className="bg-bg-secondary p-4 rounded-lg shadow-md h-fit sticky top-24"
+                        className="bg-bg-secondary p-4 rounded-3xl shadow-md h-fit sticky top-24 border border-border-primary/50"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="relative overflow-hidden rounded-lg aspect-square">
+                        <div className="relative overflow-hidden rounded-2xl aspect-square bg-bg-tertiary">
                             <AnimatePresence mode="wait">
                                 <motion.img 
                                     key={selectedImage}
-                                    src={selectedImage} 
+                                    src={optimizeCloudinaryUrl(selectedImage, 1000)} 
                                     alt={product.name} 
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    transition={{ duration: 0.3 }}
+                                    initial={{ opacity: 0, scale: 1.1 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.4, ease: "circOut" }}
                                     className="w-full h-full object-cover" 
                                 />
                             </AnimatePresence>
@@ -295,10 +309,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                     <button
                                         key={index}
                                         onClick={() => setSelectedImage(img)}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-md overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
                                         aria-label={`View image ${index + 1}`}
                                     >
-                                        <img src={img} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                        <img src={optimizeCloudinaryUrl(img, 200)} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
                                     </button>
                                 ))}
                             </div>
@@ -311,54 +325,60 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5, delay: 0.1 }}
                     >
-                        <span className="text-sm text-text-secondary uppercase tracking-wider">{product.category}</span>
-                        <h1 className="text-3xl md:text-4xl font-bold my-2 text-text-primary">{product.name}</h1>
+                        <span className="text-sm text-text-secondary uppercase tracking-wider font-bold">{product.category}</span>
+                        <h1 className="text-3xl md:text-5xl font-black my-2 text-text-primary leading-tight">{product.name}</h1>
                         
                         <div className="flex items-center gap-2 mb-4">
                             <StarRating rating={averageRating} />
-                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors underline decoration-dotted">
+                            <button onClick={onNavigateToReviews} className="text-sm text-text-secondary hover:text-accent-primary transition-colors underline underline-offset-4 decoration-dotted">
                                 {reviews.length > 0 ? `(${reviews.length} Review${reviews.length === 1 ? '' : 's'})` : 'No reviews yet'}
                             </button>
                         </div>
                         
                         {hasSale ? (
-                            <div className="flex items-baseline space-x-3">
-                                <p className="text-3xl font-light text-red-600">GH₵{product.salePrice?.toFixed(2)}</p>
-                                <p className="text-xl font-light text-text-secondary line-through">GH₵{product.price.toFixed(2)}</p>
+                            <div className="flex items-baseline space-x-3 mb-4">
+                                <p className="text-4xl font-black text-red-600">GH₵{product.salePrice?.toFixed(2)}</p>
+                                <p className="text-2xl font-medium text-text-secondary line-through opacity-50">GH₵{product.price.toFixed(2)}</p>
                             </div>
                         ) : (
-                            <p className="text-3xl font-light text-accent-primary">GH₵{product.price.toFixed(2)}</p>
+                            <p className="text-4xl font-black text-accent-primary mb-4">GH₵{product.price.toFixed(2)}</p>
                         )}
 
                         <StockIndicator stock={stockLevel} />
 
-                        <p className="text-text-secondary mb-6 leading-relaxed">{product.description}</p>
+                        <p className="text-text-secondary mb-8 leading-relaxed text-lg">{product.description}</p>
                         
                         {hasVariants && (
-                            <div className="space-y-6 mb-6">
+                            <div className="space-y-8 mb-8 bg-bg-secondary p-6 rounded-3xl border border-border-primary/30 shadow-sm">
                                 {hasColorOptions && (
                                     <div>
-                                        <h3 className="text-sm font-semibold text-text-primary mb-2">Color: <span className="font-normal">{selectedColor}</span></h3>
-                                        <div className="flex items-center gap-3">
+                                        <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest mb-3">Color: <span className="font-normal normal-case text-text-secondary ml-1">{selectedColor || 'Choose Color'}</span></h3>
+                                        <div className="flex items-center gap-4">
                                             {availableColors.map(color => (
                                                 <button
                                                     key={color.name}
-                                                    onClick={() => handleColorSelect(color)}
-                                                    className={`w-8 h-8 rounded-full border-2 transition ${selectedColor === color.name ? 'ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-secondary' : 'border-gray-200 dark:border-zinc-600'}`}
-                                                    style={{ backgroundColor: color.hex || 'transparent' }}
+                                                    onClick={() => handleColorSelect(color.name)}
+                                                    className={`group relative w-10 h-10 rounded-full border-2 transition-all p-0.5 ${selectedColor === color.name ? 'border-accent-primary scale-110 shadow-lg' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'}`}
                                                     aria-label={`Select color ${color.name}`}
-                                                />
+                                                >
+                                                    <div className="w-full h-full rounded-full" style={{ backgroundColor: color.hex || 'transparent' }} />
+                                                    {selectedColor === color.name && (
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-accent-primary rounded-full border-2 border-white flex items-center justify-center">
+                                                            <div className="w-1.5 h-1.5 bg-white rounded-full" />
+                                                        </div>
+                                                    )}
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
                                 )}
                                 {hasSizeOptions && (
                                      <div>
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className="text-sm font-semibold text-text-primary">Size: <span className="font-normal">{selectedSize}</span></h3>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest">Size: <span className="font-normal normal-case text-text-secondary ml-1">{selectedSize || 'Select Size'}</span></h3>
                                             <button 
                                                 onClick={() => setIsSizeGuideOpen(true)}
-                                                className="text-xs text-accent-primary hover:underline font-medium"
+                                                className="text-xs text-accent-primary hover:underline font-bold uppercase tracking-tighter"
                                             >
                                                 Size Guide
                                             </button>
@@ -367,16 +387,16 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                             {availableSizes.map(size => (
                                                 <button
                                                     key={size.name}
-                                                    onClick={() => setSelectedSize(size.name)}
+                                                    onClick={() => handleSizeSelect(size.name)}
                                                     disabled={size.stock === 0}
-                                                    className={`px-4 py-2 border rounded-full text-sm font-medium transition ${
+                                                    className={`px-5 py-2.5 border rounded-2xl text-sm font-bold transition-all ${
                                                         selectedSize === size.name 
-                                                            ? 'bg-accent-primary text-accent-text border-accent-primary' 
-                                                            : 'bg-bg-secondary text-text-primary border-border-primary'
+                                                            ? 'bg-accent-primary text-white border-accent-primary shadow-md scale-105' 
+                                                            : 'bg-bg-secondary text-text-primary border-border-primary hover:border-accent-primary'
                                                     } ${
                                                         size.stock === 0 
-                                                            ? 'opacity-50 cursor-not-allowed line-through' 
-                                                            : 'hover:border-accent-primary'
+                                                            ? 'opacity-30 cursor-not-allowed line-through' 
+                                                            : ''
                                                     }`}
                                                 >
                                                     {size.name}
@@ -388,92 +408,100 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                             </div>
                         )}
 
-                        <div className="flex items-center gap-4 mb-6">
-                            <span className="font-semibold text-text-primary">Quantity:</span>
-                            <div className="flex items-center border border-border-primary rounded-full bg-bg-secondary">
-                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="p-2.5 text-text-secondary hover:text-accent-primary disabled:opacity-50" aria-label="Decrease quantity">
+                        <div className="flex items-center gap-4 mb-8">
+                            <span className="font-bold text-text-primary uppercase tracking-widest text-sm">Quantity:</span>
+                            <div className="flex items-center border border-border-primary rounded-full bg-bg-secondary px-2">
+                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="p-3 text-text-secondary hover:text-accent-primary disabled:opacity-30" aria-label="Decrease quantity">
                                     <MinusIcon />
                                 </button>
-                                <span className="px-5 font-semibold text-lg text-text-primary tabular-nums">{quantity}</span>
-                                <button onClick={() => handleQuantityChange(1)} className="p-2.5 text-text-secondary hover:text-accent-primary" aria-label="Increase quantity">
+                                <span className="px-4 font-black text-xl text-text-primary tabular-nums">{quantity}</span>
+                                <button onClick={() => handleQuantityChange(1)} className="p-3 text-text-secondary hover:text-accent-primary" aria-label="Increase quantity">
                                     <PlusIcon />
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <motion.button 
                                 onClick={handleAddToCartClick} 
-                                className="flex-grow font-bold py-3 px-4 rounded-full disabled:cursor-not-allowed overflow-hidden"
+                                className="flex-grow font-black py-4 px-6 rounded-full disabled:cursor-not-allowed shadow-xl uppercase tracking-widest text-sm overflow-hidden"
                                 disabled={isAddToCartDisabled && !isAdded}
                                 animate={{ 
                                     backgroundColor: isAdded ? '#22c55e' : (isAddToCartDisabled ? '#a1a1aa' : '#f59e0b')
                                 }}
-                                whileHover={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 1.05 }}
-                                whileTap={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 0.95 }}
+                                whileHover={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 1.02 }}
+                                whileTap={{ scale: (isAddToCartDisabled || isAdded) ? 1 : 0.98 }}
                             >
-                               <span className={`block ${isAdded || !isAddToCartDisabled ? 'text-accent-text' : 'text-white'}`}>
+                               <span className={`block ${isAdded || !isAddToCartDisabled ? 'text-white' : 'text-zinc-200'}`}>
                                     <AnimatePresence mode="wait" initial={false}>
                                         <motion.span
                                             key={isAdded ? 'added' : addToCartText}
-                                            initial={{ y: 10, opacity: 0 }}
+                                            initial={{ y: 20, opacity: 0 }}
                                             animate={{ y: 0, opacity: 1 }}
-                                            exit={{ y: -10, opacity: 0 }}
+                                            exit={{ y: -20, opacity: 0 }}
                                             transition={{ duration: 0.2 }}
                                             className="inline-block"
                                         >
-                                            {isAdded ? 'Added!' : addToCartText}
+                                            {isAdded ? 'Added to Cart!' : addToCartText}
                                         </motion.span>
                                     </AnimatePresence>
                                 </span>
                             </motion.button>
                             <motion.button
                                 onClick={() => toggleWishlist(product.id)}
-                                className={`flex-shrink-0 flex items-center justify-center p-3 rounded-full border transition-colors ${
-                                    isInWishlist ? 'bg-red-50 dark:bg-red-500/10 border-red-400 dark:border-red-500/30 text-red-500' : 'bg-bg-secondary border-border-primary text-text-secondary hover:bg-bg-tertiary hover:border-zinc-400 dark:hover:border-zinc-500'
+                                className={`flex-shrink-0 flex items-center justify-center p-4 rounded-full border shadow-sm transition-all ${
+                                    isInWishlist ? 'bg-red-50 dark:bg-red-500/10 border-red-400 dark:border-red-500/30 text-red-500' : 'bg-bg-secondary border-border-primary text-text-secondary hover:bg-bg-tertiary hover:border-zinc-400'
                                 }`}
-                                whileTap={{ scale: 0.9 }}
+                                whileTap={{ scale: 0.8 }}
                                 aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
                                 >
-                                <HeartIcon className="h-6 w-6" filled={isInWishlist} />
+                                <HeartIcon className="h-7 w-7" filled={isInWishlist} />
                             </motion.button>
                         </div>
-                        <div className="mt-6 pt-6 border-t border-border-primary">
+                        <div className="mt-8 pt-8 border-t border-border-primary/50 flex gap-4">
                             <button
                                 onClick={handleCopyToClipboard}
-                                className="w-full flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-full bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors"
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
                                 aria-label="Share this product by copying the link"
                             >
-                                <LinkIcon className="h-5 w-5" />
-                                <span className="font-semibold">Share</span>
+                                <LinkIcon className="h-4 w-4" />
+                                <span>Copy Link</span>
                             </button>
+                            <a
+                                href={emailInquiryUrl}
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
+                                aria-label="Inquire about this product via email"
+                            >
+                                <MailIcon className="h-4 w-4" />
+                                <span>Email Inquiry</span>
+                            </a>
                         </div>
 
                         {/* Customer Reviews Section */}
-                        <div className="mt-12 border-t border-border-primary pt-12">
-                            <div className="flex justify-between items-end mb-6">
-                                <h2 className="text-2xl font-bold text-text-primary">Customer Reviews</h2>
-                                <button onClick={onNavigateToReviews} className="text-sm font-medium text-accent-primary hover:underline">See All</button>
+                        <div className="mt-16 border-t border-border-primary/50 pt-12">
+                            <div className="flex justify-between items-end mb-8">
+                                <h2 className="text-3xl font-black text-text-primary">Reviews</h2>
+                                <button onClick={onNavigateToReviews} className="text-sm font-black text-accent-primary hover:underline uppercase tracking-widest">See All</button>
                             </div>
                             
                             {reviews.length > 0 ? (
-                                <div className="space-y-2">
-                                    {reviews.slice(0, 3).map(review => (
+                                <div className="space-y-4">
+                                    {reviews.slice(0, 2).map(review => (
                                         <ReviewCard key={review.id} review={review} onImageClick={setExpandedReviewImage} />
                                     ))}
-                                    <div className="pt-4 text-center">
+                                    <div className="pt-6 text-center">
                                         <button 
                                             onClick={onNavigateToReviews} 
-                                            className="px-6 py-2.5 bg-bg-secondary border border-border-primary rounded-full text-sm font-medium text-text-primary hover:bg-bg-tertiary transition-colors shadow-sm"
+                                            className="px-8 py-3 bg-bg-secondary border-2 border-border-primary rounded-full text-xs font-black text-text-primary hover:bg-bg-tertiary transition-all shadow-md uppercase tracking-widest"
                                         >
-                                            View all {reviews.length} reviews or Write a Review
+                                            View all {reviews.length} reviews
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="text-center py-8 bg-bg-secondary/50 rounded-lg">
-                                    <p className="text-text-secondary mb-3">No reviews yet.</p>
-                                    <button onClick={onNavigateToReviews} className="text-accent-primary font-medium hover:underline">Be the first to write a review!</button>
+                                <div className="text-center py-10 bg-bg-tertiary/50 rounded-3xl border-2 border-dashed border-border-primary/30">
+                                    <p className="text-text-secondary mb-4 font-medium">No reviews yet for this product.</p>
+                                    <button onClick={onNavigateToReviews} className="text-accent-primary font-black uppercase tracking-widest text-sm hover:underline">Be the first to review!</button>
                                 </div>
                             )}
                         </div>
@@ -481,17 +509,17 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                 </div>
             </div>
 
-            {relatedProducts.length > 0 && (
-                <div className="mt-16 md:mt-24">
+            {relatedProducts.length > 0 ? (
+                <div className="mt-24 md:mt-32">
                     <ProductGrid 
-                        title="You Might Also Like"
+                        title="Complete the Look"
                         products={relatedProducts}
                         onProductClick={onProductClick}
                         onQuickView={onQuickView}
                         bgColor="bg-transparent"
                     />
                 </div>
-            )}
+            ) : null}
             
             <AnimatePresence>
                 {isSizeGuideOpen && <SizeGuideModal onClose={() => setIsSizeGuideOpen(false)} category={product.category} />}
@@ -504,13 +532,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                         onClick={() => setExpandedReviewImage(null)}
                     >
                         <motion.img 
-                            src={expandedReviewImage} 
-                            className="max-w-full max-h-[90vh] rounded-lg shadow-2xl" 
+                            src={optimizeCloudinaryUrl(expandedReviewImage, 1200)} 
+                            className="max-w-full max-h-[90vh] rounded-3xl shadow-2xl" 
                             initial={{ scale: 0.9 }}
                             animate={{ scale: 1 }}
                         />
-                        <button className="absolute top-4 right-4 text-white/80 hover:text-white p-2 transition-colors">
-                            <span className="text-4xl">&times;</span>
+                        <button className="absolute top-6 right-6 text-white hover:text-accent-primary p-2 transition-colors">
+                            {/* Fixed missing XIcon use in the review lightbox */}
+                            <XIcon className="w-10 h-10" />
                         </button>
                     </motion.div>
                 )}

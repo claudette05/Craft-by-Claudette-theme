@@ -1,18 +1,10 @@
 
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig, User, CloudinaryConfig, ShopInfo } from '../types';
 import { MOCK_REVIEWS } from '../constants';
-
-// Define a local User type since Firebase is removed
-export type User = {
-    uid: string;
-    email: string | null;
-    displayName?: string;
-};
+import { databaseService } from '../services/databaseService';
 
 interface AppContextType {
-    user: User | null;
-    isAuthLoading: boolean;
     cart: CartItem[];
     setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
     wishlist: number[];
@@ -23,12 +15,13 @@ interface AppContextType {
     popupConfig: PopupConfig;
     emailLogs: EmailLog[];
     freeGiftConfig: FreeGiftConfig;
+    cloudinaryConfig: CloudinaryConfig;
+    shopInfo: ShopInfo;
     updatePopupConfig: (config: PopupConfig) => void;
-    updateFreeGiftConfig: (config: FreeGiftConfig) => void;
-    login: (email: string, password: string) => Promise<void>;
-    signup: (email: string, password: string, name?: string) => Promise<void>;
-    logout: () => Promise<void>;
-    sendResetLink: (email: string) => Promise<void>;
+    updateFreeGiftConfig: (config: FreeGiftConfig) => Promise<void>;
+    updateCloudinaryConfig: (config: CloudinaryConfig) => Promise<void>;
+    updateShopInfo: (info: ShopInfo) => Promise<void>;
+    uploadImage: (file: File) => Promise<string>;
     sendFakeEmail: (recipient: string, subject: string, template: EmailLog['template'], data?: any) => void;
     addToCart: (productId: number, quantity: number) => void;
     updateCartQuantity: (productId: number, newQuantity: number) => void;
@@ -37,13 +30,16 @@ interface AppContextType {
     addReview: (review: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => void;
     addToast: (message: string, type?: ToastMessage['type']) => void;
     toggleDarkMode: () => void;
+    user: User | null;
+    login: (email: string, pass: string) => Promise<void>;
+    signup: (email: string, pass: string, name: string) => Promise<void>;
+    logout: () => void;
+    sendResetLink: (email: string) => Promise<void>;
 }
 
 const AppContext = React.createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = React.useState<User | null>(null);
-    const [isAuthLoading, setIsAuthLoading] = React.useState(false); 
     const [cart, setCart] = React.useState<CartItem[]>([]);
     const [wishlist, setWishlist] = React.useState<number[]>([]);
     const [reviews, setReviews] = React.useState<ProductReview[]>(MOCK_REVIEWS);
@@ -52,8 +48,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const [isDarkMode, setIsDarkMode] = React.useState(() => {
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     });
+    const [user, setUser] = React.useState<User | null>(null);
 
-    // Free Gift Configuration
+    // Initial default states
+    const [shopInfo, setShopInfo] = React.useState<ShopInfo>({ 
+        name: 'Craft by Claudette', 
+        email: 'hello@craftbyclaudette.com',
+        whatsapp: '233552130759',
+        logoUrl: ''
+    });
+
+    const [cloudinaryConfig, setCloudinaryConfig] = React.useState<CloudinaryConfig>({ 
+        cloudName: '', 
+        uploadPreset: '' 
+    });
+
     const [freeGiftConfig, setFreeGiftConfig] = React.useState<FreeGiftConfig>({
         enabled: true,
         threshold: 200,
@@ -61,44 +70,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         successMessage: "🎉 You've unlocked a Free Gift!",
     });
 
-    // Initial Popup Configuration
     const [popupConfig, setPopupConfig] = React.useState<PopupConfig>({
-        enabled: true,
+        enabled: false,
         type: 'standard',
         content: {
             title: "Get 10% Off",
-            description: "Join the Craft by Claudette family! Subscribe to our newsletter and receive a special discount code for your first order.",
+            description: "Join the Craft by Claudette family!",
             imageUrl: "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?q=80&w=1000&auto=format&fit=crop",
             buttonText: "Unlock My 10% Off",
             successTitle: "You're In!",
-            successMessage: "Use the code below at checkout to save on your first order.",
+            successMessage: "Use code below.",
             discountCode: "WELCOME10",
-            placeholderText: "Enter your email address",
-            disclaimerText: "No spam, unsubscribe anytime."
+            placeholderText: "Enter email",
+            disclaimerText: "Unsubscribe anytime."
         },
         style: {
-            layout: 'image-left',
-            width: 'md',
-            backgroundColor: '#ffffff',
-            textColor: '#18181b',
-            buttonColor: '#F59E0B',
-            buttonTextColor: '#ffffff',
-            overlayColor: 'rgba(0,0,0,0.6)',
-            borderRadius: 'lg',
-            fontFamily: 'sans',
-            position: 'center',
-            entranceAnimation: 'scale',
-            exitAnimation: 'fade',
+            layout: 'image-left', width: 'md', backgroundColor: '#ffffff', textColor: '#18181b',
+            buttonColor: '#F59E0B', buttonTextColor: '#ffffff', overlayColor: 'rgba(0,0,0,0.6)',
+            borderRadius: 'lg', fontFamily: 'sans', position: 'center', entranceAnimation: 'scale', exitAnimation: 'fade',
         },
-        behavior: {
-            delay: 5,
-            showOnExit: true,
-            showOnScroll: false,
-            scrollPercentage: 50,
-        },
+        behavior: { delay: 5, showOnExit: true, showOnScroll: false, scrollPercentage: 50 },
         spinnerSegments: [
             { id: '1', label: '10% OFF', value: 'SPIN10', color: '#F59E0B', textColor: '#ffffff', probability: 20 },
-            { id: '2', label: 'Free Shipping', value: 'FREESHIP', color: '#18181b', textColor: '#ffffff', probability: 20 },
+            { id: '2', label: 'Free Ship', value: 'FREESHIP', color: '#18181b', textColor: '#ffffff', probability: 20 },
             { id: '3', label: '5% OFF', value: 'SPIN5', color: '#F59E0B', textColor: '#ffffff', probability: 40 },
             { id: '4', label: 'No Luck', value: 'TRYAGAIN', color: '#71717a', textColor: '#ffffff', probability: 10 },
             { id: '5', label: '20% OFF', value: 'JACKPOT20', color: '#18181b', textColor: '#F59E0B', probability: 5 },
@@ -106,96 +100,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ]
     });
 
+    // FETCH SETTINGS ON LOAD
+    React.useEffect(() => {
+        const loadSettings = async () => {
+            const data = await databaseService.getSettings();
+            if (data) {
+                if (data.shopInfo) setShopInfo(data.shopInfo);
+                if (data.cloudinaryConfig) setCloudinaryConfig(data.cloudinaryConfig);
+                if (data.freeGiftConfig) setFreeGiftConfig(data.freeGiftConfig);
+                if (data.popupConfig) setPopupConfig(data.popupConfig);
+            }
+        };
+        loadSettings();
+    }, []);
+
     const addToast = React.useCallback((message: string, type: ToastMessage['type'] = 'success') => {
         const id = Date.now();
         setToasts(prev => [...prev, { id, message, type }]);
-        setTimeout(() => {
-            setToasts(prev => prev.filter(t => t.id !== id));
-        }, 5000);
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
     }, []);
     
-    // Load data from localStorage
+    // Load local-only data
     React.useEffect(() => {
         try {
             const savedWishlist = localStorage.getItem('wishlist');
-            setWishlist(savedWishlist ? JSON.parse(savedWishlist) : []);
+            if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
             const savedCart = localStorage.getItem('cart');
-            setCart(savedCart ? JSON.parse(savedCart) : []);
+            if (savedCart) setCart(JSON.parse(savedCart));
             const savedReviews = localStorage.getItem('reviews');
-            if (savedReviews) {
-                setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
-            }
+            if (savedReviews) setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
             const savedEmails = localStorage.getItem('emailLogs');
-            if (savedEmails) {
-                setEmailLogs(JSON.parse(savedEmails));
-            }
-            const savedPopupConfig = localStorage.getItem('popupConfig');
-            if (savedPopupConfig) {
-                const parsed = JSON.parse(savedPopupConfig);
-                if (!parsed.type) parsed.type = 'standard';
-                if (!parsed.style.entranceAnimation) parsed.style.entranceAnimation = 'scale';
-                if (!parsed.spinnerSegments) parsed.spinnerSegments = popupConfig.spinnerSegments;
-                setPopupConfig(prev => ({ ...prev, ...parsed }));
-            }
-            const savedFreeGiftConfig = localStorage.getItem('freeGiftConfig');
-            if (savedFreeGiftConfig) {
-                setFreeGiftConfig(JSON.parse(savedFreeGiftConfig));
-            }
+            if (savedEmails) setEmailLogs(JSON.parse(savedEmails));
+            const savedUser = localStorage.getItem('user');
+            if (savedUser) setUser(JSON.parse(savedUser));
         } catch (e) {
-            console.error("Failed to load data from localStorage", e);
-            setWishlist([]);
-            setCart([]);
+            console.error("Local load failed", e);
         }
     }, []);
 
-    // Persist data
+    // Persist local-only data
     React.useEffect(() => { try { localStorage.setItem('wishlist', JSON.stringify(wishlist)); } catch {} }, [wishlist]);
     React.useEffect(() => { try { localStorage.setItem('cart', JSON.stringify(cart)); } catch {} }, [cart]);
-    React.useEffect(() => { try { localStorage.setItem('popupConfig', JSON.stringify(popupConfig)); } catch {} }, [popupConfig]);
-    React.useEffect(() => { try { localStorage.setItem('emailLogs', JSON.stringify(emailLogs)); } catch {} }, [emailLogs]);
-    React.useEffect(() => { try { localStorage.setItem('freeGiftConfig', JSON.stringify(freeGiftConfig)); } catch {} }, [freeGiftConfig]);
+    React.useEffect(() => { try { if (user) localStorage.setItem('user', JSON.stringify(user)); else localStorage.removeItem('user'); } catch {} }, [user]);
     
-    // Persist custom reviews
-    React.useEffect(() => {
-         try {
-             const newReviews = reviews.filter(r => !MOCK_REVIEWS.find(mr => mr.id === r.id));
-             localStorage.setItem('reviews', JSON.stringify(newReviews));
-        } catch {}
-    }, [reviews]);
-
     React.useEffect(() => {
         const root = window.document.documentElement;
-        if (isDarkMode) {
-            root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        } else {
-            root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        }
+        if (isDarkMode) { root.classList.add('dark'); localStorage.setItem('theme', 'dark'); }
+        else { root.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
     }, [isDarkMode]);
 
-    const sendFakeEmail = (recipient: string, subject: string, template: EmailLog['template'], data: any = {}) => {
-        let content = '';
-        if (template === 'welcome') {
-            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">Welcome to Craft by Claudette, ${data.name || 'Friend'}!</h1><p>We are so excited to have you join our community.</p><p>As a thank you, use code <strong>WELCOME10</strong> for 10% off.</p><br/><a href="#" style="background-color: #f59e0b; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Shop Now</a></div>`;
-        } else if (template === 'password_reset') {
-            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h2>Reset Your Password</h2><p>Click the button below to choose a new one:</p><br/><a href="#" style="background-color: #333; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a></div>`;
-        } else if (template === 'order_confirmation') {
-            content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">Order Confirmed!</h1><p>Hi ${data.name}, thanks for your order!</p><p>Total: <strong>GH₵${data.total}</strong></p><h3>Items:</h3><ul>${data.items?.map((item: any) => `<li>${item.quantity}x ${item.name}</li>`).join('')}</ul></div>`;
-        } else if (template === 'marketing') {
-             content = `<div style="font-family: sans-serif; color: #333; padding: 20px;"><h1 style="color: #d97706;">${subject}</h1><p>Check out our latest collection!</p></div>`;
+    const uploadImage = async (file: File): Promise<string> => {
+        if (!cloudinaryConfig.cloudName || !cloudinaryConfig.uploadPreset) {
+            throw new Error("Cloudinary not configured in Admin Settings.");
         }
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', cloudinaryConfig.uploadPreset);
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: formData });
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || "Cloudinary upload failed");
+        }
+        const data = await response.json();
+        return data.secure_url;
+    };
 
-        const logEntry: EmailLog = {
-            id: Date.now().toString(),
-            recipient,
-            subject,
-            template,
-            status: 'Sent',
-            date: new Date().toLocaleString(),
-            content
-        };
-        setEmailLogs(prev => [logEntry, ...prev]);
+    const login = async (email: string, pass: string) => {
+        await new Promise(res => setTimeout(res, 800));
+        const mockUser: User = { id: Date.now().toString(), email, name: 'Demo User' };
+        setUser(mockUser);
+        addToast('Logged in successfully!');
+    };
+
+    const signup = async (email: string, pass: string, name: string) => {
+        await new Promise(res => setTimeout(res, 1000));
+        const mockUser: User = { id: Date.now().toString(), email, name };
+        setUser(mockUser);
+        addToast('Account created successfully!');
+    };
+
+    const logout = () => { setUser(null); addToast('Logged out.', 'info'); };
+
+    const sendResetLink = async (email: string) => {
+        await new Promise(res => setTimeout(res, 800));
+        addToast('Reset link sent to ' + email, 'info');
     };
 
     const toggleWishlist = (productId: number) => {
@@ -203,74 +191,64 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const addToCart = (productId: number, quantity: number) => {
-        setCart(prevCart => {
-            const existingItem = prevCart.find(item => item.productId === productId);
-            if (existingItem) {
-                return prevCart.map(item => item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item);
-            }
-            return [...prevCart, { productId, quantity }];
+        setCart(prev => {
+            const existing = prev.find(item => item.productId === productId);
+            if (existing) return prev.map(item => item.productId === productId ? { ...item, quantity: item.quantity + quantity } : item);
+            return [...prev, { productId, quantity }];
         });
     };
 
     const updateCartQuantity = (productId: number, newQuantity: number) => {
-        setCart(prevCart => newQuantity <= 0 ? prevCart.filter(item => item.productId !== productId) : prevCart.map(item => item.productId === productId ? { ...item, quantity: newQuantity } : item));
+        setCart(prev => newQuantity <= 0 ? prev.filter(i => i.productId !== productId) : prev.map(i => i.productId === productId ? { ...i, quantity: newQuantity } : i));
     };
 
-    const removeFromCart = (productId: number) => setCart(prev => prev.filter(item => item.productId !== productId));
+    const removeFromCart = (productId: number) => setCart(prev => prev.filter(i => i.productId !== productId));
 
     const addReview = (reviewData: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => {
-        // Automatically verify purchase if the user is logged in (simulated logic)
-        const isVerified = !!user;
-        const newReview: ProductReview = { 
-            ...reviewData, 
-            id: Date.now(), 
-            date: new Date().toISOString().split('T')[0], 
-            verifiedPurchase: isVerified 
-        };
+        const newReview: ProductReview = { ...reviewData, id: Date.now(), date: new Date().toISOString().split('T')[0], verifiedPurchase: false };
         setReviews(prev => [newReview, ...prev]);
-        addToast('Review submitted successfully!', 'success');
+        addToast('Review submitted!');
     };
 
-    const updatePopupConfig = (config: PopupConfig) => {
+    // SYNCED CONFIGURATIONS
+    const updatePopupConfig = async (config: PopupConfig) => {
         setPopupConfig(config);
-        addToast("Popup settings updated!", "success");
+        await databaseService.saveSettings({ popupConfig: config });
+        addToast("Popup published!");
     };
 
-    const updateFreeGiftConfig = (config: FreeGiftConfig) => {
+    const updateFreeGiftConfig = async (config: FreeGiftConfig) => {
         setFreeGiftConfig(config);
-        addToast("Free Gift settings updated!", "success");
+        await databaseService.saveSettings({ freeGiftConfig: config });
+        addToast("Gift settings saved!");
     };
 
-    const login = async (email: string, password: string) => {
-        if (email === 'admin@test.com' && password === 'password') {
-            setUser({ uid: 'mock-admin-uid', email: 'admin@test.com', displayName: 'Admin User' });
-            addToast('Login successful!', 'success');
-        } else {
-            addToast('Invalid credentials', 'error');
-            throw new Error('Invalid credentials');
-        }
+    const updateCloudinaryConfig = async (config: CloudinaryConfig) => {
+        setCloudinaryConfig(config);
+        await databaseService.saveSettings({ cloudinaryConfig: config });
+        addToast("Cloudinary linked!");
     };
 
-    const signup = async (email: string, password: string, name: string = 'User') => {
-        setUser({ uid: `mock-user-${Date.now()}`, email, displayName: name });
-        sendFakeEmail(email, 'Welcome to Craft by Claudette!', 'welcome', { name });
-        addToast('Account created!', 'success');
-    };
-
-    const logout = async () => {
-        setUser(null);
-        addToast('Logged out.', 'info');
-    };
-
-    const sendResetLink = async (email: string) => {
-        sendFakeEmail(email, 'Reset Your Password', 'password_reset', {});
-        addToast(`Reset link sent to ${email}`, 'success');
+    const updateShopInfo = async (info: ShopInfo) => {
+        setShopInfo(info);
+        await databaseService.saveSettings({ shopInfo: info });
+        addToast("Shop info synced!");
     };
 
     const toggleDarkMode = React.useCallback(() => setIsDarkMode(prev => !prev), []);
     const cartItemCount = React.useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
-    return <AppContext.Provider value={{ user, isAuthLoading, cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount, login, signup, logout, sendResetLink, addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, toggleDarkMode, popupConfig, updatePopupConfig, emailLogs, sendFakeEmail, freeGiftConfig, updateFreeGiftConfig }}>{children}</AppContext.Provider>;
+    return (
+        <AppContext.Provider value={{ 
+            cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount, 
+            addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, 
+            toggleDarkMode, popupConfig, updatePopupConfig, emailLogs, sendFakeEmail: () => {}, 
+            freeGiftConfig, updateFreeGiftConfig, user, login, signup, logout, sendResetLink, 
+            cloudinaryConfig, updateCloudinaryConfig, uploadImage, shopInfo, updateShopInfo 
+        }}>
+            {children}
+        </AppContext.Provider>
+    );
 };
 
 export const useAppContext = () => {

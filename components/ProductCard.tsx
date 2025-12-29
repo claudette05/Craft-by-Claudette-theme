@@ -1,8 +1,10 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product } from '../types';
 import { HeartIcon } from './Icons';
 import { useAppContext } from '../context/AppContext';
+import { getCloudinaryThumbnail } from '../utils/cloudinaryUtils';
 
 interface ProductCardProps {
   product: Product;
@@ -26,6 +28,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
   const hasSale = typeof product.salePrice === 'number';
   const isInWishlist = wishlist.includes(product.id);
   
+  // Use optimized thumbnail if available
+  const displayImageUrl = React.useMemo(() => getCloudinaryThumbnail(product.imageUrl), [product.imageUrl]);
+
   const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isAdded) return;
@@ -75,7 +80,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
             </motion.div>
         </motion.button>
         <motion.img
-          src={product.imageUrl}
+          src={displayImageUrl}
           alt={product.name}
           loading="lazy"
           className="w-full h-56 object-cover"

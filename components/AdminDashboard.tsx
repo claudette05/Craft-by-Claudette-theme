@@ -1,11 +1,7 @@
 
-
-
-
-
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections } from '../types';
+import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page } from '../types';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminDashboardHome from './admin/pages/AdminDashboardHome';
 import AdminProductsPage from './admin/pages/AdminProductsPage';
@@ -27,7 +23,7 @@ import PromotionForm from './admin/ui/PromotionForm';
 import Toast from './admin/ui/Toast';
 import { HamburgerIcon } from './Icons';
 
-type Page = 'shop' | 'cart' | 'login' | 'signup' | 'admin';
+// Fix: Removed local Page type definition that was shadowing and causing conflicts with the central Page type
 type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
 
 interface AdminDashboardProps {
@@ -143,7 +139,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
 
     const renderContent = () => {
         switch (activePage) {
-            case 'dashboard': return <AdminDashboardHome orders={orders} products={products} />;
+            case 'dashboard': return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
             case 'products': return <AdminProductsPage products={products} onAddProduct={handleOpenAddProductModal} onEditProduct={handleOpenEditProductModal} onDeleteProduct={onDeleteProduct} />;
             case 'categories': return <AdminCategoriesPage categories={categories} products={products} onAddCategory={handleOpenAddCategoryModal} onEditCategory={handleOpenEditCategoryModal} onDeleteCategory={onDeleteCategory} />;
             case 'orders': return <AdminOrdersPage orders={orders} />;
@@ -154,8 +150,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
             case 'popup': return <AdminPopupSettingsPage />;
-            case 'emails': return <AdminEmailsPage />; // Add email logs page
-            default: return <AdminDashboardHome orders={orders} products={products}/>;
+            case 'emails': return <AdminEmailsPage />; 
+            default: return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
         }
     };
 

@@ -1,8 +1,4 @@
 
-
-
-
-
 import * as React from 'react';
 import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, ChartBarIcon, LayoutIcon, ExternalLinkIcon, SparklesIcon, MailIcon } from '../Icons';
 
@@ -42,14 +38,11 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, 
         { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
         { id: 'customers', label: 'Customers', icon: UsersIcon },
         { id: 'promotions', label: 'Promotions', icon: TagIcon },
-        { id: 'emails', label: 'Emails', icon: MailIcon }, // Added emails
-        { id: 'popup', label: 'Popup Manager', icon: SparklesIcon },
         { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
         { id: 'hero', label: 'Hero Section', icon: LayoutIcon },
         { id: 'homepage', label: 'Homepage', icon: LayoutIcon },
+        { id: 'settings', label: 'Settings', icon: SettingsIcon }, // Moved here
     ];
-
-    const settingsItem = { id: 'settings', label: 'Settings', icon: SettingsIcon };
 
     const handleNavClick = (page: AdminPage) => {
         setActivePage(page);
@@ -81,19 +74,12 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, 
                 {onNavigateToShop && (
                      <button
                         onClick={handleViewStoreClick}
-                        className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors text-sm font-medium text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200 mb-2`}
+                        className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors text-sm font-medium text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200`}
                     >
                         <ExternalLinkIcon className="h-5 w-5 mr-3" />
                         <span>View Store</span>
                     </button>
                 )}
-                <NavLink
-                    key={settingsItem.id}
-                    label={settingsItem.label}
-                    icon={settingsItem.icon}
-                    isActive={activePage === settingsItem.id}
-                    onClick={() => handleNavClick(settingsItem.id as AdminPage)}
-                />
             </div>
         </aside>
     );

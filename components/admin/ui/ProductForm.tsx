@@ -2,11 +2,12 @@
 import * as React from 'react';
 import { Product, ProductVariant } from '../../../types';
 import Toggle from './Toggle';
-import { TrashIcon } from '../../Icons';
+import { TrashIcon, PhotoIcon } from '../../Icons';
+import { useAppContext } from '../../../context/AppContext';
 
 interface ProductFormProps {
     product: Product | null;
-    onSave: (product: Product, imageFile?: File) => void;
+    onSave: (product: Product, imageFile?: File) => Promise<void> | void;
     onCancel: () => void;
 }
 
@@ -31,10 +32,14 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: str
 );
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) => {
+    const { uploadImage, addToast } = useAppContext();
     const [formData, setFormData] = React.useState<Product | Omit<Product, 'id'>>(product || emptyProduct);
     const [tagInput, setTagInput] = React.useState('');
     const [imageFile, setImageFile] = React.useState<File | undefined>();
     const [imagePreview, setImagePreview] = React.useState(product?.imageUrl || emptyProduct.imageUrl);
+    const [isSaving, setIsSaving] = React.useState(false);
+    const [uploadingVariants, setUploadingVariants] = React.useState<Set<string>>(new Set());
+    
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -61,6 +66,30 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
             v.id === variantId ? { ...v, [field]: value } : v
         );
         setFormData(prev => ({ ...prev, variants: updatedVariants }));
+    };
+
+    const handleVariantImageChange = async (variantId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            
+            // Track loading state for this specific variant
+            setUploadingVariants(prev => new Set(prev).add(variantId));
+            
+            try {
+                addToast('Uploading variant image...', 'info');
+                const url = await uploadImage(file);
+                handleVariantChange(variantId, 'imageUrl', url);
+                addToast('Variant image updated');
+            } catch (err: any) {
+                addToast(err.message || 'Variant upload failed', 'error');
+            } finally {
+                setUploadingVariants(prev => {
+                    const next = new Set(prev);
+                    next.delete(variantId);
+                    return next;
+                });
+            }
+        }
     };
 
     const addVariant = () => {
@@ -91,9 +120,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
         setFormData(prev => ({ ...prev, tags: prev.tags?.filter(tag => tag !== tagToRemove) }));
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        onSave(formData as Product, imageFile);
+        setIsSaving(true);
+        try {
+            await onSave(formData as Product, imageFile);
+        } catch (error) {
+            console.error("Save failed", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -109,7 +145,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                 <div>
                     <img src={imagePreview} alt="Product preview" className="rounded-lg shadow-sm w-full aspect-square object-cover mb-2"/>
                     <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full text-sm text-center py-2 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 rounded-md text-[var(--text-primary)]">Change Image</button>
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full text-sm text-center py-2 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 rounded-md text-[var(--text-primary)]">Change Main Image</button>
                 </div>
             </div>
             
@@ -163,10 +199,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  {formData.variants && formData.variants.length > 0 && (
                      <div className="grid grid-cols-12 gap-2 mb-2 px-1 text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider">
                          <div className="col-span-3">Color</div>
-                         <div className="col-span-1">Hex</div>
+                         <div className="col-span-1 text-center">Hex</div>
                          <div className="col-span-3">Size</div>
                          <div className="col-span-2">Stock</div>
-                         <div className="col-span-2">Image URL</div>
+                         <div className="col-span-2 text-center">Image</div>
                          <div className="col-span-1 text-center">Action</div>
                      </div>
                  )}
@@ -174,7 +210,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                  <div className="space-y-3">
                      {formData.variants?.map(variant => (
                          <div key={variant.id} className="grid grid-cols-12 gap-2 items-center">
-                            {/* Color Name */}
                             <div className="col-span-3">
                                 <input 
                                     value={variant.color} 
@@ -183,19 +218,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
                             </div>
-                            
-                            {/* Color Hex Picker */}
-                            <div className="col-span-1">
+                            <div className="col-span-1 flex justify-center">
                                 <input 
                                     type="color" 
                                     value={variant.colorHex || '#000000'} 
                                     onChange={e => handleVariantChange(variant.id, 'colorHex', e.target.value)} 
-                                    className="h-9 w-full p-0 border-0 rounded cursor-pointer bg-transparent" 
+                                    className="h-9 w-9 p-0 border-0 rounded-full cursor-pointer bg-transparent overflow-hidden" 
                                     title="Choose Hex Color"
                                 />
                             </div>
-
-                            {/* Size */}
                             <div className="col-span-3">
                                 <input 
                                     value={variant.size} 
@@ -204,8 +235,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
                             </div>
-
-                            {/* Stock */}
                             <div className="col-span-2">
                                 <input 
                                     value={variant.stock} 
@@ -215,23 +244,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                                     className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]" 
                                 />
                             </div>
-
-                            {/* Image URL with Preview */}
-                            <div className="col-span-2 relative group">
-                                <input 
-                                    value={variant.imageUrl || ''} 
-                                    onChange={e => handleVariantChange(variant.id, 'imageUrl', e.target.value)} 
-                                    placeholder="https://..." 
-                                    className="block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)] pr-8" 
-                                />
-                                {variant.imageUrl && (
-                                    <div className="absolute right-2 top-1/2 -translate-y-1/2 w-6 h-6 rounded overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white">
+                            <div className="col-span-2 flex justify-center">
+                                <label className="relative cursor-pointer group w-10 h-10 rounded-lg overflow-hidden border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 flex items-center justify-center hover:border-amber-500 transition-colors">
+                                    {uploadingVariants.has(variant.id) ? (
+                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-amber-500 border-t-transparent"></div>
+                                    ) : variant.imageUrl ? (
                                         <img src={variant.imageUrl} alt="Variant" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <PhotoIcon className="w-5 h-5 text-zinc-400 group-hover:text-amber-500" />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                         <PhotoIcon className="w-4 h-4 text-white" />
                                     </div>
-                                )}
+                                    <input 
+                                        type="file" 
+                                        className="hidden" 
+                                        accept="image/*"
+                                        onChange={(e) => handleVariantImageChange(variant.id, e)}
+                                        disabled={uploadingVariants.has(variant.id)}
+                                    />
+                                </label>
                             </div>
-
-                            {/* Delete Button */}
                             <div className="col-span-1 flex justify-center">
                                 <button 
                                     type="button" 
@@ -261,8 +294,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
             </div>
 
             <div className="flex justify-end gap-4 pt-4 border-t border-[var(--border-primary)]">
-                <button type="button" onClick={onCancel} className="bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-800 dark:text-zinc-200 font-bold py-2 px-4 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">Save Product</button>
+                <button type="button" disabled={isSaving} onClick={onCancel} className="bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 text-zinc-800 dark:text-zinc-200 font-bold py-2 px-4 rounded-lg transition-colors disabled:opacity-50">Cancel</button>
+                <button type="submit" disabled={isSaving} className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-lg transition-colors flex items-center gap-2 disabled:opacity-70">
+                    {isSaving ? (
+                        <>
+                            <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                            Saving Product...
+                        </>
+                    ) : 'Save Product'}
+                </button>
             </div>
         </form>
     );

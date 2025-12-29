@@ -1,6 +1,24 @@
 
 // types.ts
 
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+}
+
+export interface ShopInfo {
+  name: string;
+  email: string;
+  whatsapp: string;
+  logoUrl?: string;
+}
+
+export interface CloudinaryConfig {
+  cloudName: string;
+  uploadPreset: string;
+}
+
 export interface ProductVariant {
   id: string;
   color: string;
@@ -40,10 +58,10 @@ export interface HeroSlide {
 }
 
 export type Page = 
-  'shop' | 'cart' | 'login' | 'signup' | 'productDetail' | 
+  'shop' | 'cart' | 'productDetail' | 
   'checkout' | 'admin' | 'productReviews' | 'search' | 
-  'searchHistory' | 'affiliate' | 'account' | 'forgotPassword' | 
-  'resetPassword' | 'allProducts' | 'reportBug' | 'notFound';
+  'searchHistory' | 'affiliate' | 'allProducts' | 'reportBug' | 'notFound' |
+  'login' | 'signup' | 'forgotPassword' | 'resetPassword' | 'myAccount';
 
 export interface CartItem {
   productId: number;

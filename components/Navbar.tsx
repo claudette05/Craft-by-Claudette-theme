@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, UserIcon, HeartIcon } from './Icons';
+import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, HeartIcon, MailIcon } from './Icons';
 import { Page, Product } from '../types';
 import ThemeToggle from './ThemeToggle';
 import { useAppContext } from '../context/AppContext';
@@ -16,20 +16,24 @@ interface NavbarProps {
   products: Product[];
 }
 
-const navLinks = [
-  { name: 'Home', href: '#' },
-  { name: 'Contact', href: '#' },
-];
-
 const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeClick, onNavigate, searchHistory, onSearch, products }) => {
-  const { cartItemCount, wishlist, user, logout, isDarkMode, toggleDarkMode } = useAppContext();
+  const { cartItemCount, wishlist, isDarkMode, toggleDarkMode, shopInfo } = useAppContext();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
   const [isSearchOpen, setIsSearchOpen] = React.useState(false);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
   const [searchInputValue, setSearchInputValue] = React.useState('');
   const searchInputRef = React.useRef<HTMLInputElement>(null);
-  const accountMenuRef = React.useRef<HTMLDivElement>(null);
+
+  // Contact Configurations from context
+  const whatsappMessage = encodeURIComponent(`Hello ${shopInfo.name}! I'm browsing your website and I'd like to ask about...`);
+  const whatsappUrl = `https://wa.me/${shopInfo.whatsapp}?text=${whatsappMessage}`;
+  const emailUrl = `mailto:${shopInfo.email}?subject=Inquiry from Website`;
+
+  const navLinks = [
+    { name: 'Home', href: '#', isExternal: false },
+    { name: 'WhatsApp', href: whatsappUrl, isExternal: true },
+    { name: 'Email Us', href: emailUrl, isExternal: true },
+  ];
 
   const navBgClass = isScrolled || isMenuOpen
     ? 'bg-bg-primary/80 backdrop-blur-lg shadow-sm'
@@ -51,29 +55,15 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setIsSearchOpen(false);
-        setIsAccountMenuOpen(false);
-      }
-    };
-    const handleClickOutside = (event: MouseEvent) => {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(event.target as Node)) {
-        setIsAccountMenuOpen(false);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleClickOutside);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  
-  const handleLogoutClick = () => {
-    logout();
-    setIsAccountMenuOpen(false);
-    if(isMenuOpen) toggleMenu();
-  };
   
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,8 +110,12 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-20">
             <div className="flex-shrink-0">
-              <button onClick={onHomeClick} className="text-2xl font-bold text-accent-primary transition-colors hover:opacity-80">
-                Craft by Claudette
+              <button onClick={onHomeClick} className="flex items-center gap-3 transition-opacity hover:opacity-80">
+                {shopInfo.logoUrl ? (
+                    <img src={shopInfo.logoUrl} alt={shopInfo.name} className="h-10 sm:h-12 w-auto object-contain" />
+                ) : (
+                    <span className="text-2xl font-bold text-accent-primary">{shopInfo.name}</span>
+                )}
               </button>
             </div>
             <div className="hidden md:block">
@@ -130,9 +124,13 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
                   <a 
                     key={link.name} 
                     href={link.href} 
+                    target={link.isExternal ? "_blank" : undefined}
+                    rel={link.isExternal ? "noopener noreferrer" : undefined}
                     onClick={(e) => {
-                      e.preventDefault();
-                      if (link.name === 'Home') onHomeClick();
+                      if (!link.isExternal) {
+                        e.preventDefault();
+                        if (link.name === 'Home') onHomeClick();
+                      }
                     }}
                     className="text-text-secondary hover:text-accent-primary px-3 py-2 rounded-md text-sm font-medium transition-colors"
                   >
@@ -160,34 +158,6 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
                     </motion.span>
                   )}
                 </button>
-
-                <div className="ml-2" ref={accountMenuRef}>
-                  {!!user ? (
-                    <div className="relative">
-                      <button onClick={() => setIsAccountMenuOpen(!isAccountMenuOpen)} className="p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors">
-                        <UserIcon />
-                      </button>
-                      <AnimatePresence>
-                        {isAccountMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute right-0 mt-2 w-48 bg-bg-secondary rounded-md shadow-lg py-1 z-50 border border-border-primary/50"
-                          >
-                            <a href="#/account" onClick={() => setIsAccountMenuOpen(false)} className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-bg-tertiary">My Account</a>
-                            <button onClick={handleLogoutClick} className="block w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-bg-tertiary">Logout</button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                ) : (
-                    <button onClick={() => onNavigate('login')} className="flex items-center gap-1 text-text-secondary hover:text-accent-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
-                        <UserIcon className="h-4 w-4" />
-                        Login
-                    </button>
-                )}
-                </div>
               </div>
 
               <button onClick={onCartClick} className="relative p-1 rounded-full text-text-secondary hover:text-accent-primary focus:outline-none transition-colors ml-2">
@@ -306,9 +276,13 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
                           <a 
                             key={link.name} 
                             href={link.href} 
+                            target={link.isExternal ? "_blank" : undefined}
+                            rel={link.isExternal ? "noopener noreferrer" : undefined}
                             onClick={(e) => {
-                              e.preventDefault();
-                              if (link.name === 'Home') onHomeClick();
+                              if (!link.isExternal) {
+                                e.preventDefault();
+                                if (link.name === 'Home') onHomeClick();
+                              }
                               toggleMenu();
                             }}
                             className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors"
@@ -320,25 +294,6 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
                         <button onClick={() => { onWishlistClick(); toggleMenu(); }} className="flex items-center gap-2 text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
                           <HeartIcon className="h-5 w-5" /> My Wishlist ({wishlist.length})
                         </button>
-                        {!!user ? (
-                          <>
-                           <a href="#/account" onClick={toggleMenu} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
-                              My Account
-                           </a>
-                           <button onClick={handleLogoutClick} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
-                              Logout
-                           </button>
-                          </>
-                        ) : (
-                          <>
-                            <button onClick={() => { onNavigate('login'); toggleMenu(); }} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
-                                Login
-                            </button>
-                             <button onClick={() => { onNavigate('signup'); toggleMenu(); }} className="text-text-primary hover:text-accent-primary block px-3 py-2 rounded-md text-base font-medium transition-colors">
-                                Sign Up
-                            </button>
-                          </>
-                        )}
                     </div>
                   </motion.div>
               </motion.div>

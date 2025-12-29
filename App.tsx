@@ -16,8 +16,6 @@ import Footer from './components/Footer';
 import DealsSection from './components/DealsSection';
 import Bestsellers from './components/Bestsellers';
 import CartPage from './components/CartPage';
-import LoginPage from './components/LoginPage';
-import SignupPage from './components/SignupPage';
 import ProductDetailPage from './components/ProductDetailPage';
 import CheckoutPage from './components/CheckoutPage';
 // Lazy load AdminDashboard
@@ -27,26 +25,26 @@ import SearchResultsPage from './components/SearchResultsPage';
 import SearchPage from './components/SearchPage';
 import ProductModal from './components/ProductModal';
 import AffiliatePage from './components/AffiliatePage';
-import MyAccountPage from './components/MyAccountPage';
 import WishlistSidebar from './components/WishlistSidebar';
-import ForgotPasswordPage from './components/ForgotPasswordPage';
-import ResetPasswordPage from './components/ResetPasswordPage';
 import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
 import AllProductsPage from './components/AllProductsPage';
-import PromotionalPopup from './components/PromotionalPopup';
 import { HomeSkeleton } from './components/Skeleton';
 import ReportBugPage from './components/ReportBugPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import NotFoundPage from './components/NotFoundPage';
+import LoginPage from './components/LoginPage';
+import SignupPage from './components/SignupPage';
+import ForgotPasswordPage from './components/ForgotPasswordPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
+import MyAccountPage from './components/MyAccountPage';
+import { databaseService } from './services/databaseService';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
-    // Check if there's a history to go back to
     if (window.history.length > 1) {
       window.history.back();
     } else {
-      // Otherwise, navigate to the shop as a fallback
       onNavigate('shop');
     }
   };
@@ -78,11 +76,14 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
     }
     
     const pageMap: { [key: string]: Page } = {
-        admin: 'admin', affiliate: 'affiliate', account: 'account', login: 'login',
-        signup: 'signup', cart: 'cart', checkout: 'checkout', searchHistory: 'searchHistory',
-        search: 'search', productReviews: 'productReviews', forgotPassword: 'forgotPassword',
-        resetPassword: 'resetPassword', allProducts: 'allProducts', reportBug: 'reportBug',
-        shop: 'shop'
+        admin: 'admin', affiliate: 'affiliate',
+        cart: 'cart', checkout: 'checkout', searchHistory: 'searchHistory',
+        search: 'search', productReviews: 'productReviews',
+        allProducts: 'allProducts', reportBug: 'reportBug',
+        shop: 'shop',
+        login: 'login', signup: 'signup',
+        forgotPassword: 'forgotPassword', resetPassword: 'resetPassword',
+        myAccount: 'myAccount'
     };
 
     if (hash === '' || hash === '/') return { page: 'shop', productId: null };
@@ -91,17 +92,21 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
 };
 
 const ScrollToTop = () => {
-    const { pathname, hash } = window.location;
+    const { hash } = window.location;
     React.useEffect(() => {
         window.scrollTo(0, 0);
-    }, [pathname, hash]);
+    }, [hash]);
     return null;
 };
 
 const App: React.FC = () => {
-  const { user, isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews } = useAppContext();
+  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews, uploadImage } = useAppContext();
   
-  // App-wide data state
+  const STORAGE_KEYS = {
+    HOMEPAGE: 'craft_data_homepage',
+    HISTORY: 'searchHistory'
+  };
+
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [heroSlides, setHeroSlides] = React.useState<HeroSlide[]>([]);
@@ -111,7 +116,6 @@ const App: React.FC = () => {
   const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [] });
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // View/Routing State
   const initialRoute = getRouteFromHash();
   const [currentPage, setCurrentPage] = React.useState<Page>(initialRoute.page);
   const [selectedProductId, setSelectedProductId] = React.useState<number | null>(() => {
@@ -122,124 +126,178 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState<string>(() => sessionStorage.getItem('searchQuery') || '');
   const [activeCategory, setActiveCategory] = React.useState<string>('All');
   
-  // UI Component State
   const [quickViewProduct, setQuickViewProduct] = React.useState<Product | null>(null);
   const [isWishlistOpen, setIsWishlistOpen] = React.useState(false);
 
-  // Search History State
   const [searchHistory, setSearchHistory] = React.useState<string[]>(() => {
     try {
-      return JSON.parse(localStorage.getItem('searchHistory') || '[]');
+      return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
     } catch {
       return [];
     }
   });
 
-  // Load mock data on initial load
+  // Load Data with Firestore as primary, LocalStorage as fallback
   React.useEffect(() => {
-    const loadMockData = () => {
+    const loadAppData = async () => {
         setIsLoading(true);
-        // Simulate network delay for a better loading experience
-        setTimeout(() => {
-            setProducts(MOCK_PRODUCTS);
-            setCategories(CATEGORIES);
-            setHeroSlides(HERO_SLIDES);
-            setOrders(MOCK_ORDERS);
+        try {
+            const [p, c, h, o] = await Promise.all([
+                databaseService.getProducts().then(res => res.length ? res : MOCK_PRODUCTS).catch(() => MOCK_PRODUCTS),
+                databaseService.getCategories().then(res => res.length ? res : CATEGORIES).catch(() => CATEGORIES),
+                databaseService.getHeroSlides().then(res => res.length ? res : HERO_SLIDES).catch(() => HERO_SLIDES),
+                databaseService.getOrders().then(res => res.length ? res : MOCK_ORDERS).catch(() => MOCK_ORDERS)
+            ]);
+
+            setProducts(p);
+            setCategories(c);
+            setHeroSlides(h);
+            setOrders(o);
             setCustomers(MOCK_CUSTOMERS);
             setPromotions(MOCK_PROMOTIONS);
-            // Setup some initial homepage sections from mock data
-            const dealProduct = MOCK_PRODUCTS.find(p => p.salePrice);
-            setHomepageSections({
-                deals: dealProduct ? [dealProduct.id] : [],
-                bestsellers: [1, 3, 5],
+            
+            const savedHomepage = localStorage.getItem(STORAGE_KEYS.HOMEPAGE);
+            setHomepageSections(savedHomepage ? JSON.parse(savedHomepage) : {
+                deals: [p.find(prod => prod.salePrice)?.id || 1],
+                bestsellers: p.slice(0, 3).map(prod => prod.id),
             });
-            setIsLoading(false);
-        }, 1200);
+        } catch (e) {
+            console.error("Critical error loading app data", e);
+        } finally {
+            setTimeout(() => setIsLoading(false), 500);
+        }
     };
-    loadMockData();
+    loadAppData();
   }, []);
 
-  // CRUD Handlers (operate on local state)
-  const handleSaveProduct = (productData: Product, imageFile?: File) => {
-    if ('id' in productData && productData.id) {
-        setProducts(products.map(p => p.id === productData.id ? { ...productData } : p));
-        addToast('Product updated successfully!');
-    } else {
-        const newProduct = { ...productData, id: Date.now() }; // Use timestamp for unique ID
-        setProducts([newProduct, ...products]);
-        addToast('Product added successfully!');
+  const handleSaveProduct = async (productData: Product, imageFile?: File) => {
+    let finalImageUrl = productData.imageUrl;
+    
+    if (imageFile) {
+        try {
+            addToast('Uploading image to Cloudinary...', 'info');
+            finalImageUrl = await uploadImage(imageFile);
+        } catch (e: any) {
+            addToast(e.message || 'Image upload failed', 'error');
+            return;
+        }
+    }
+
+    const updatedProduct = { ...productData, imageUrl: finalImageUrl };
+    const isNew = !updatedProduct.id || String(updatedProduct.id).startsWith('new-');
+    if (isNew) updatedProduct.id = Date.now();
+
+    try {
+        // Wired to Firestore via databaseService
+        await databaseService.saveProduct(updatedProduct);
+        
+        // Refresh state
+        if (isNew) setProducts([updatedProduct, ...products]);
+        else setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+        
+        const status = databaseService.getCloudStatus();
+        if (status === 'connected') addToast('Product saved to Cloud!');
+        else if (status === 'denied') addToast('Saved locally (Permission Denied for Cloud)', 'error');
+        else addToast('Saved locally', 'info');
+    } catch (err: any) {
+        addToast(`Failed to sync: ${err.message}`, 'error');
     }
   };
 
-  const handleDeleteProduct = (productId: number) => {
+  const handleDeleteProduct = async (productId: number) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
-        setProducts(products.filter(p => p.id !== productId));
-        addToast('Product deleted!', 'info');
+        try {
+            await databaseService.deleteProduct(productId);
+            setProducts(products.filter(p => p.id !== productId));
+            addToast('Product deleted');
+        } catch (err: any) {
+            addToast('Delete failed: ' + err.message, 'error');
+        }
     }
   };
 
-  const handleSaveCategory = (categoryData: Category, imageFile?: File) => {
-    if ('id' in categoryData && categoryData.id) {
-        setCategories(categories.map(c => c.id === categoryData.id ? { ...categoryData } : c));
-        addToast('Category updated successfully!');
-    } else {
-        const newCategory = { ...categoryData, id: Date.now() };
-        setCategories([newCategory, ...categories]);
-        addToast('Category added successfully!');
+  const handleSaveCategory = async (categoryData: Category, imageFile?: File) => {
+    let finalImageUrl = categoryData.imageUrl;
+    if (imageFile) {
+        try {
+            addToast('Uploading...', 'info');
+            finalImageUrl = await uploadImage(imageFile);
+        } catch (e: any) {
+            addToast('Upload failed', 'error');
+            return;
+        }
+    }
+    const updated = { ...categoryData, imageUrl: finalImageUrl };
+    const isNew = !updated.id || updated.id === 0;
+    if (isNew) updated.id = Date.now();
+
+    try {
+        await databaseService.saveCategory(updated);
+        if (isNew) setCategories([updated, ...categories]);
+        else setCategories(categories.map(c => c.id === updated.id ? updated : c));
+        addToast('Category saved');
+    } catch (err: any) {
+        addToast('Failed to save category', 'error');
     }
   };
 
-  const handleDeleteCategory = (categoryId: number) => {
-    if (window.confirm('Are you sure you want to delete this category?')) {
-        setCategories(categories.filter(c => c.id !== categoryId));
-        addToast('Category deleted!', 'info');
+  const handleDeleteCategory = async (categoryId: number) => {
+    if (window.confirm('Delete category?')) {
+        try {
+            await databaseService.deleteCategory(categoryId);
+            setCategories(categories.filter(c => c.id !== categoryId));
+            addToast('Category deleted');
+        } catch (err: any) {
+            addToast('Delete failed', 'error');
+        }
     }
   };
 
-  const handleSaveHeroSlide = (slideData: HeroSlide, imageFile?: File) => {
-    if ('id' in slideData && slideData.id) {
-        setHeroSlides(heroSlides.map(s => s.id === slideData.id ? { ...slideData } : s));
-        addToast('Hero slide updated successfully!');
-    } else {
-        const newSlide = { ...slideData, id: Date.now() };
-        setHeroSlides([newSlide, ...heroSlides]);
-        addToast('Hero slide added successfully!');
+  const handleSaveHeroSlide = async (slideData: HeroSlide, imageFile?: File) => {
+    let finalImageUrl = slideData.imageUrl;
+    if (imageFile) {
+        try { finalImageUrl = await uploadImage(imageFile); } catch { return; }
+    }
+    const updated = { ...slideData, imageUrl: finalImageUrl };
+    const isNew = !updated.id || updated.id === 0;
+    if (isNew) updated.id = Date.now();
+
+    try {
+        await databaseService.saveHeroSlide(updated);
+        if (isNew) setHeroSlides([updated, ...heroSlides]);
+        else setHeroSlides(heroSlides.map(s => s.id === updated.id ? updated : s));
+        addToast('Hero slide saved');
+    } catch (err: any) {
+        addToast('Failed to save hero slide', 'error');
     }
   };
 
-  const handleDeleteHeroSlide = (slideId: number) => {
-    if (window.confirm('Are you sure you want to delete this hero slide?')) {
-        setHeroSlides(heroSlides.filter(s => s.id !== slideId));
-        addToast('Hero slide deleted!', 'info');
+  const handleDeleteHeroSlide = async (slideId: number) => {
+    if (window.confirm('Delete slide?')) {
+        try {
+            await databaseService.deleteHeroSlide(slideId);
+            setHeroSlides(heroSlides.filter(s => s.id !== slideId));
+            addToast('Hero slide deleted');
+        } catch (err: any) {
+            addToast('Delete failed', 'error');
+        }
     }
   };
 
-  const handleSavePromotion = (promotion: Promotion) => {
-    if (promotion.id) {
-        setPromotions(promotions.map(p => p.id === promotion.id ? promotion : p));
-        addToast('Promotion updated successfully!');
-    } else {
-        const newPromo = { ...promotion, id: Date.now(), usageCount: 0 };
-        setPromotions([newPromo, ...promotions]);
-        addToast('Promotion created successfully!');
+  const handleCreateOrder = async (orderData: AdminOrder) => {
+    try {
+        await databaseService.saveOrder(orderData);
+        setOrders([orderData, ...orders]);
+        setCart([]);
+        addToast('Order recorded successfully!');
+    } catch (err: any) {
+        addToast('Order recorded locally, cloud sync failed', 'info');
     }
   };
 
-  const handleDeletePromotion = (id: number) => {
-      if (window.confirm('Delete this promotion?')) {
-          setPromotions(promotions.filter(p => p.id !== id));
-          addToast('Promotion deleted!', 'info');
-      }
-  };
-
-  const handleSaveHomepageSections = (sections: HomepageSections) => {
-      setHomepageSections(sections);
-      addToast("Homepage sections updated successfully!");
-  };
-
-  React.useEffect(() => {
-    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
-  }, [searchHistory]);
+  // Local-only persistence for temporary states
+  React.useEffect(() => { localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(searchHistory)); }, [searchHistory]);
+  React.useEffect(() => { localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(homepageSections)); }, [homepageSections]);
   
   React.useEffect(() => {
     if (selectedProductId) sessionStorage.setItem('selectedProductId', JSON.stringify(selectedProductId));
@@ -255,7 +313,6 @@ const App: React.FC = () => {
     if (currentPage === 'productDetail' && selectedProductId) {
         newHash = `/product/${selectedProductId}`;
     } else if (currentPage === 'notFound') {
-        // Do not update hash for 404 to preserve the wrong URL for user context
         return; 
     }
     const currentHash = window.location.hash.slice(1);
@@ -277,13 +334,6 @@ const App: React.FC = () => {
   React.useEffect(() => {
     document.body.className = currentPage === 'admin' ? 'bg-bg-tertiary' : 'bg-bg-primary';
   }, [currentPage]);
-  
-  React.useEffect(() => {
-    if(user && (currentPage === 'login' || currentPage === 'signup')) {
-      setCurrentPage('shop');
-    }
-  }, [user, currentPage]);
-
 
   const handleProductClick = React.useCallback((product: Product) => {
     setSelectedProductId(product.id);
@@ -350,8 +400,6 @@ const App: React.FC = () => {
   const renderPage = () => {
     switch(currentPage) {
       case 'cart': return <CartPage products={products} onContinueShopping={() => setCurrentPage('shop')} onNavigateToCheckout={() => setCurrentPage('checkout')} />;
-      case 'login': return <LoginPage onNavigate={onNavigate} />;
-      case 'signup': return <SignupPage onNavigate={onNavigate} />;
       case 'productDetail':
         if (selectedProduct) {
           return <ProductDetailPage
@@ -365,7 +413,7 @@ const App: React.FC = () => {
           />;
         }
         return <NotFoundPage onNavigate={onNavigate} />;
-      case 'checkout': return <CheckoutPage products={products} promotions={promotions} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={() => { addToast('Order placed successfully!'); setCart([]); setCurrentPage('shop'); }} />;
+      case 'checkout': return <CheckoutPage products={products} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={handleCreateOrder} />;
       case 'admin': return (
         <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Loading Admin...</div>}>
             <AdminDashboard
@@ -374,8 +422,8 @@ const App: React.FC = () => {
                 categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
                 heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
                 orders={orders} customers={customers} 
-                promotions={promotions} onSavePromotion={handleSavePromotion} onDeletePromotion={handleDeletePromotion}
-                homepageSections={homepageSections} onSaveHomepageSections={handleSaveHomepageSections}
+                promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))}
+                homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections}
                 isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
             />
         </React.Suspense>
@@ -384,12 +432,14 @@ const App: React.FC = () => {
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
       case 'affiliate': return <AffiliatePage />;
-      case 'account': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
-      case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
-      case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast("Password reset successfully!"); onNavigate('login'); }} onNavigate={onNavigate} />;
       case 'allProducts': return <AllProductsPage products={products.filter(p => p.published)} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'reportBug': return <ReportBugPage onNavigate={onNavigate} />;
       case 'notFound': return <NotFoundPage onNavigate={onNavigate} />;
+      case 'login': return <LoginPage onNavigate={onNavigate} />;
+      case 'signup': return <SignupPage onNavigate={onNavigate} />;
+      case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
+      case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast('Password reset successfully!'); setCurrentPage('login'); }} onNavigate={onNavigate} />;
+      case 'myAccount': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'shop':
       default:
         return (
@@ -473,7 +523,6 @@ const App: React.FC = () => {
             {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
             {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
             </AnimatePresence>
-            {currentPage !== 'admin' && currentPage !== 'notFound' && <PromotionalPopup />}
             <GlobalToastContainer toasts={toasts} />
         </div>
     </ErrorBoundary>
