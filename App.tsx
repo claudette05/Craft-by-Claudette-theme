@@ -1,5 +1,4 @@
 
-
 import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeftIcon } from './components/Icons';
@@ -19,6 +18,7 @@ import Bestsellers from './components/Bestsellers';
 import CartPage from './components/CartPage';
 import ProductDetailPage from './components/ProductDetailPage';
 import CheckoutPage from './components/CheckoutPage';
+import AdminGuard from './components/AdminGuard';
 // Lazy load AdminDashboard
 const AdminDashboard = React.lazy(() => import('./components/AdminDashboard'));
 import ProductReviewsPage from './components/ProductReviewsPage';
@@ -71,13 +71,11 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
     const hash = window.location.hash.slice(1);
     const [path, param] = hash.split('/').filter(Boolean);
 
-    // Support /product/ID
     if (path === 'product' && param) {
         const productId = parseInt(param, 10);
         if (!isNaN(productId)) return { page: 'productDetail', productId };
     }
     
-    // Support /productReviews/ID
     if (path === 'productReviews' && param) {
         const productId = parseInt(param, 10);
         if (!isNaN(productId)) return { page: 'productReviews', productId };
@@ -108,12 +106,9 @@ const ScrollToTop = () => {
 };
 
 const App: React.FC = () => {
-  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews, uploadImage } = useAppContext();
+  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews, uploadImage, user, isAdmin } = useAppContext();
   
-  const STORAGE_KEYS = {
-    HOMEPAGE: 'craft_data_homepage',
-    HISTORY: 'searchHistory'
-  };
+  const STORAGE_KEYS = { HOMEPAGE: 'craft_data_homepage', HISTORY: 'searchHistory' };
 
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -140,14 +135,9 @@ const App: React.FC = () => {
   const [isWishlistOpen, setIsWishlistOpen] = React.useState(false);
 
   const [searchHistory, setSearchHistory] = React.useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]'); } catch { return []; }
   });
 
-  // Load Data with Firestore as primary, LocalStorage as fallback
   React.useEffect(() => {
     const loadAppData = async () => {
         setIsLoading(true);
@@ -160,198 +150,105 @@ const App: React.FC = () => {
                 databaseService.getOrders().then(res => res.length ? res : MOCK_ORDERS).catch(() => MOCK_ORDERS)
             ]);
 
-            setCategories(c);
-            setHeroSlides(h);
-            setOrders(o);
-            setCustomers(MOCK_CUSTOMERS);
-            setPromotions(MOCK_PROMOTIONS);
+            setCategories(c); setHeroSlides(h); setOrders(o); setCustomers(MOCK_CUSTOMERS); setPromotions(MOCK_PROMOTIONS);
             
             const savedHomepage = localStorage.getItem(STORAGE_KEYS.HOMEPAGE);
-            setHomepageSections(savedHomepage ? JSON.parse(savedHomepage) : {
-                deals: [products.find(prod => prod.salePrice)?.id || 1],
-                bestsellers: products.slice(0, 3).map(prod => prod.id),
-            });
+            if(savedHomepage) setHomepageSections(JSON.parse(savedHomepage));
 
-            return unsub; // Return the unsubscribe function to be used in the cleanup
+            return unsub;
         } catch (e) {
-            console.error("Critical error loading app data", e);
+            console.error("Error loading app data", e);
         } finally {
             setTimeout(() => setIsLoading(false), 500);
         }
     };
     
     let unsubscribe: (() => void) | undefined;
-    loadAppData().then(unsub => {
-        unsubscribe = unsub;
-    });
+    loadAppData().then(unsub => { unsubscribe = unsub; });
 
-    // Cleanup subscription on component unmount
-    return () => {
-        if (unsubscribe) {
-            unsubscribe();
-        }
-    };
+    return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
   const handleSaveProduct = async (productData: Product, imageFile?: File, additionalImageFiles?: File[]) => {
     let finalImageUrl = productData.imageUrl;
     let finalGalleryUrls = Array.isArray(productData.images) ? [...productData.images] : [];
-    
     try {
-        if (imageFile) {
-            addToast('Uploading main image...', 'info');
-            finalImageUrl = await uploadImage(imageFile);
+        if (imageFile) { finalImageUrl = await uploadImage(imageFile); }
+        if (additionalImageFiles?.length) {
+            const urls = await Promise.all(additionalImageFiles.map(file => uploadImage(file)));
+            finalGalleryUrls.push(...urls);
         }
-
-        if (additionalImageFiles && additionalImageFiles.length > 0) {
-            addToast(`Uploading ${additionalImageFiles.length} new gallery images...`, 'info');
-            const uploadedUrls = await Promise.all(
-                additionalImageFiles.map(file => uploadImage(file))
-            );
-            finalGalleryUrls = [...finalGalleryUrls, ...uploadedUrls];
-        }
-
-        finalGalleryUrls = Array.from(new Set(finalGalleryUrls.filter(url => typeof url === 'string' && url.trim() !== '')));
-
-        const updatedProduct = { 
-            ...productData, 
-            imageUrl: finalImageUrl, 
-            images: finalGalleryUrls 
-        };
-        
-        const isNew = !updatedProduct.id || String(updatedProduct.id).startsWith('new-');
-        if (isNew) updatedProduct.id = Date.now();
-
+        const updatedProduct = { ...productData, imageUrl: finalImageUrl, images: finalGalleryUrls };
+        if (!updatedProduct.id) updatedProduct.id = Date.now();
         await databaseService.saveProduct(updatedProduct);
-        
-        if (isNew) setProducts([updatedProduct, ...products]);
-        else setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
-        
-        const status = databaseService.getCloudStatus();
-        if (status === 'connected') addToast('Product saved and synced!');
-        else addToast('Saved locally', 'info');
-    } catch (e: any) {
-        addToast(e.message || 'Image upload or save failed', 'error');
-    }
+        setProducts(prev => [updatedProduct, ...prev.filter(p => p.id !== updatedProduct.id)]);
+        addToast('Product saved');
+    } catch (e: any) { addToast(e.message, 'error'); }
   };
 
   const handleDeleteProduct = async (productId: number) => {
-    if (window.confirm('Are you sure you want to delete this product?')) {
+    if (window.confirm('Delete this product?')) {
         try {
             await databaseService.deleteProduct(productId);
             setProducts(products.filter(p => p.id !== productId));
             addToast('Product deleted');
-        } catch (err: any) {
-            addToast('Delete failed: ' + err.message, 'error');
-        }
+        } catch (err: any) { addToast('Delete failed', 'error'); }
     }
   };
 
-  const handleSaveCategory = async (categoryData: Category, imageFile?: File) => {
-    let finalImageUrl = categoryData.imageUrl;
-    if (imageFile) {
-        try {
-            addToast('Uploading...', 'info');
-            finalImageUrl = await uploadImage(imageFile);
-        } catch (e: any) {
-            addToast('Upload failed', 'error');
-            return;
-        }
-    }
-    const updated = { ...categoryData, imageUrl: finalImageUrl };
-    const isNew = !updated.id || updated.id === 0;
-    if (isNew) updated.id = Date.now();
-
-    try {
-        await databaseService.saveCategory(updated);
-        if (isNew) setCategories([updated, ...categories]);
-        else setCategories(categories.map(c => c.id === updated.id ? updated : c));
-        addToast('Category saved');
-    } catch (err: any) {
-        addToast('Failed to save category', 'error');
-    }
+  const handleSaveCategory = async (catData: Category, imageFile?: File) => {
+    let finalImageUrl = catData.imageUrl;
+    if (imageFile) { try { finalImageUrl = await uploadImage(imageFile); } catch (e:any) { addToast(e.message, 'error'); return; } }
+    const updated = { ...catData, imageUrl: finalImageUrl };
+    if (!updated.id) updated.id = Date.now();
+    await databaseService.saveCategory(updated);
+    setCategories(prev => [updated, ...prev.filter(c => c.id !== updated.id)]);
+    addToast('Category saved');
   };
 
-  const handleDeleteCategory = async (categoryId: number) => {
+  const handleDeleteCategory = async (catId: number) => {
     if (window.confirm('Delete category?')) {
-        try {
-            await databaseService.deleteCategory(categoryId);
-            setCategories(categories.filter(c => c.id !== categoryId));
-            addToast('Category deleted');
-        } catch (err: any) {
-            addToast('Delete failed', 'error');
-        }
+      await databaseService.deleteCategory(catId);
+      setCategories(categories.filter(c => c.id !== catId));
+      addToast('Category deleted');
     }
   };
 
   const handleSaveHeroSlide = async (slideData: HeroSlide, imageFile?: File) => {
     let finalImageUrl = slideData.imageUrl;
-    if (imageFile) {
-        try { finalImageUrl = await uploadImage(imageFile); } catch { return; }
-    }
+    if (imageFile) { try { finalImageUrl = await uploadImage(imageFile); } catch (e:any) { addToast(e.message, 'error'); return; } }
     const updated = { ...slideData, imageUrl: finalImageUrl };
-    const isNew = !updated.id || updated.id === 0;
-    if (isNew) updated.id = Date.now();
-
-    try {
-        await databaseService.saveHeroSlide(updated);
-        if (isNew) setHeroSlides([updated, ...heroSlides]);
-        else setHeroSlides(heroSlides.map(s => s.id === updated.id ? updated : s));
-        addToast('Hero slide saved');
-    } catch (err: any) {
-        addToast('Failed to save hero slide', 'error');
-    }
+    if (!updated.id) updated.id = Date.now();
+    await databaseService.saveHeroSlide(updated);
+    setHeroSlides(prev => [updated, ...prev.filter(s => s.id !== updated.id)]);
+    addToast('Slide saved');
   };
 
   const handleDeleteHeroSlide = async (slideId: number) => {
-    if (window.confirm('Delete slide?')) {
-        try {
-            await databaseService.deleteHeroSlide(slideId);
-            setHeroSlides(heroSlides.filter(s => s.id !== slideId));
-            addToast('Hero slide deleted');
-        } catch (err: any) {
-            addToast('Delete failed', 'error');
-        }
+    if(window.confirm('Delete slide?')){
+      await databaseService.deleteHeroSlide(slideId);
+      setHeroSlides(heroSlides.filter(s => s.id !== slideId));
+      addToast('Slide deleted');
     }
   };
 
   const handleCreateOrder = async (orderData: AdminOrder) => {
-    try {
-        await databaseService.saveOrder(orderData);
-        setOrders([orderData, ...orders]);
-        setCart([]);
-        addToast('Order recorded successfully!');
-    } catch (err: any) {
-        addToast('Order recorded locally, cloud sync failed', 'info');
-    }
+    await databaseService.saveOrder(orderData);
+    setOrders([orderData, ...orders]);
+    setCart([]);
+    addToast('Order placed!');
   };
 
-  // Local-only persistence for temporary states
   React.useEffect(() => { localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(searchHistory)); }, [searchHistory]);
   React.useEffect(() => { localStorage.setItem(STORAGE_KEYS.HOMEPAGE, JSON.stringify(homepageSections)); }, [homepageSections]);
-  
-  React.useEffect(() => {
-    if (selectedProductId) sessionStorage.setItem('selectedProductId', JSON.stringify(selectedProductId));
-    else sessionStorage.removeItem('selectedProductId');
-  }, [selectedProductId]);
-
-  React.useEffect(() => {
-    sessionStorage.setItem('searchQuery', searchQuery);
-  }, [searchQuery]);
+  React.useEffect(() => { if (selectedProductId) sessionStorage.setItem('selectedProductId', JSON.stringify(selectedProductId)); }, [selectedProductId]);
+  React.useEffect(() => { sessionStorage.setItem('searchQuery', searchQuery); }, [searchQuery]);
 
   React.useEffect(() => {
     let newHash = currentPage === 'shop' ? '/' : `/${currentPage}`;
-    if (currentPage === 'productDetail' && selectedProductId) {
-        newHash = `/product/${selectedProductId}`;
-    } else if (currentPage === 'productReviews' && selectedProductId) {
-        newHash = `/productReviews/${selectedProductId}`;
-    } else if (currentPage === 'notFound') {
-        return; 
-    }
-    const currentHash = window.location.hash.slice(1);
-    if (currentHash !== newHash && !(currentHash === '' && newHash === '/')) {
-        window.location.hash = newHash;
-    }
+    if (currentPage === 'productDetail' && selectedProductId) newHash = `/product/${selectedProductId}`;
+    else if (currentPage === 'productReviews' && selectedProductId) newHash = `/productReviews/${selectedProductId}`;
+    if (window.location.hash.slice(1) !== newHash) window.location.hash = newHash;
   }, [currentPage, selectedProductId]);
 
   React.useEffect(() => {
@@ -363,208 +260,67 @@ const App: React.FC = () => {
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
+  
+  // This is the corrected navigation effect
+  React.useEffect(() => {
+    if (user && currentPage === 'login') {
+      if (isAdmin) {
+        setCurrentPage('admin');
+      } else {
+        setCurrentPage('myAccount');
+      }
+    }
+  }, [user, isAdmin, currentPage]);
 
   React.useEffect(() => {
     document.body.className = currentPage === 'admin' ? 'bg-bg-tertiary' : 'bg-bg-primary';
   }, [currentPage]);
 
-  const handleProductClick = React.useCallback((product: Product) => {
-    setSelectedProductId(product.id);
-    setCurrentPage('productDetail');
-  }, []);
+  const handleProductClick = React.useCallback((product: Product) => { setSelectedProductId(product.id); setCurrentPage('productDetail'); }, []);
+  const handleSearch = React.useCallback((query: string) => { setSearchQuery(query); setCurrentPage('search'); if (query && !searchHistory.includes(query)) setSearchHistory([query, ...searchHistory.slice(0, 9)]); }, [searchHistory]);
+  const onNavigate = React.useCallback((page: Page) => { setCurrentPage(page); if (page === 'shop') setSelectedProductId(null); }, []);
 
-  const handleSearch = React.useCallback((query: string) => {
-    setSearchQuery(query);
-    setCurrentPage('search');
-    if (query && !searchHistory.includes(query)) {
-      setSearchHistory([query, ...searchHistory.slice(0, 9)]);
-    }
-  }, [searchHistory]);
-
-  const onNavigate = React.useCallback((page: Page) => {
-    setCurrentPage(page);
-    if (page === 'shop') setSelectedProductId(null);
-  }, []);
-
-  const selectedProduct = React.useMemo(() => {
-    // BUG FIX: Allow 'productReviews' to also resolve the product so it doesn't trigger 404
-    if ((currentPage !== 'productDetail' && currentPage !== 'productReviews') || !selectedProductId) return null;
-    return products.find(p => p.id === selectedProductId) ?? null;
-  }, [currentPage, selectedProductId, products]);
-
-  const filteredProducts = React.useMemo(() => {
-    return activeCategory === 'All'
-      ? products.filter(p => p.published)
-      : products.filter(p => p.category === activeCategory && p.published);
-  }, [activeCategory, products]);
-  
-  const newArrivals = React.useMemo(() => {
-    return [...products]
-        .filter(p => p.published)
-        .sort((a, b) => b.id - a.id)
-        .slice(0, 8);
-  }, [products]);
-
-  const searchResults = React.useMemo(() => {
-    if (!searchQuery) return [];
-    return products.filter(p =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.tags?.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  }, [searchQuery, products]);
-
-  const dealsProducts = React.useMemo(() => {
-    const dealIds = new Set(homepageSections?.deals || []);
-    return products.filter(p => dealIds.has(p.id));
-  }, [homepageSections, products]);
-
-  const bestsellerProducts = React.useMemo(() => {
-    const bestsellerIds = new Set(homepageSections?.bestsellers || []);
-    return products.filter(p => bestsellerIds.has(p.id));
-  }, [homepageSections, products]);
-
-  const resinProducts = React.useMemo(() => {
-    return products.filter(p => p.category === 'Resin' && p.published).slice(0, 8);
-  }, [products]);
-
-  const giftProducts = React.useMemo(() => {
-    return products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8);
-  }, [products]);
+  const selectedProduct = React.useMemo(() => products.find(p => p.id === selectedProductId), [selectedProductId, products]);
+  const filteredProducts = React.useMemo(() => activeCategory === 'All' ? products.filter(p => p.published) : products.filter(p => p.category === activeCategory && p.published), [activeCategory, products]);
+  const newArrivals = React.useMemo(() => [...products].filter(p => p.published).sort((a, b) => b.id - a.id).slice(0, 8), [products]);
+  const searchResults = React.useMemo(() => searchQuery ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) : [], [searchQuery, products]);
+  const dealsProducts = React.useMemo(() => products.filter(p => homepageSections?.deals?.includes(p.id)), [homepageSections, products]);
+  const bestsellerProducts = React.useMemo(() => products.filter(p => homepageSections?.bestsellers?.includes(p.id)), [homepageSections, products]);
+  const resinProducts = React.useMemo(() => products.filter(p => p.category === 'Resin' && p.published).slice(0, 8), [products]);
+  const giftProducts = React.useMemo(() => products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8), [products]);
 
   const renderPage = () => {
     switch(currentPage) {
-      case 'cart': return <CartPage products={products} onContinueShopping={() => setCurrentPage('shop')} onNavigateToCheckout={() => setCurrentPage('checkout')} />;
-      case 'productDetail':
-        if (selectedProduct) {
-          return <ProductDetailPage
-            product={selectedProduct}
-            relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 8)}
-            reviews={reviews.filter(r => r.productId === selectedProduct.id)}
-            onBackToShop={() => setCurrentPage('shop')}
-            onProductClick={handleProductClick}
-            onNavigateToReviews={() => setCurrentPage('productReviews')}
-            onQuickView={setQuickViewProduct}
-          />;
-        }
-        return <NotFoundPage onNavigate={onNavigate} />;
-      case 'checkout': return <CheckoutPage products={products} onBackToCart={() => setCurrentPage('cart')} onPlaceOrder={handleCreateOrder} />;
-      case 'admin': return (
-        <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center text-text-secondary">Loading Admin...</div>}>
-            <AdminDashboard
-                onNavigate={onNavigate}
-                products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct}
-                categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory}
-                heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide}
-                orders={orders} customers={customers} 
-                promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))}
-                homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections}
-                isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode}
-            />
-        </React.Suspense>
-      );
-      case 'productReviews': 
-        if (selectedProduct) {
-          return <ProductReviewsPage 
-            product={selectedProduct} 
-            reviews={reviews.filter(r => r.productId === selectedProduct.id)} 
-            onBackToProduct={() => setCurrentPage('productDetail')} 
-          />;
-        }
-        return <NotFoundPage onNavigate={onNavigate} />;
+      case 'cart': return <CartPage products={products} onContinueShopping={() => onNavigate('shop')} onNavigateToCheckout={() => onNavigate('checkout')} />;
+      case 'productDetail': return selectedProduct ? <ProductDetailPage product={selectedProduct} relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 4)} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToShop={() => onNavigate('shop')} onProductClick={handleProductClick} onNavigateToReviews={() => setCurrentPage('productReviews')} onQuickView={setQuickViewProduct} /> : <NotFoundPage onNavigate={onNavigate} />;
+      case 'checkout': return <CheckoutPage products={products} onBackToCart={() => onNavigate('cart')} onPlaceOrder={handleCreateOrder} />;
+      case 'admin': return <AdminGuard onNavigate={onNavigate}><React.Suspense fallback={<div>Loading...</div>}><AdminDashboard onNavigate={onNavigate} products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct} categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory} heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide} orders={orders} customers={customers} promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))} homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} /></React.Suspense></AdminGuard>;
+      case 'productReviews': return selectedProduct ? <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} /> : <NotFoundPage onNavigate={onNavigate} />;
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
       case 'affiliate': return <AffiliatePage />;
       case 'allProducts': return <AllProductsPage products={products.filter(p => p.published)} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'reportBug': return <ReportBugPage onNavigate={onNavigate} />;
-      case 'notFound': return <NotFoundPage onNavigate={onNavigate} />;
       case 'login': return <LoginPage onNavigate={onNavigate} />;
       case 'signup': return <SignupPage onNavigate={onNavigate} />;
       case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
-      case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast('Password reset successfully!'); setCurrentPage('login'); }} onNavigate={onNavigate} />;
+      case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast('Password reset!'); onNavigate('login'); }} onNavigate={onNavigate} />;
       case 'myAccount': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
-      case 'shop':
-      default:
-        return (
-          <>
-            <HeroCarousel slides={heroSlides} />
-            <Features />
-            <CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} />
-            <ProductGrid 
-              products={newArrivals} 
-              onProductClick={handleProductClick} 
-              title="New Arrivals" 
-              onQuickView={setQuickViewProduct} 
-              bgColor="bg-bg-primary"
-            />
-            <ProductGrid 
-              products={filteredProducts} 
-              onProductClick={handleProductClick} 
-              title="Featured Products" 
-              onQuickView={setQuickViewProduct} 
-              bgColor="bg-bg-secondary"
-            />
-            {dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
-            <CTA onShopNowClick={() => onNavigate('allProducts')} />
-            {bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}
-            <ProductGrid 
-              products={resinProducts} 
-              onProductClick={handleProductClick} 
-              title="Resin Art Collection" 
-              onQuickView={setQuickViewProduct} 
-              bgColor="bg-bg-secondary"
-            />
-             <ProductGrid 
-              products={giftProducts} 
-              onProductClick={handleProductClick} 
-              title="Perfect Gifts Under GH₵50" 
-              onQuickView={setQuickViewProduct} 
-              bgColor="bg-bg-primary"
-            />
-          </>
-        );
+      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title="Featured Products" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<CTA onShopNowClick={() => onNavigate('allProducts')} />{bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /></>);
     }
   };
 
-  if (isLoading) {
-    return <HomeSkeleton />;
-  }
+  if (isLoading) return <HomeSkeleton />;
 
   return (
     <ErrorBoundary>
         <div className={isDarkMode ? 'dark' : ''}>
             <ScrollToTop />
-            {currentPage !== 'admin' && currentPage !== 'notFound' && (
-            <Navbar 
-                onCartClick={() => setCurrentPage('cart')} 
-                onWishlistClick={() => setIsWishlistOpen(true)}
-                onHomeClick={() => setCurrentPage('shop')}
-                onNavigate={onNavigate}
-                searchHistory={searchHistory}
-                onSearch={handleSearch}
-                products={products}
-            />
-            )}
-            <AnimatePresence>
-                {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'productReviews' && currentPage !== 'notFound' && (
-                    <BackButton onNavigate={onNavigate} />
-                )}
-            </AnimatePresence>
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={currentPage}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                >
-                    {renderPage()}
-                </motion.div>
-            </AnimatePresence>
+            {currentPage !== 'admin' && currentPage !== 'notFound' && <Navbar onCartClick={() => onNavigate('cart')} onWishlistClick={() => setIsWishlistOpen(true)} onHomeClick={() => onNavigate('shop')} onNavigate={onNavigate} searchHistory={searchHistory} onSearch={handleSearch} products={products} />}
+            <AnimatePresence>{currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'productReviews' && currentPage !== 'notFound' && <BackButton onNavigate={onNavigate} />}</AnimatePresence>
+            <AnimatePresence mode="wait"><motion.div key={currentPage} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>{renderPage()}</motion.div></AnimatePresence>
             {currentPage !== 'admin' && currentPage !== 'notFound' && <Footer onNavigate={onNavigate} />}
-            <AnimatePresence>
-            {quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}
-            {isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}
-            </AnimatePresence>
+            <AnimatePresence>{quickViewProduct && <ProductModal product={quickViewProduct} onClose={() => setQuickViewProduct(null)} onViewDetails={p => { handleProductClick(p); setQuickViewProduct(null); }} />}{isWishlistOpen && <WishlistSidebar products={products} onClose={() => setIsWishlistOpen(false)} onProductClick={p => { handleProductClick(p); setIsWishlistOpen(false); }} />}</AnimatePresence>
             <GlobalToastContainer toasts={toasts} />
         </div>
     </ErrorBoundary>

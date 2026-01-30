@@ -4,6 +4,9 @@ import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftC
 import { MOCK_REVIEWS } from '../constants';
 import { databaseService } from '../services/databaseService';
 
+// Hardcoded admin email for this example
+const ADMIN_EMAIL = 'cobbahclaudette@gmail.com';
+
 interface AppContextType {
     cart: CartItem[];
     setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
@@ -31,6 +34,8 @@ interface AppContextType {
     addToast: (message: string, type?: ToastMessage['type']) => void;
     toggleDarkMode: () => void;
     user: User | null;
+    isAdmin: boolean;
+    authLoading: boolean; // To track initial auth state check
     login: (email: string, pass: string) => Promise<void>;
     signup: (email: string, pass: string, name: string) => Promise<void>;
     logout: () => void;
@@ -49,6 +54,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
     });
     const [user, setUser] = React.useState<User | null>(null);
+    const [isAdmin, setIsAdmin] = React.useState(false);
+    const [authLoading, setAuthLoading] = React.useState(true);
 
     // Initial default states
     const [shopInfo, setShopInfo] = React.useState<ShopInfo>({ 
@@ -120,8 +127,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 5000);
     }, []);
     
-    // Load local-only data
+    // Load local-only data & check auth
     React.useEffect(() => {
+        setAuthLoading(true);
         try {
             const savedWishlist = localStorage.getItem('wishlist');
             if (savedWishlist) setWishlist(JSON.parse(savedWishlist));
@@ -131,10 +139,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             if (savedReviews) setReviews([...MOCK_REVIEWS, ...JSON.parse(savedReviews)]);
             const savedEmails = localStorage.getItem('emailLogs');
             if (savedEmails) setEmailLogs(JSON.parse(savedEmails));
+            
             const savedUser = localStorage.getItem('user');
-            if (savedUser) setUser(JSON.parse(savedUser));
+            if (savedUser) {
+                const user = JSON.parse(savedUser);
+                setUser(user);
+                if(user.email === ADMIN_EMAIL) {
+                    setIsAdmin(true);
+                }
+            }
         } catch (e) {
             console.error("Local load failed", e);
+        } finally {
+            setAuthLoading(false);
         }
     }, []);
 
@@ -167,8 +184,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     const login = async (email: string, pass: string) => {
         await new Promise(res => setTimeout(res, 800));
-        const mockUser: User = { id: Date.now().toString(), email, name: 'Demo User' };
+        const mockUser: User = { id: Date.now().toString(), email, name: email === ADMIN_EMAIL ? 'Admin User' : 'Demo User' };
         setUser(mockUser);
+        if (email === ADMIN_EMAIL) {
+            setIsAdmin(true);
+        }
         addToast('Logged in successfully!');
     };
 
@@ -179,7 +199,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast('Account created successfully!');
     };
 
-    const logout = () => { setUser(null); addToast('Logged out.', 'info'); };
+    const logout = () => { 
+        setUser(null); 
+        setIsAdmin(false);
+        addToast('Logged out.', 'info'); 
+    };
 
     const sendResetLink = async (email: string) => {
         await new Promise(res => setTimeout(res, 800));
@@ -251,7 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             cart, setCart, wishlist, reviews, isDarkMode, toasts, cartItemCount, 
             addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, 
             toggleDarkMode, popupConfig, updatePopupConfig, emailLogs, sendFakeEmail: () => {}, 
-            freeGiftConfig, updateFreeGiftConfig, user, login, signup, logout, sendResetLink, 
+            freeGiftConfig, updateFreeGiftConfig, user, isAdmin, authLoading, login, signup, logout, sendResetLink, 
             cloudinaryConfig, updateCloudinaryConfig, uploadImage, shopInfo, updateShopInfo 
         }}>
             {children}
