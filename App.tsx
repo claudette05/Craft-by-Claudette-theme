@@ -1,4 +1,5 @@
 
+
 import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeftIcon } from './components/Icons';
@@ -70,9 +71,16 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
     const hash = window.location.hash.slice(1);
     const [path, param] = hash.split('/').filter(Boolean);
 
+    // Support /product/ID
     if (path === 'product' && param) {
         const productId = parseInt(param, 10);
         if (!isNaN(productId)) return { page: 'productDetail', productId };
+    }
+    
+    // Support /productReviews/ID
+    if (path === 'productReviews' && param) {
+        const productId = parseInt(param, 10);
+        if (!isNaN(productId)) return { page: 'productReviews', productId };
     }
     
     const pageMap: { [key: string]: Page } = {
@@ -119,7 +127,9 @@ const App: React.FC = () => {
   const initialRoute = getRouteFromHash();
   const [currentPage, setCurrentPage] = React.useState<Page>(initialRoute.page);
   const [selectedProductId, setSelectedProductId] = React.useState<number | null>(() => {
-    if (initialRoute.page === 'productDetail' && initialRoute.productId) return initialRoute.productId;
+    if ((initialRoute.page === 'productDetail' || initialRoute.page === 'productReviews') && initialRoute.productId) {
+        return initialRoute.productId;
+    }
     const savedId = sessionStorage.getItem('selectedProductId');
     return savedId ? JSON.parse(savedId) : null;
   });
@@ -142,14 +152,14 @@ const App: React.FC = () => {
     const loadAppData = async () => {
         setIsLoading(true);
         try {
-            const [p, c, h, o] = await Promise.all([
-                databaseService.getProducts().then(res => res.length ? res : MOCK_PRODUCTS).catch(() => MOCK_PRODUCTS),
+            const unsub = await databaseService.getProducts(setProducts);
+
+            const [c, h, o] = await Promise.all([
                 databaseService.getCategories().then(res => res.length ? res : CATEGORIES).catch(() => CATEGORIES),
                 databaseService.getHeroSlides().then(res => res.length ? res : HERO_SLIDES).catch(() => HERO_SLIDES),
                 databaseService.getOrders().then(res => res.length ? res : MOCK_ORDERS).catch(() => MOCK_ORDERS)
             ]);
 
-            setProducts(p);
             setCategories(c);
             setHeroSlides(h);
             setOrders(o);
@@ -158,49 +168,70 @@ const App: React.FC = () => {
             
             const savedHomepage = localStorage.getItem(STORAGE_KEYS.HOMEPAGE);
             setHomepageSections(savedHomepage ? JSON.parse(savedHomepage) : {
-                deals: [p.find(prod => prod.salePrice)?.id || 1],
-                bestsellers: p.slice(0, 3).map(prod => prod.id),
+                deals: [products.find(prod => prod.salePrice)?.id || 1],
+                bestsellers: products.slice(0, 3).map(prod => prod.id),
             });
+
+            return unsub; // Return the unsubscribe function to be used in the cleanup
         } catch (e) {
             console.error("Critical error loading app data", e);
         } finally {
             setTimeout(() => setIsLoading(false), 500);
         }
     };
-    loadAppData();
+    
+    let unsubscribe: (() => void) | undefined;
+    loadAppData().then(unsub => {
+        unsubscribe = unsub;
+    });
+
+    // Cleanup subscription on component unmount
+    return () => {
+        if (unsubscribe) {
+            unsubscribe();
+        }
+    };
   }, []);
 
-  const handleSaveProduct = async (productData: Product, imageFile?: File) => {
+  const handleSaveProduct = async (productData: Product, imageFile?: File, additionalImageFiles?: File[]) => {
     let finalImageUrl = productData.imageUrl;
+    let finalGalleryUrls = Array.isArray(productData.images) ? [...productData.images] : [];
     
-    if (imageFile) {
-        try {
-            addToast('Uploading image to Cloudinary...', 'info');
-            finalImageUrl = await uploadImage(imageFile);
-        } catch (e: any) {
-            addToast(e.message || 'Image upload failed', 'error');
-            return;
-        }
-    }
-
-    const updatedProduct = { ...productData, imageUrl: finalImageUrl };
-    const isNew = !updatedProduct.id || String(updatedProduct.id).startsWith('new-');
-    if (isNew) updatedProduct.id = Date.now();
-
     try {
-        // Wired to Firestore via databaseService
+        if (imageFile) {
+            addToast('Uploading main image...', 'info');
+            finalImageUrl = await uploadImage(imageFile);
+        }
+
+        if (additionalImageFiles && additionalImageFiles.length > 0) {
+            addToast(`Uploading ${additionalImageFiles.length} new gallery images...`, 'info');
+            const uploadedUrls = await Promise.all(
+                additionalImageFiles.map(file => uploadImage(file))
+            );
+            finalGalleryUrls = [...finalGalleryUrls, ...uploadedUrls];
+        }
+
+        finalGalleryUrls = Array.from(new Set(finalGalleryUrls.filter(url => typeof url === 'string' && url.trim() !== '')));
+
+        const updatedProduct = { 
+            ...productData, 
+            imageUrl: finalImageUrl, 
+            images: finalGalleryUrls 
+        };
+        
+        const isNew = !updatedProduct.id || String(updatedProduct.id).startsWith('new-');
+        if (isNew) updatedProduct.id = Date.now();
+
         await databaseService.saveProduct(updatedProduct);
         
-        // Refresh state
         if (isNew) setProducts([updatedProduct, ...products]);
         else setProducts(products.map(p => p.id === updatedProduct.id ? updatedProduct : p));
         
         const status = databaseService.getCloudStatus();
-        if (status === 'connected') addToast('Product saved to Cloud!');
-        else if (status === 'denied') addToast('Saved locally (Permission Denied for Cloud)', 'error');
+        if (status === 'connected') addToast('Product saved and synced!');
         else addToast('Saved locally', 'info');
-    } catch (err: any) {
-        addToast(`Failed to sync: ${err.message}`, 'error');
+    } catch (e: any) {
+        addToast(e.message || 'Image upload or save failed', 'error');
     }
   };
 
@@ -312,6 +343,8 @@ const App: React.FC = () => {
     let newHash = currentPage === 'shop' ? '/' : `/${currentPage}`;
     if (currentPage === 'productDetail' && selectedProductId) {
         newHash = `/product/${selectedProductId}`;
+    } else if (currentPage === 'productReviews' && selectedProductId) {
+        newHash = `/productReviews/${selectedProductId}`;
     } else if (currentPage === 'notFound') {
         return; 
     }
@@ -324,7 +357,7 @@ const App: React.FC = () => {
   React.useEffect(() => {
     const handleHashChange = () => {
         const { page, productId } = getRouteFromHash();
-        setSelectedProductId(productId);
+        if (productId !== null) setSelectedProductId(productId);
         setCurrentPage(page);
     };
     window.addEventListener('hashchange', handleHashChange);
@@ -354,7 +387,8 @@ const App: React.FC = () => {
   }, []);
 
   const selectedProduct = React.useMemo(() => {
-    if (currentPage !== 'productDetail' || !selectedProductId) return null;
+    // BUG FIX: Allow 'productReviews' to also resolve the product so it doesn't trigger 404
+    if ((currentPage !== 'productDetail' && currentPage !== 'productReviews') || !selectedProductId) return null;
     return products.find(p => p.id === selectedProductId) ?? null;
   }, [currentPage, selectedProductId, products]);
 
@@ -428,7 +462,15 @@ const App: React.FC = () => {
             />
         </React.Suspense>
       );
-      case 'productReviews': return selectedProduct ? <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} /> : <NotFoundPage onNavigate={onNavigate} />;
+      case 'productReviews': 
+        if (selectedProduct) {
+          return <ProductReviewsPage 
+            product={selectedProduct} 
+            reviews={reviews.filter(r => r.productId === selectedProduct.id)} 
+            onBackToProduct={() => setCurrentPage('productDetail')} 
+          />;
+        }
+        return <NotFoundPage onNavigate={onNavigate} />;
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
       case 'affiliate': return <AffiliatePage />;
@@ -503,7 +545,7 @@ const App: React.FC = () => {
             />
             )}
             <AnimatePresence>
-                {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'notFound' && (
+                {currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'productReviews' && currentPage !== 'notFound' && (
                     <BackButton onNavigate={onNavigate} />
                 )}
             </AnimatePresence>

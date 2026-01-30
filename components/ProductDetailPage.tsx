@@ -1,9 +1,8 @@
 
 import * as React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Product, ProductReview, ProductVariant } from '../types';
-// Fixed missing XIcon import
-import { ChevronLeftIcon, HeartIcon, LinkIcon, CheckBadgeIcon, MailIcon, XIcon } from './Icons';
+import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, LinkIcon, CheckBadgeIcon, XIcon, SparklesIcon, EyeIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
 import SizeGuideModal from './SizeGuideModal';
@@ -99,7 +98,7 @@ const ReviewCard: React.FC<{ review: ProductReview, onImageClick: (src: string) 
             <StarRating rating={review.rating} className="w-4 h-4" />
             <h4 className="ml-2 font-semibold text-text-primary text-sm">{review.title}</h4>
         </div>
-        <p className="text-text-secondary text-sm leading-relaxed mb-4">{review.comment}</p>
+        <div className="text-text-secondary text-sm leading-relaxed mb-4">{review.comment}</div>
         {review.images && review.images.length > 0 && (
             <div className="flex gap-3 mt-2">
                 {review.images.map((img, idx) => (
@@ -133,12 +132,42 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const [isAdded, setIsAdded] = React.useState(false);
     const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
     const [selectedSize, setSelectedSize] = React.useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = React.useState(product.imageUrl);
+    const [selectedImage, setSelectedImage] = React.useState(product?.imageUrl || '');
     const [isSizeGuideOpen, setIsSizeGuideOpen] = React.useState(false);
     const [expandedReviewImage, setExpandedReviewImage] = React.useState<string | null>(null);
+    const [isProductLightboxOpen, setIsProductLightboxOpen] = React.useState(false);
+    const [isZoomed, setIsZoomed] = React.useState(false);
+    const [isManualImageSelection, setIsManualImageSelection] = React.useState(false);
 
-    const hasSale = typeof product.salePrice === 'number';
-    const isInWishlist = wishlist.includes(product.id);
+    const thumbScrollRef = React.useRef<HTMLDivElement>(null);
+    const [canScrollThumbLeft, setCanScrollThumbLeft] = React.useState(false);
+    const [canScrollThumbRight, setCanScrollThumbRight] = React.useState(false);
+
+    const hasSale = typeof product?.salePrice === 'number';
+    const isInWishlist = product ? wishlist.includes(product.id) : false;
+
+    // BUILD COMPREHENSIVE GALLERY: Harvest from main image, gallery array, AND variants
+    const allImages = React.useMemo(() => {
+        if (!product) return [];
+        const imgs = [product.imageUrl];
+        
+        // Add images from explicit gallery array
+        if (Array.isArray(product.images)) {
+            imgs.push(...product.images);
+        }
+
+        // Harvest images from variants (crucial for older products)
+        if (Array.isArray(product.variants)) {
+            product.variants.forEach(v => {
+                if (v.imageUrl) imgs.push(v.imageUrl);
+            });
+        }
+
+        // Return unique, non-empty, string URLs only
+        return Array.from(new Set(imgs.filter(img => typeof img === 'string' && img.trim() !== '')));
+    }, [product]);
+
+    const currentIndex = allImages.indexOf(selectedImage);
 
     const averageRating = React.useMemo(() => {
         if (reviews.length === 0) return 0;
@@ -146,19 +175,45 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         return total / reviews.length;
     }, [reviews]);
 
+    const checkThumbScroll = React.useCallback(() => {
+        const el = thumbScrollRef.current;
+        if (el) {
+            setCanScrollThumbLeft(el.scrollLeft > 5);
+            setCanScrollThumbRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
+        }
+    }, []);
+
+    // Effect to reset state when product changes
     React.useEffect(() => {
+        if (!product) return;
         setQuantity(1);
         setSelectedColor(null);
         setSelectedSize(null);
         setSelectedImage(product.imageUrl);
         setIsAdded(false);
-    }, [product]);
+        setIsManualImageSelection(false);
+    }, [product?.id, product?.imageUrl]);
 
-    // Logic: Find the image for the current selection
+    React.useLayoutEffect(() => {
+        const el = thumbScrollRef.current;
+        if (el) {
+            checkThumbScroll();
+            el.addEventListener('scroll', checkThumbScroll);
+            const observer = new ResizeObserver(checkThumbScroll);
+            observer.observe(el);
+            return () => {
+                if (el) {
+                    el.removeEventListener('scroll', checkThumbScroll);
+                }
+                observer.disconnect();
+            };
+        }
+    }, [checkThumbScroll, allImages.length]);
+
+    // Update image when variant changes, UNLESS the user manually picked an image
     React.useEffect(() => {
-        if (!product.variants) return;
+        if (!product?.variants || isManualImageSelection) return;
         
-        // Try to find a variant that matches BOTH or either selection and has an image
         const matchingVariant = product.variants.find(v => {
             const colorMatch = !selectedColor || v.color === selectedColor;
             const sizeMatch = !selectedSize || v.size === selectedSize;
@@ -168,19 +223,64 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         if (matchingVariant?.imageUrl) {
             setSelectedImage(matchingVariant.imageUrl);
         }
-    }, [selectedColor, selectedSize, product.variants]);
-
-    const allImages = React.useMemo(() => {
-        const imgs = [product.imageUrl];
-        if (product.images) {
-            imgs.push(...product.images);
-        }
-        return Array.from(new Set(imgs));
-    }, [product]);
+    }, [selectedColor, selectedSize, product?.variants, isManualImageSelection]);
 
     const handleQuantityChange = (amount: number) => {
         setQuantity(prev => Math.max(1, prev + amount));
     };
+
+    const handleThumbScroll = (direction: 'left' | 'right') => {
+        const el = thumbScrollRef.current;
+        if (el) {
+            const scrollAmount = el.clientWidth * 0.7;
+            el.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
+
+    const handleThumbnailClick = (img: string) => {
+        setIsManualImageSelection(true);
+        setSelectedImage(img);
+    };
+
+    const navigateImage = (direction: 'prev' | 'next') => {
+        setIsManualImageSelection(true);
+        if (isZoomed) setIsZoomed(false);
+        let newIndex = currentIndex;
+        if (direction === 'next') {
+            newIndex = (currentIndex + 1) % allImages.length;
+        } else {
+            newIndex = (currentIndex - 1 + allImages.length) % allImages.length;
+        }
+        setSelectedImage(allImages[newIndex]);
+    };
+
+    const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+        if (isZoomed) return;
+        const offsetThreshold = 50;
+        const velocityThreshold = 500;
+        if (info.offset.x < -offsetThreshold || info.velocity.x < -velocityThreshold) {
+            navigateImage('next');
+        } else if (info.offset.x > offsetThreshold || info.velocity.x > velocityThreshold) {
+            navigateImage('prev');
+        }
+    };
+
+    React.useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (isProductLightboxOpen) {
+                if (e.key === 'ArrowRight') navigateImage('next');
+                if (e.key === 'ArrowLeft') navigateImage('prev');
+                if (e.key === 'Escape') setIsProductLightboxOpen(false);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isProductLightboxOpen, currentIndex, allImages, isZoomed]);
+
+    if (!product) return null;
     
     const availableColors = React.useMemo(() => {
         if (!product.variants) return [];
@@ -208,13 +308,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
     const handleColorSelect = (colorName: string) => {
         setSelectedColor(colorName);
-        // We don't reset size if the new color also has that size available
+        setIsManualImageSelection(false); 
         const sizeStillValid = availableSizes.some(s => s.name === selectedSize && s.stock > 0);
         if (!sizeStillValid) setSelectedSize(null);
     };
 
     const handleSizeSelect = (sizeName: string) => {
         setSelectedSize(sizeName);
+        setIsManualImageSelection(false);
     };
 
     const stockLevel = React.useMemo(() => {
@@ -260,7 +361,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     };
 
-    const emailInquiryUrl = `mailto:${shopInfo.email}?subject=Inquiry: ${product.name}&body=Hello, I'm interested in the ${product.name}. Could you please provide more details? %0AProduct link: ${window.location.href}`;
+    // Prefilled WhatsApp Enquiry Link
+    const whatsappEnquiryMessage = encodeURIComponent(
+        `Hello ${shopInfo.name}! 👋🏽\n\nI'm interested in the ${product.name} priced at GH₵${(product.salePrice ?? product.price).toFixed(2)}.\n\nCan you please tell me more about this item?\n\nProduct Link: ${window.location.href}`
+    );
+    const whatsappEnquiryUrl = `https://wa.me/${shopInfo.whatsapp}?text=${whatsappEnquiryMessage}`;
 
     return (
         <motion.main
@@ -283,12 +388,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
                     <motion.div 
-                        className="bg-bg-secondary p-4 rounded-3xl shadow-md h-fit sticky top-24 border border-border-primary/50"
+                        className="bg-bg-secondary p-4 rounded-3xl shadow-md h-fit md:sticky md:top-24 border border-border-primary/50"
                         initial={{ opacity: 0, x: -50 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.5 }}
                     >
-                        <div className="relative overflow-hidden rounded-2xl aspect-square bg-bg-tertiary">
+                        <div className="relative group/main overflow-hidden rounded-2xl aspect-square bg-bg-tertiary touch-pan-y">
                             <AnimatePresence mode="wait">
                                 <motion.img 
                                     key={selectedImage}
@@ -298,23 +403,87 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ duration: 0.4, ease: "circOut" }}
-                                    className="w-full h-full object-cover" 
+                                    className="w-full h-full object-cover cursor-zoom-in"
+                                    onClick={() => setIsProductLightboxOpen(true)}
+                                    drag="x"
+                                    dragConstraints={{ left: 0, right: 0 }}
+                                    dragElastic={0.2}
+                                    onDragEnd={handleDragEnd}
                                 />
                             </AnimatePresence>
+
+                            {/* Main Image Navigation Arrows */}
+                            {allImages.length > 1 && (
+                                <>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-md text-white hover:bg-white/60 transition-all opacity-0 group-hover/main:opacity-100 hidden md:flex"
+                                        aria-label="Previous image"
+                                    >
+                                        <ChevronLeftIcon className="w-6 h-6" />
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-3 rounded-full bg-white/40 dark:bg-black/40 backdrop-blur-md text-white hover:bg-white/60 transition-all opacity-0 group-hover/main:opacity-100 hidden md:flex"
+                                        aria-label="Next image"
+                                    >
+                                        <ChevronRightIcon className="w-6 h-6" />
+                                    </button>
+                                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest pointer-events-none opacity-0 group-hover/main:opacity-100 transition-opacity flex items-center gap-2">
+                                        <EyeIcon className="w-3 h-3" />
+                                        <span>{currentIndex + 1} / {allImages.length}</span>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
                         {allImages.length > 1 && (
-                            <div className="flex gap-2 mt-4 overflow-x-auto pb-2 hide-scrollbar">
-                                {allImages.map((img, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setSelectedImage(img)}
-                                        className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
-                                        aria-label={`View image ${index + 1}`}
-                                    >
-                                        <img src={optimizeCloudinaryUrl(img, 200)} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
-                                    </button>
-                                ))}
+                            <div className="relative group/thumbs mt-4 overflow-hidden rounded-xl min-h-[90px]">
+                                <AnimatePresence>
+                                    {canScrollThumbLeft && (
+                                        <motion.button 
+                                            initial={{ opacity: 0, scale: 0.5, x: -10 }}
+                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                            exit={{ opacity: 0, scale: 0.5, x: -10 }}
+                                            onClick={() => handleThumbScroll('left')}
+                                            className="absolute left-1 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md shadow-lg text-text-primary hover:text-accent-primary transition-all border border-border-primary/20 hidden md:flex items-center justify-center opacity-0 group-hover/thumbs:opacity-100"
+                                            aria-label="Scroll thumbnails left"
+                                        >
+                                            <ChevronLeftIcon className="w-6 h-6" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
+                                
+                                <div 
+                                    ref={thumbScrollRef}
+                                    className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar scroll-smooth"
+                                >
+                                    {allImages.map((img, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => handleThumbnailClick(img)}
+                                            className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                            aria-label={`View image ${index + 1}`}
+                                        >
+                                            <img src={optimizeCloudinaryUrl(img, 200)} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <AnimatePresence>
+                                    {canScrollThumbRight && (
+                                        <motion.button 
+                                            initial={{ opacity: 0, scale: 0.5, x: 10 }}
+                                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                                            exit={{ opacity: 0, scale: 0.5, x: 10 }}
+                                            onClick={() => handleThumbScroll('right')}
+                                            className="absolute right-1 top-1/2 -translate-y-1/2 z-10 p-2.5 rounded-full bg-white/90 dark:bg-zinc-800/90 backdrop-blur-md shadow-lg text-text-primary hover:text-accent-primary transition-all border border-border-primary/20 hidden md:flex items-center justify-center opacity-0 group-hover/thumbs:opacity-100"
+                                            aria-label="Scroll thumbnails right"
+                                        >
+                                            <ChevronRightIcon className="w-6 h-6" />
+                                        </motion.button>
+                                    )}
+                                </AnimatePresence>
                             </div>
                         )}
                     </motion.div>
@@ -353,12 +522,12 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 {hasColorOptions && (
                                     <div>
                                         <h3 className="text-sm font-bold text-text-primary uppercase tracking-widest mb-3">Color: <span className="font-normal normal-case text-text-secondary ml-1">{selectedColor || 'Choose Color'}</span></h3>
-                                        <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-4 flex-wrap">
                                             {availableColors.map(color => (
                                                 <button
                                                     key={color.name}
                                                     onClick={() => handleColorSelect(color.name)}
-                                                    className={`group relative w-10 h-10 rounded-full border-2 transition-all p-0.5 ${selectedColor === color.name ? 'border-accent-primary scale-110 shadow-lg' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'}`}
+                                                    className={`group relative w-9 h-9 md:w-11 md:h-11 rounded-full border-2 transition-all p-0.5 ${selectedColor === color.name ? 'border-accent-primary scale-110 shadow-lg ring-4 ring-accent-primary/20' : 'border-zinc-200 dark:border-zinc-700 hover:border-zinc-400'}`}
                                                     aria-label={`Select color ${color.name}`}
                                                 >
                                                     <div className="w-full h-full rounded-full" style={{ backgroundColor: color.hex || 'transparent' }} />
@@ -389,9 +558,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                                     key={size.name}
                                                     onClick={() => handleSizeSelect(size.name)}
                                                     disabled={size.stock === 0}
-                                                    className={`px-5 py-2.5 border rounded-2xl text-sm font-bold transition-all ${
+                                                    className={`w-10 h-10 md:w-12 md:h-12 rounded-full border flex items-center justify-center text-xs md:text-sm font-bold transition-all ${
                                                         selectedSize === size.name 
-                                                            ? 'bg-accent-primary text-white border-accent-primary shadow-md scale-105' 
+                                                            ? 'bg-accent-primary text-white border-accent-primary shadow-md scale-110 ring-4 ring-accent-primary/20' 
                                                             : 'bg-bg-secondary text-text-primary border-border-primary hover:border-accent-primary'
                                                     } ${
                                                         size.stock === 0 
@@ -458,7 +627,19 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 <HeartIcon className="h-7 w-7" filled={isInWishlist} />
                             </motion.button>
                         </div>
-                        <div className="mt-8 pt-8 border-t border-border-primary/50 flex gap-4">
+                        <div className="mt-8 pt-8 border-t border-border-primary/50 flex flex-col sm:flex-row gap-4">
+                            <a
+                                href={whatsappEnquiryUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-[#25D366]/30 rounded-2xl bg-[#25D366]/5 text-[#25D366] hover:bg-[#25D366]/10 transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
+                                aria-label="Send WhatsApp Enquiry for this product"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                </svg>
+                                <span>Send Enquiry</span>
+                            </a>
                             <button
                                 onClick={handleCopyToClipboard}
                                 className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
@@ -467,14 +648,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 <LinkIcon className="h-4 w-4" />
                                 <span>Copy Link</span>
                             </button>
-                            <a
-                                href={emailInquiryUrl}
-                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
-                                aria-label="Inquire about this product via email"
-                            >
-                                <MailIcon className="h-4 w-4" />
-                                <span>Email Inquiry</span>
-                            </a>
                         </div>
 
                         {/* Customer Reviews Section */}
@@ -500,7 +673,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 </div>
                             ) : (
                                 <div className="text-center py-10 bg-bg-tertiary/50 rounded-3xl border-2 border-dashed border-border-primary/30">
-                                    <p className="text-text-secondary mb-4 font-medium">No reviews yet for this product.</p>
+                                    <div className="text-text-secondary mb-4 font-medium">No reviews yet for this product.</div>
                                     <button onClick={onNavigateToReviews} className="text-accent-primary font-black uppercase tracking-widest text-sm hover:underline">Be the first to review!</button>
                                 </div>
                             )}
@@ -523,6 +696,8 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
             
             <AnimatePresence>
                 {isSizeGuideOpen && <SizeGuideModal onClose={() => setIsSizeGuideOpen(false)} category={product.category} />}
+                
+                {/* Review Lightbox */}
                 {expandedReviewImage && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -538,9 +713,112 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                             animate={{ scale: 1 }}
                         />
                         <button className="absolute top-6 right-6 text-white hover:text-accent-primary p-2 transition-colors">
-                            {/* Fixed missing XIcon use in the review lightbox */}
                             <XIcon className="w-10 h-10" />
                         </button>
+                    </motion.div>
+                )}
+
+                {/* Product Image Lightbox */}
+                {isProductLightboxOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-black/95 p-4 md:p-12 backdrop-blur-xl touch-none"
+                        onClick={() => setIsProductLightboxOpen(false)}
+                    >
+                        <div className="absolute top-6 right-6 flex items-center gap-6 z-[100]">
+                            {!isZoomed && (
+                                <span className="text-white/60 font-bold tracking-widest text-xs uppercase hidden md:block">
+                                    {currentIndex + 1} / {allImages.length}
+                                </span>
+                            )}
+                            <button 
+                                onClick={() => setIsProductLightboxOpen(false)}
+                                className="text-white/80 hover:text-white transition-colors p-2 bg-white/10 rounded-full"
+                                aria-label="Close lightbox"
+                            >
+                                <XIcon className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        <div 
+                            className="relative w-full h-full flex items-center justify-center overflow-hidden" 
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isZoomed) setIsProductLightboxOpen(false);
+                            }}
+                        >
+                            <AnimatePresence mode="wait" initial={false}>
+                                <motion.div
+                                    key={selectedImage}
+                                    className="w-full h-full flex items-center justify-center p-4"
+                                    initial={{ opacity: 0, x: 100 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -100 }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                >
+                                    <motion.img 
+                                        src={optimizeCloudinaryUrl(selectedImage, 1800)} 
+                                        className={`max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300 ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`} 
+                                        animate={{ 
+                                            scale: isZoomed ? 2.5 : 1,
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setIsZoomed(!isZoomed);
+                                        }}
+                                        drag={isZoomed ? true : "x"}
+                                        dragConstraints={isZoomed ? false : { left: 0, right: 0 }}
+                                        dragElastic={isZoomed ? 0 : 0.5}
+                                        onDragEnd={handleDragEnd}
+                                        layout
+                                    />
+                                </motion.div>
+                            </AnimatePresence>
+
+                            {allImages.length > 1 && !isZoomed && (
+                                <>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
+                                        className="absolute left-4 md:left-12 top-1/2 -translate-y-1/2 z-20 p-5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10 hidden md:flex"
+                                        aria-label="Previous image"
+                                    >
+                                        <ChevronLeftIcon className="w-10 h-10" />
+                                    </button>
+                                    <button 
+                                        onClick={(e) => { e.stopPropagation(); navigateImage('next'); }}
+                                        className="absolute right-4 md:right-12 top-1/2 -translate-y-1/2 z-20 p-5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all border border-white/10 hidden md:flex"
+                                        aria-label="Next image"
+                                    >
+                                        <ChevronRightIcon className="w-10 h-10" />
+                                    </button>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Lightbox Thumbnails */}
+                        {allImages.length > 1 && !isZoomed && (
+                            <motion.div 
+                                initial={{ y: 50, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                className="mt-8 flex gap-3 overflow-x-auto max-w-full px-12 py-4 hide-scrollbar bg-black/40 backdrop-blur-md rounded-2xl border border-white/10" 
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {allImages.map((img, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            if (isZoomed) setIsZoomed(false);
+                                            setSelectedImage(img);
+                                        }}
+                                        className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-4 ring-accent-primary/20' : 'border-white/10 opacity-40 hover:opacity-100'}`}
+                                    >
+                                        <img src={optimizeCloudinaryUrl(img, 200)} className="w-full h-full object-cover" alt={`Thumb ${idx}`} />
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

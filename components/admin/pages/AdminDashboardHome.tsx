@@ -67,7 +67,7 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, product
             id: p.id,
             name: p.name,
             imageUrl: p.imageUrl,
-            sales: Math.floor(Math.random() * 100) + 50 
+            sales: 0
         })).sort((a,b) => b.sales - a.sales);
     }, [products]);
 
@@ -75,10 +75,25 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, product
         return orders.reduce((acc, order) => acc + (order.status === 'Completed' ? order.total : 0), 0);
     }, [orders]);
 
+    const salesData = React.useMemo(() => {
+        const monthlySales: { [key: string]: number } = {};
+        orders.forEach(order => {
+            const date = new Date(order.date);
+            const month = date.toLocaleString('default', { month: 'short' });
+            if (order.status === 'Completed') {
+                monthlySales[month] = (monthlySales[month] || 0) + order.total;
+            }
+        });
+
+        return Object.keys(monthlySales).map(month => ({
+            name: month,
+            sales: monthlySales[month]
+        }));
+    }, [orders]);
+
     const adminStats: AdminStat[] = [
         { label: 'Total Sales', value: `GH₵${totalSales.toFixed(2)}`, icon: DollarSignIcon },
         { label: 'Total Orders', value: orders.length.toString(), icon: ShoppingCartIcon },
-        { label: 'New Customers', value: '78', icon: UsersIcon }, 
         { label: 'Products in Stock', value: products.filter(p=>p.stock > 0).length.toString(), icon: PackageIcon },
     ];
 
@@ -141,7 +156,7 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, product
                 >
                     <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Sales Overview</h2>
                     <div className="h-72">
-                        <SalesChart />
+                        <SalesChart data={salesData} />
                     </div>
                 </motion.div>
                 <motion.div

@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, HeartIcon, MailIcon } from './Icons';
+import { ShoppingCartIcon, HamburgerIcon, XIcon, SearchIcon, HeartIcon } from './Icons';
 import { Page, Product } from '../types';
 import ThemeToggle from './ThemeToggle';
 import { useAppContext } from '../context/AppContext';
@@ -25,14 +25,12 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onWishlistClick, onHomeCli
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Contact Configurations from context
-  const whatsappMessage = encodeURIComponent(`Hello ${shopInfo.name}! I'm browsing your website and I'd like to ask about...`);
+  const whatsappMessage = encodeURIComponent(`Hello ${shopInfo.name}! I'm browsing your website and I'd like to make an enquiry...`);
   const whatsappUrl = `https://wa.me/${shopInfo.whatsapp}?text=${whatsappMessage}`;
-  const emailUrl = `mailto:${shopInfo.email}?subject=Inquiry from Website`;
 
   const navLinks = [
     { name: 'Home', href: '#', isExternal: false },
-    { name: 'WhatsApp', href: whatsappUrl, isExternal: true },
-    { name: 'Email Us', href: emailUrl, isExternal: true },
+    { name: 'Send Enquiry', href: whatsappUrl, isExternal: true },
   ];
 
   const navBgClass = isScrolled || isMenuOpen

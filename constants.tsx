@@ -2,21 +2,21 @@ import { Category, HeroSlide, ProductReview, HomepageSectionConfig } from './typ
 
 export const HERO_SLIDES: HeroSlide[] = [
   {
-    id: 1,
+    id: 101,
     title: 'New Resin Earrings',
     subtitle: 'Handcrafted with love and vibrant colors.',
     imageUrl: 'https://images.unsplash.com/photo-1611151923205-3333575303a1?q=80&w=2670&auto=format&fit=crop',
     buttonText: 'Shop Now',
   },
   {
-    id: 2,
+    id: 102,
     title: 'Beaded Bracelets',
     subtitle: 'Unique designs for every style.',
     imageUrl: 'https://images.unsplash.com/photo-1589309797086-628867a1956f?q=80&w=2670&auto=format&fit=crop',
     buttonText: 'Explore Collection',
   },
   {
-    id: 3,
+    id: 103,
     title: 'Lipgloss Keychains',
     subtitle: 'Beauty on the go, stylish and practical.',
     imageUrl: 'https://images.unsplash.com/photo-1620920494901-de1a63c8a98a?q=80&w=2670&auto=format&fit=crop',
@@ -25,19 +25,19 @@ export const HERO_SLIDES: HeroSlide[] = [
 ];
 
 export const CATEGORIES: Category[] = [
-  { id: 1, name: 'Resin', imageUrl: 'https://images.unsplash.com/photo-1636572481942-12492162523d?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 2, name: 'Beads', imageUrl: 'https://images.unsplash.com/photo-1454563823136-7e8392a404c0?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 3, name: 'Lipgloss', imageUrl: 'https://images.unsplash.com/photo-1575429391320-42f068771a36?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 4, name: 'Ribbons', imageUrl: 'https://images.unsplash.com/photo-1595932582801-5e544711655b?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 5, name: 'Keychains', imageUrl: 'https://images.unsplash.com/photo-1606913743380-a5491a1357c3?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 6, name: 'Bracelets', imageUrl: 'https://images.unsplash.com/photo-1611099222359-52a69a083311?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 7, name: 'Earrings', imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=200&h=200&auto=format&fit=crop' },
-  { id: 8, name: 'Necklaces', imageUrl: 'https://images.unsplash.com/photo-1507702811690-3f7dc36f2f45?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 201, name: 'Resin', imageUrl: 'https://images.unsplash.com/photo-1636572481942-12492162523d?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 202, name: 'Beads', imageUrl: 'https://images.unsplash.com/photo-1454563823136-7e8392a404c0?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 203, name: 'Lipgloss', imageUrl: 'https://images.unsplash.com/photo-1575429391320-42f068771a36?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 204, name: 'Ribbons', imageUrl: 'https://images.unsplash.com/photo-1595932582801-5e544711655b?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 205, name: 'Keychains', imageUrl: 'https://images.unsplash.com/photo-1606913743380-a5491a1357c3?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 206, name: 'Bracelets', imageUrl: 'https://images.unsplash.com/photo-1611099222359-52a69a083311?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 207, name: 'Earrings', imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=200&h=200&auto=format&fit=crop' },
+  { id: 208, name: 'Necklaces', imageUrl: 'https://images.unsplash.com/photo-1507702811690-3f7dc36f2f45?q=80&w=200&h=200&auto=format&fit=crop' },
 ];
 
 export const MOCK_REVIEWS: ProductReview[] = [
   {
-    id: 1,
+    id: 301,
     productId: 1,
     author: 'Emily R.',
     rating: 5,
@@ -47,7 +47,7 @@ export const MOCK_REVIEWS: ProductReview[] = [
     verifiedPurchase: true,
   },
   {
-    id: 2,
+    id: 302,
     productId: 1,
     author: 'Jessica B.',
     rating: 4,
@@ -57,7 +57,7 @@ export const MOCK_REVIEWS: ProductReview[] = [
     verifiedPurchase: true,
   },
   {
-    id: 3,
+    id: 303,
     productId: 1,
     author: 'Sarah L.',
     rating: 5,
@@ -67,7 +67,7 @@ export const MOCK_REVIEWS: ProductReview[] = [
     verifiedPurchase: false,
   },
    {
-    id: 4,
+    id: 304,
     productId: 5,
     author: 'Mike P.',
     rating: 5,
@@ -77,7 +77,7 @@ export const MOCK_REVIEWS: ProductReview[] = [
     verifiedPurchase: true,
   },
   {
-    id: 5,
+    id: 305,
     productId: 5,
     author: 'Chloe G.',
     rating: 4,

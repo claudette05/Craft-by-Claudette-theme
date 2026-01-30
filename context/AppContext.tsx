@@ -187,7 +187,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const toggleWishlist = (productId: number) => {
-        setWishlist(prev => prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]);
+        setWishlist(prev => {
+            const newWishlist = new Set(prev);
+            if (newWishlist.has(productId)) {
+                newWishlist.delete(productId);
+            } else {
+                newWishlist.add(productId);
+            }
+            return Array.from(newWishlist);
+        });
     };
 
     const addToCart = (productId: number, quantity: number) => {

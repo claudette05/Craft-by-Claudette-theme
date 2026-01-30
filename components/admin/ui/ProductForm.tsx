@@ -7,8 +7,14 @@ import { useAppContext } from '../../../context/AppContext';
 
 interface ProductFormProps {
     product: Product | null;
-    onSave: (product: Product, imageFile?: File) => Promise<void> | void;
+    onSave: (product: Product, imageFile?: File, additionalImageFiles?: File[]) => Promise<void> | void;
     onCancel: () => void;
+}
+
+interface GalleryItem {
+    id: string;
+    url: string;
+    file?: File;
 }
 
 const emptyProduct: Omit<Product, 'id'> = {
@@ -16,6 +22,7 @@ const emptyProduct: Omit<Product, 'id'> = {
     price: 0,
     salePrice: undefined,
     imageUrl: 'https://placehold.co/600x400/FFF0E6/F97316?text=Image',
+    images: [],
     category: 'Earrings',
     description: '',
     stock: 0,
@@ -35,12 +42,27 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     const { uploadImage, addToast } = useAppContext();
     const [formData, setFormData] = React.useState<Product | Omit<Product, 'id'>>(product || emptyProduct);
     const [tagInput, setTagInput] = React.useState('');
+    
+    // Main image state
     const [imageFile, setImageFile] = React.useState<File | undefined>();
     const [imagePreview, setImagePreview] = React.useState(product?.imageUrl || emptyProduct.imageUrl);
+    
+    // Additional gallery state - Unified for better management
+    const [galleryItems, setGalleryItems] = React.useState<GalleryItem[]>(() => {
+        if (product && Array.isArray(product.images)) {
+            return product.images.filter(url => typeof url === 'string' && url.trim() !== '').map(url => ({ 
+                id: `existing-${url}`, 
+                url 
+            }));
+        }
+        return [];
+    });
+
     const [isSaving, setIsSaving] = React.useState(false);
     const [uploadingVariants, setUploadingVariants] = React.useState<Set<string>>(new Set());
     
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const mainFileInputRef = React.useRef<HTMLInputElement>(null);
+    const additionalFilesInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value, type } = e.target;
@@ -49,12 +71,29 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
         setFormData(prev => ({ ...prev, [name]: parsedValue }));
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleMainImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
             setImageFile(file);
             setImagePreview(URL.createObjectURL(file));
         }
+    };
+    
+    const handleAdditionalImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files) as File[];
+            const newItems: GalleryItem[] = files.map(file => ({
+                id: Math.random().toString(36).substr(2, 9),
+                url: URL.createObjectURL(file),
+                file: file
+            }));
+            
+            setGalleryItems(prev => [...prev, ...newItems]);
+        }
+    };
+
+    const handleRemoveGalleryItem = (id: string) => {
+        setGalleryItems(prev => prev.filter(item => item.id !== id));
     };
 
     const handlePublishedChange = () => {
@@ -71,8 +110,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     const handleVariantImageChange = async (variantId: string, e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
-            
-            // Track loading state for this specific variant
             setUploadingVariants(prev => new Set(prev).add(variantId));
             
             try {
@@ -123,8 +160,19 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSaving(true);
+        
+        // Split gallery items into existing URLs and new Files
+        const existingImageUrls = galleryItems.filter(item => !item.file).map(item => item.url);
+        const newImageFiles = galleryItems.filter(item => item.file).map(item => item.file as File);
+        
+        // Update product data with existing URLs before sending to parent
+        const finalProductData = {
+            ...formData,
+            images: existingImageUrls
+        } as Product;
+
         try {
-            await onSave(formData as Product, imageFile);
+            await onSave(finalProductData, imageFile, newImageFiles);
         } catch (error) {
             console.error("Save failed", error);
         } finally {
@@ -135,6 +183,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     return (
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Product Info Section */}
                 <div className="md:col-span-2 space-y-4">
                     <Input label="Product Name" id="name" name="name" value={formData.name} onChange={handleChange} required />
                     <div>
@@ -142,10 +191,33 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                         <textarea id="description" name="description" value={formData.description} onChange={handleChange} rows={4} className="mt-1 block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/50 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]"></textarea>
                     </div>
                 </div>
+
+                {/* Main Image & Additional Images Section */}
                 <div>
+                    <h2 className="text-lg font-medium text-[var(--text-primary)] mb-2">Main Image</h2>
                     <img src={imagePreview} alt="Product preview" className="rounded-lg shadow-sm w-full aspect-square object-cover mb-2"/>
-                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageChange} className="hidden" />
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full text-sm text-center py-2 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 rounded-md text-[var(--text-primary)]">Change Main Image</button>
+                    <input type="file" accept="image/*" ref={mainFileInputRef} onChange={handleMainImageChange} className="hidden" />
+                    <button type="button" onClick={() => mainFileInputRef.current?.click()} className="w-full text-sm text-center py-2 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 rounded-md text-[var(--text-primary)] transition-colors">Change Main Image</button>
+                    
+                    <div className="mt-6">
+                        <h2 className="text-lg font-medium text-[var(--text-primary)] mb-2">Product Gallery</h2>
+                        <div className="grid grid-cols-3 gap-2 mb-2">
+                            {galleryItems.map((item) => (
+                                <div key={item.id} className="relative group">
+                                    <img src={item.url} alt="Gallery item" className="rounded-md shadow-sm w-full aspect-square object-cover"/>
+                                    <button 
+                                        type="button" 
+                                        onClick={() => handleRemoveGalleryItem(item.id)}
+                                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-all hover:scale-110"
+                                    >
+                                        <TrashIcon className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                        <input type="file" accept="image/*" ref={additionalFilesInputRef} onChange={handleAdditionalImagesChange} className="hidden" multiple />
+                        <button type="button" onClick={() => additionalFilesInputRef.current?.click()} className="w-full text-sm text-center py-2 bg-zinc-200 dark:bg-zinc-600 hover:bg-zinc-300 dark:hover:bg-zinc-500 rounded-md text-[var(--text-primary)] transition-colors">Add to Gallery</button>
+                    </div>
                 </div>
             </div>
             

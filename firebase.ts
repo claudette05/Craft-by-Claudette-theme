@@ -1,15 +1,15 @@
 
-import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
-import { getFirestore } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getFirestore } from 'firebase/firestore';
 
 // These are your provided credentials
 const firebaseConfig = {
-  apiKey: "AIzaSyALMO0s9a_SwsGpjKilVDQfqn5dPQAnIyE",
-  authDomain: "craft-by-claudette-04120-158b5.firebaseapp.com",
-  projectId: "craft-by-claudette-04120-158b5",
-  storageBucket: "craft-by-claudette-04120-158b5.firebasestorage.app",
-  messagingSenderId: "238977292587",
-  appId: "1:238977292587:web:6b415ab9dc372309bd0d6e"
+  apiKey: "AIzaSyC3i1PMINFJse7Iu_xZiM0Za9bSa0I5w5w",
+  authDomain: "craft-by-claudette-02467-36805.firebaseapp.com",
+  projectId: "craft-by-claudette-02467-36805",
+  storageBucket: "craft-by-claudette-02467-36805.firebasestorage.app",
+  messagingSenderId: "515691180906",
+  appId: "1:515691180906:web:ac0c1359bb73b40ff12b13"
 };
 
 /**

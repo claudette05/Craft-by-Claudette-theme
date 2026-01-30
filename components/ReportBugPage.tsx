@@ -8,6 +8,8 @@ interface ReportBugPageProps {
     onNavigate: (page: Page) => void;
 }
 
+const bugTypes = ['Visual Glitch', 'Functionality Error', 'Payment Issue', 'Other'];
+
 const ReportBugPage: React.FC<ReportBugPageProps> = ({ onNavigate }) => {
     const { addToast } = useAppContext();
     const [isLoading, setIsLoading] = React.useState(false);
@@ -38,10 +40,9 @@ const ReportBugPage: React.FC<ReportBugPageProps> = ({ onNavigate }) => {
                     <div>
                         <label className="block text-sm font-medium text-text-secondary mb-1">Issue Type</label>
                         <select className="w-full p-3 rounded-lg border border-border-primary bg-bg-tertiary text-text-primary outline-none focus:ring-2 focus:ring-accent-primary">
-                            <option>Visual Glitch</option>
-                            <option>Functionality Error</option>
-                            <option>Payment Issue</option>
-                            <option>Other</option>
+                            {bugTypes.map(type => (
+                                <option key={type}>{type}</option>
+                            ))}
                         </select>
                     </div>
                     <div>

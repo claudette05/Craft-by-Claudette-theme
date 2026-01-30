@@ -7,10 +7,12 @@ import {
   setDoc,
   getDoc,
   query,
-  orderBy
-} from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+  orderBy,
+  onSnapshot
+} from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase';
 import { Product, Category, HeroSlide, AdminOrder } from '../types';
+import MOCK_PRODUCTS from '../mockProducts';
 
 // Track if we've encountered a permission error to stop spamming requests
 let cloudDisabled = !isFirebaseConfigured;
@@ -47,6 +49,12 @@ const saveLocal = (key: string, data: any) => {
   localStorage.setItem(key, JSON.stringify(data));
 };
 
+// A helper to safely parse the string ID from Firestore into a number
+const safeParseId = (id: string): number => {
+    const num = parseInt(id, 10);
+    return isNaN(num) ? Date.now() + Math.random() : num; // Fallback for non-numeric IDs
+}
+
 export const databaseService = {
   getCloudStatus(): 'connected' | 'unconfigured' | 'denied' {
     if (!isFirebaseConfigured) return 'unconfigured';
@@ -77,7 +85,6 @@ export const databaseService = {
     if (!cloudDisabled) {
       try {
         const docRef = doc(db, 'settings', 'global');
-        // Clean undefined values before saving
         const cleanedData = removeUndefined({
           ...settings,
           updatedAt: new Date().toISOString()
@@ -91,47 +98,59 @@ export const databaseService = {
   },
 
   // --- Products ---
-  async getProducts(): Promise<Product[]> {
-    if (!cloudDisabled) {
-      try {
-        console.info("Fetching products from Firestore...");
-        const q = query(collection(db, 'products'), orderBy('id', 'desc'));
-        const querySnapshot = await getDocs(q);
-        const products = querySnapshot.docs.map(doc => ({ ...doc.data() } as Product));
-        
-        if (products.length > 0) {
-            saveLocal(LOCAL_KEYS.PRODUCTS, products);
-            console.info(`Successfully synced ${products.length} products from Cloud.`);
-        }
-        return products;
-      } catch (error: any) {
-        if (error.code === 'permission-denied' || error.message?.includes('permission')) {
-            console.error("Firestore Permission Denied: Ensure your Security Rules allow Read/Write.");
-            cloudDisabled = true;
-        }
-        console.warn("Cloud products fetch failed, using local cache:", error.message);
-      }
+  async getProducts(onUpdate: (products: Product[]) => void): Promise<() => void> {
+    if (typeof onUpdate !== 'function') {
+      console.error("getProducts was called without a valid onUpdate function.");
+      return () => {}; // Return an empty unsubscribe function
     }
-    return getLocal<Product[]>(LOCAL_KEYS.PRODUCTS) || [];
+    if (cloudDisabled) {
+      const localProducts = getLocal<Product[]>(LOCAL_KEYS.PRODUCTS) || [];
+      onUpdate(localProducts);
+      return () => {}; // Return an empty unsubscribe function
+    }
+
+    console.info("Setting up real-time product listener from Firestore...");
+    const q = query(collection(db, 'products'), orderBy('id', 'desc'));
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const products = querySnapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        return { ...data, id: safeParseId(docSnap.id) } as Product;
+      });
+      
+      saveLocal(LOCAL_KEYS.PRODUCTS, products);
+      console.info(`Successfully synced ${products.length} products from Cloud in real-time.`);
+      onUpdate(products);
+    }, (error: any) => {
+      if (error.code === 'permission-denied' || error.message?.includes('permission')) {
+          console.error("Firestore Permission Denied: Ensure your Security Rules allow Read/Write.");
+          cloudDisabled = true;
+      }
+      console.warn("Real-time product updates failed, using local cache:", error.message);
+      const localProducts = getLocal<Product[]>(LOCAL_KEYS.PRODUCTS) || [];
+      const combinedProducts = [...MOCK_PRODUCTS, ...localProducts];
+      const uniqueProducts = Array.from(new Map(combinedProducts.map(p => [p.id, p])).values());
+      saveLocal(LOCAL_KEYS.PRODUCTS, uniqueProducts);
+      onUpdate(uniqueProducts);
+    });
+
+    return unsubscribe; // Return the unsubscribe function to the caller
   },
 
   async saveProduct(product: Product): Promise<void> {
     console.info(`Preparing to save product: ${product.name} (ID: ${product.id})`);
     
-    // 1. Save Locally for immediate UI responsiveness
     const products = getLocal<Product[]>(LOCAL_KEYS.PRODUCTS) || [];
     const updated = products.some(p => p.id === product.id) 
       ? products.map(p => p.id === product.id ? product : p)
       : [product, ...products];
     saveLocal(LOCAL_KEYS.PRODUCTS, updated);
 
-    // 2. Sync to Firestore
     if (!cloudDisabled) {
       try {
         const productRef = doc(db, 'products', String(product.id));
         console.info("Syncing to Firestore...");
         
-        // Clean undefined values (like optional salePrice) before saving
         const cleanedProduct = removeUndefined({
             ...product,
             updatedAt: new Date().toISOString(),
@@ -174,7 +193,10 @@ export const databaseService = {
     if (!cloudDisabled) {
       try {
         const querySnapshot = await getDocs(collection(db, 'categories'));
-        const categories = querySnapshot.docs.map(doc => ({ ...doc.data() } as Category));
+        const categories = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return { ...data, id: safeParseId(docSnap.id) } as Category;
+        });
         if (categories.length > 0) saveLocal(LOCAL_KEYS.CATEGORIES, categories);
         return categories;
       } catch (error: any) {
@@ -220,7 +242,10 @@ export const databaseService = {
     if (!cloudDisabled) {
       try {
         const querySnapshot = await getDocs(collection(db, 'heroSlides'));
-        const slides = querySnapshot.docs.map(doc => ({ ...doc.data() } as HeroSlide));
+        const slides = querySnapshot.docs.map(docSnap => {
+            const data = docSnap.data();
+            return { ...data, id: safeParseId(docSnap.id) } as HeroSlide;
+        });
         if (slides.length > 0) saveLocal(LOCAL_KEYS.HERO, slides);
         return slides;
       } catch (error: any) {
@@ -266,7 +291,7 @@ export const databaseService = {
       try {
         const q = query(collection(db, 'orders'), orderBy('date', 'desc'));
         const querySnapshot = await getDocs(q);
-        const orders = querySnapshot.docs.map(doc => ({ ...doc.data() } as AdminOrder));
+        const orders = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as AdminOrder));
         if (orders.length > 0) saveLocal(LOCAL_KEYS.ORDERS, orders);
         return orders;
       } catch (error: any) {

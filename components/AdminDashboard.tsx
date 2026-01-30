@@ -30,7 +30,7 @@ interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
     
     products: Product[];
-    onSaveProduct: (product: Product, imageFile?: File) => Promise<void> | void;
+    onSaveProduct: (product: Product, imageFile?: File, additionalImageFiles?: File[]) => Promise<void> | void;
     onDeleteProduct: (productId: number) => Promise<void> | void;
 
     categories: Category[];
@@ -105,8 +105,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const handleOpenAddProductModal = () => { setEditingProduct(null); setIsProductModalOpen(true); };
     const handleOpenEditProductModal = (product: Product) => { setEditingProduct(product); setIsProductModalOpen(true); };
     const handleCloseProductModal = () => { setIsProductModalOpen(false); setEditingProduct(null); };
-    const handleSaveProductWithModal = async (productData: Product, imageFile?: File) => {
-        await onSaveProduct(productData, imageFile);
+    const handleSaveProductWithModal = async (productData: Product, imageFile?: File, additionalImageFiles?: File[]) => {
+        await onSaveProduct(productData, imageFile, additionalImageFiles);
         handleCloseProductModal();
     };
 

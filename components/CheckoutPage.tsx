@@ -117,7 +117,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                 .filter(Boolean)
                 .join(', ');
             
-            const message = `Hello 👋🏽\n` +
+            const message = `Hello \n` +
                 `I’d like to complete my order from ${shopInfo.name}.\n\n` +
                 `Order ID: ${orderId}\n` +
                 `Product(s): ${productNamesList}\n` +
@@ -128,11 +128,11 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                 `Location: ${formData.location}\n` +
                 `${formData.note ? `Note: ${formData.note}\n` : ''}\n` +
                 `Payment Method: Mobile Money\n` +
-                `MoMo Number: ${shopInfo.whatsapp}\n` +
-                `MoMo Name: Claudette Cobbah\n\n` +
+                `MoMo Number: ${shopInfo.momoNumber || shopInfo.whatsapp}\n` +
+                `MoMo Name: ${shopInfo.momoName || 'Claudette Cobbah'}\n\n` +
                 `Delivery fee will be calculated and communicated once the order is ready.\n\n` +
-                `I’ll make payment now and send proof.\n` +
-                `Thank you ✨`;
+                `I’ll make payment now and send proof of payment.\n` +
+                `Thank you `;
 
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${shopInfo.whatsapp}?text=${encodedMessage}`;
@@ -267,8 +267,8 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                         </div>
                     </form>
 
-                    {/* Order Summary */}
-                    <div className="bg-bg-secondary p-6 sm:p-8 rounded-3xl shadow-lg border border-border-primary sticky top-28 order-1 lg:order-2">
+                    {/* Order Summary - lg:sticky to prevent mobile layout issues */}
+                    <div className="bg-bg-secondary p-6 sm:p-8 rounded-3xl shadow-lg border border-border-primary lg:sticky lg:top-28 order-1 lg:order-2">
                         <h2 className="text-xl font-bold text-text-primary border-b border-border-primary pb-4 mb-4">Your Order</h2>
                         <div className="space-y-4 max-h-64 overflow-y-auto pr-2 mb-6 hide-scrollbar">
                             {cartDetails.map(({ product, quantity }) => product && (

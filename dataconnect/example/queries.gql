@@ -1,0 +1,30 @@
+mutation CreateUser($displayName: String!, $email: String!) @auth(level: USER, insecureReason: "This operation is safe to expose to any user as it's for user creation") {
+  user_insert(data: {displayName: $displayName, email: $email, createdAt_expr: "request.time", id_expr: "uuidV4()"})
+}
+
+query ListProducts @auth(level: PUBLIC, insecureReason: "This operation is safe to expose to the public") {
+  products {
+    id
+    name
+    description
+    price
+    imageUrl
+  }
+}
+
+mutation AddToCart($productId: UUID!, $quantity: Int!) @auth(level: USER) {
+  cartItem_insert(data: {productId: $productId, quantity: $quantity, userId_expr: "auth.uid", createdAt_expr: "request.time", id_expr: "uuidV4()"})
+}
+
+query GetUserCart @auth(level: USER) {
+  cartItems(where: {userId: {eq_expr: "auth.uid"}}) {
+    id
+    product {
+      id
+      name
+      price
+      imageUrl
+    }
+    quantity
+  }
+}
