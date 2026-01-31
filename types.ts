@@ -192,7 +192,7 @@ export interface PopupStyle {
     buttonColor: string;
     buttonTextColor: string;
     overlayColor: string;
-    borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+    borderRadius: string;
     fontFamily: 'sans' | 'serif' | 'mono';
     position: PopupPosition;
     entranceAnimation: AnimationType;
@@ -209,9 +209,9 @@ export interface PopupBehavior {
 export interface PopupConfig {
     enabled: boolean;
     type: PopupType;
-    content: PopupContent;
-    style: PopupStyle;
-    behavior: PopupBehavior;
+    content: Partial<PopupContent>;
+    style: Partial<PopupStyle>;
+    behavior: Partial<PopupBehavior>;
     spinnerSegments?: SpinnerSegment[];
 }
 

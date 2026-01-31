@@ -8,55 +8,12 @@ import TopProductsList from '../TopProductsList';
 import SalesChart from '../charts/SalesChart';
 import { ShoppingCartIcon, DollarSignIcon, UsersIcon, PackageIcon, SparklesIcon, CheckBadgeIcon, ExclamationTriangleIcon } from '../../Icons';
 import { useAppContext } from '../../../context/AppContext';
-import { databaseService } from '../../../services/databaseService';
 
 interface AdminDashboardHomeProps {
     orders: AdminOrder[];
     products: Product[];
     onNavigateToSettings?: () => void;
 }
-
-const CloudStatusIndicator = () => {
-    const status = databaseService.getCloudStatus();
-    
-    if (status === 'connected') {
-        return (
-            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-500/10 rounded-full border border-green-200 dark:border-green-800">
-                <CheckBadgeIcon className="w-5 h-5 text-green-600" />
-                <span className="text-xs font-bold text-green-700 dark:text-green-400 uppercase tracking-wider">Cloud Synchronized</span>
-            </div>
-        );
-    }
-
-    if (status === 'unconfigured') {
-        return (
-            <div className="flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-zinc-500/10 rounded-full border border-zinc-200 dark:border-zinc-800">
-                <span className="h-2 w-2 rounded-full bg-zinc-400 animate-pulse"></span>
-                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-400 uppercase tracking-wider">Offline Mode</span>
-            </div>
-        );
-    }
-
-    return (
-        <div className="group relative">
-            <div className="flex items-center gap-2 px-4 py-2 bg-amber-100 dark:bg-amber-500/10 rounded-full border border-amber-200 dark:border-amber-800 cursor-help">
-                <ExclamationTriangleIcon className="w-5 h-5 text-amber-600" />
-                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Sync Restricted</span>
-            </div>
-            <div className="absolute top-full right-0 mt-2 w-64 p-3 bg-zinc-800 text-white text-[10px] rounded-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl leading-relaxed">
-                <p className="font-bold mb-1 border-b border-white/20 pb-1 uppercase">Firestore Permission Denied</p>
-                <p>Your cloud database is blocking requests. To fix:</p>
-                <ol className="list-decimal list-inside mt-1 space-y-1">
-                    <li>Go to Firebase Console</li>
-                    <li>Select Firestore Database</li>
-                    <li>Click the "Rules" tab</li>
-                    <li>Update rules to allow read/write</li>
-                </ol>
-                <p className="mt-2 text-zinc-400 italic">Data is currently saving to your browser only.</p>
-            </div>
-        </div>
-    );
-};
 
 const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, products, onNavigateToSettings }) => {
     const { cloudinaryConfig } = useAppContext();
@@ -108,8 +65,6 @@ const AdminDashboardHome: React.FC<AdminDashboardHomeProps> = ({ orders, product
                     <h1 className="text-3xl font-bold text-[var(--text-primary)]">Dashboard</h1>
                     <p className="text-[var(--text-secondary)] mt-1">Welcome back, Admin!</p>
                 </motion.header>
-                
-                <CloudStatusIndicator />
             </div>
 
             {!isCloudinaryConfigured && (

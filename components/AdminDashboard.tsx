@@ -13,45 +13,41 @@ import AdminAnalyticsPage from './admin/pages/AdminAnalyticsPage';
 import AdminHeroPage from './admin/pages/AdminHeroPage';
 import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminHomepagePage from './admin/pages/AdminHomepagePage';
+import AdminContentPage from './admin/pages/AdminContentPage';
 import AdminPopupSettingsPage from './admin/pages/AdminPopupSettingsPage';
-import AdminEmailsPage from './admin/pages/AdminEmailsPage'; // Import new page
+import AdminEmailsPage from './admin/pages/AdminEmailsPage';
 import Modal from './admin/ui/Modal';
 import ProductForm from './admin/ui/ProductForm';
 import CategoryForm from './admin/ui/CategoryForm';
 import HeroSlideForm from './admin/ui/HeroSlideForm';
 import PromotionForm from './admin/ui/PromotionForm';
 import Toast from './admin/ui/Toast';
-import { HamburgerIcon } from './Icons';
+import { HamburgerIcon, ChevronLeftIcon } from './Icons';
 
-// Fix: Removed local Page type definition that was shadowing and causing conflicts with the central Page type
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'content' | 'settings' | 'popup' | 'emails';
+type AdminSubPage = 'hero' | 'homepage';
 
 interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
-    
     products: Product[];
     onSaveProduct: (product: Product, imageFile?: File, additionalImageFiles?: File[]) => Promise<void> | void;
     onDeleteProduct: (productId: number) => Promise<void> | void;
-
     categories: Category[];
     onSaveCategory: (category: Category, imageFile?: File) => Promise<void> | void;
     onDeleteCategory: (categoryId: number) => Promise<void> | void;
-
     heroSlides: HeroSlide[];
     onSaveHeroSlide: (slide: HeroSlide, imageFile?: File) => Promise<void> | void;
     onDeleteHeroSlide: (slideId: number) => Promise<void> | void;
-
     orders: AdminOrder[];
     customers: AdminCustomer[];
     promotions: Promotion[];
     onSavePromotion: (promotion: Promotion) => void;
     onDeletePromotion: (id: number) => void;
-    
     homepageSections: HomepageSections;
     onSaveHomepageSections: (sections: HomepageSections) => Promise<void> | void;
-
     isDarkMode: boolean;
     toggleDarkMode: () => void;
+    fetchCategories: () => Promise<void>;
 }
 
 const adminPageTitles: Record<AdminPage, string> = {
@@ -62,8 +58,7 @@ const adminPageTitles: Record<AdminPage, string> = {
     customers: 'Customers',
     promotions: 'Promotions',
     analytics: 'Analytics',
-    hero: 'Hero Section',
-    homepage: 'Homepage Sections',
+    content: 'Site Content',
     settings: 'Settings',
     popup: 'Popup Manager',
     emails: 'Email Logs',
@@ -75,7 +70,7 @@ const AdminMobileHeader: React.FC<{ onMenuClick: () => void, title: string }> = 
             <HamburgerIcon />
         </button>
         <h2 className="text-lg font-bold text-[var(--text-primary)]">{title}</h2>
-        <div className="w-8"></div> {/* Spacer */}
+        <div className="w-8"></div>
     </div>
 );
 
@@ -85,13 +80,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         onSaveCategory, onDeleteCategory, heroSlides, onSaveHeroSlide, onDeleteHeroSlide,
         orders, customers, promotions, onSavePromotion, onDeletePromotion,
         homepageSections, onSaveHomepageSections,
-        isDarkMode, toggleDarkMode
+        isDarkMode, toggleDarkMode, fetchCategories
     } = props;
 
     const [activePage, setActivePage] = React.useState<AdminPage>('dashboard');
+    const [subPage, setSubPage] = React.useState<AdminSubPage | null>(null);
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
-    
-    // UI states
+
     const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
     const [editingProduct, setEditingProduct] = React.useState<Product | null>(null);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = React.useState(false);
@@ -101,7 +96,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const [isPromotionModalOpen, setIsPromotionModalOpen] = React.useState(false);
     const [editingPromotion, setEditingPromotion] = React.useState<Promotion | null>(null);
 
-    // Product Handlers
     const handleOpenAddProductModal = () => { setEditingProduct(null); setIsProductModalOpen(true); };
     const handleOpenEditProductModal = (product: Product) => { setEditingProduct(product); setIsProductModalOpen(true); };
     const handleCloseProductModal = () => { setIsProductModalOpen(false); setEditingProduct(null); };
@@ -110,16 +104,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         handleCloseProductModal();
     };
 
-    // Category Handlers
     const handleOpenAddCategoryModal = () => { setEditingCategory(null); setIsCategoryModalOpen(true); };
     const handleOpenEditCategoryModal = (category: Category) => { setEditingCategory(category); setIsCategoryModalOpen(true); };
     const handleCloseCategoryModal = () => { setIsCategoryModalOpen(false); setEditingCategory(null); };
     const handleSaveCategoryWithModal = async (categoryData: Category, imageFile?: File) => {
         await onSaveCategory(categoryData, imageFile);
+        await fetchCategories(); 
         handleCloseCategoryModal();
     };
+    const handleDeleteCategory = async (categoryId: number) => {
+        await onDeleteCategory(categoryId);
+        await fetchCategories();
+    };
 
-    // Hero Slide Handlers
     const handleOpenAddHeroSlideModal = () => { setEditingHeroSlide(null); setIsHeroModalOpen(true); };
     const handleOpenEditHeroSlideModal = (slide: HeroSlide) => { setEditingHeroSlide(slide); setIsHeroModalOpen(true); };
     const handleCloseHeroModal = () => { setIsHeroModalOpen(false); setEditingHeroSlide(null); };
@@ -128,7 +125,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         handleCloseHeroModal();
     };
 
-    // Promotion Handlers
     const handleOpenAddPromotionModal = () => { setEditingPromotion(null); setIsPromotionModalOpen(true); };
     const handleOpenEditPromotionModal = (promotion: Promotion) => { setEditingPromotion(promotion); setIsPromotionModalOpen(true); };
     const handleClosePromotionModal = () => { setIsPromotionModalOpen(false); setEditingPromotion(null); };
@@ -137,23 +133,43 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         handleClosePromotionModal();
     };
 
+    const renderSubContent = () => {
+        if (activePage !== 'content' || !subPage) return null;
+        const subPageMap: Record<AdminSubPage, React.ReactNode> = {
+            'hero': <AdminHeroPage slides={heroSlides} onAddSlide={handleOpenAddHeroSlideModal} onEditSlide={handleOpenEditHeroSlideModal} onDeleteSlide={onDeleteHeroSlide} />,
+            'homepage': <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />,
+        };
+        return (
+            <div>
+                <button onClick={() => setSubPage(null)} className="flex items-center gap-2 mb-6 text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)]">
+                    <ChevronLeftIcon />
+                    Back to Site Content
+                </button>
+                {subPageMap[subPage]}
+            </div>
+        );
+    };
+
     const renderContent = () => {
+        if (activePage === 'content' && subPage) return renderSubContent();
+
         switch (activePage) {
             case 'dashboard': return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
             case 'products': return <AdminProductsPage products={products} onAddProduct={handleOpenAddProductModal} onEditProduct={handleOpenEditProductModal} onDeleteProduct={onDeleteProduct} />;
-            case 'categories': return <AdminCategoriesPage categories={categories} products={products} onAddCategory={handleOpenAddCategoryModal} onEditCategory={handleOpenEditCategoryModal} onDeleteCategory={onDeleteCategory} />;
+            case 'categories': return <AdminCategoriesPage categories={categories} products={products} onAddCategory={handleOpenAddCategoryModal} onEditCategory={handleOpenEditCategoryModal} onDeleteCategory={handleDeleteCategory} />;
             case 'orders': return <AdminOrdersPage orders={orders} />;
             case 'customers': return <AdminCustomersPage customers={customers} />;
             case 'promotions': return <AdminPromotionsPage promotions={promotions} onAddPromotion={handleOpenAddPromotionModal} onEditPromotion={handleOpenEditPromotionModal} onDeletePromotion={onDeletePromotion} />;
-            case 'analytics': return <AdminAnalyticsPage />;
-            case 'hero': return <AdminHeroPage slides={heroSlides} onAddSlide={handleOpenAddHeroSlideModal} onEditSlide={handleOpenEditHeroSlideModal} onDeleteSlide={onDeleteHeroSlide} />;
-            case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
+            case 'analytics': return <AdminAnalyticsPage orders={orders} products={products} />; 
+            case 'content': return <AdminContentPage onNavigate={setSubPage} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
             case 'popup': return <AdminPopupSettingsPage />;
             case 'emails': return <AdminEmailsPage />; 
             default: return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
         }
     };
+    
+    const getPageKey = () => subPage ? `${activePage}-${subPage}` : activePage;
 
     return (
         <div className={isDarkMode ? 'dark' : ''}>
@@ -183,7 +199,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                         <main className="p-6 md:p-10">
                             <div className="pt-16 sm:pt-0">
                                 <AnimatePresence mode="wait">
-                                    <motion.div key={activePage} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
+                                    <motion.div key={getPageKey()} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.2 }}>
                                         {renderContent()}
                                     </motion.div>
                                 </AnimatePresence>
@@ -195,7 +211,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                 <AnimatePresence>
                     {isProductModalOpen && (
                         <Modal title={editingProduct ? 'Edit Product' : 'Add New Product'} onClose={handleCloseProductModal}>
-                            <ProductForm product={editingProduct} onSave={handleSaveProductWithModal} onCancel={handleCloseProductModal} />
+                            <ProductForm product={editingProduct} onSave={handleSaveProductWithModal} onCancel={handleCloseProductModal} categories={categories} />
                         </Modal>
                     )}
                     {isCategoryModalOpen && (
