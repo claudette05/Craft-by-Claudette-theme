@@ -10,9 +10,14 @@ interface ErrorBoundaryState {
 }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  // Explicitly declare state and props properties to satisfy TypeScript in environments where inheritance detection might be limited
+  public state: ErrorBoundaryState = { hasError: false };
+  public props: ErrorBoundaryProps;
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    // Explicitly assign props to this.props to ensure availability in the instance
+    this.props = props;
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
@@ -24,6 +29,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   render() {
+    // Accessing state safely after explicit declaration
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex flex-col items-center justify-center bg-zinc-50 p-6 text-center">
@@ -39,6 +45,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
             >
               Refresh Page
             </button>
+            {/* Safely access error property for diagnostic info after explicit state declaration */}
             {this.state.error && (
                 <details className="mt-6 text-left text-xs text-zinc-400 overflow-hidden">
                     <summary className="cursor-pointer mb-1 hover:text-zinc-500">Error Details</summary>
@@ -52,6 +59,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
       );
     }
 
+    // Accessing props correctly after explicit declaration to fix "Property 'props' does not exist" error
     return this.props.children || null;
   }
 }

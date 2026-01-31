@@ -174,7 +174,7 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
                     <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm border border-[var(--border-primary)]">
                         <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-6">Shop Information</h2>
                         <div className="flex flex-col md:flex-row gap-8">
-                            <div className="flex flex-col items-center">
+                            <div className="flex flex-col items-center shrink-0">
                                 <label className="block text-sm font-medium text-[var(--text-secondary)] mb-2">Store Logo</label>
                                 <div className="relative w-32 h-32 rounded-xl border-2 border-dashed border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/30 overflow-hidden flex items-center justify-center group cursor-pointer" onClick={() => fileInputRef.current?.click()}>
                                     {localShopInfo.logoUrl ? <img src={localShopInfo.logoUrl} className="w-full h-full object-contain" alt="Logo" /> : <div className="text-center p-4"><PhotoIcon className="w-8 h-8 mx-auto text-zinc-400" /><span className="text-[10px] text-zinc-500 font-bold uppercase mt-1 block">Upload</span></div>}
@@ -183,10 +183,14 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
                                 <input type="file" ref={fileInputRef} onChange={handleLogoChange} accept="image/*" className="hidden" />
                             </div>
                             <div className="flex-1 space-y-6">
-                                <FormInput label="Shop Name" id="shop-name" value={localShopInfo.name ?? ''} onChange={(v) => handleShopChange('name', v)} />
+                                <FormInput label="Shop Name" id="shop-name" value={localShopInfo.name} onChange={(v) => handleShopChange('name', v)} />
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <FormInput label="Contact Email" id="shop-email" type="email" value={localShopInfo.email ?? ''} onChange={(v) => handleShopChange('email', v)} />
-                                    <FormInput label="WhatsApp Number" id="shop-whatsapp" value={localShopInfo.whatsapp ?? ''} onChange={(v) => handleShopChange('whatsapp', v)} placeholder="e.g. 233552130759" />
+                                    <FormInput label="Contact Email" id="shop-email" type="email" value={localShopInfo.email} onChange={(v) => handleShopChange('email', v)} />
+                                    <FormInput label="WhatsApp Number" id="shop-whatsapp" value={localShopInfo.whatsapp} onChange={(v) => handleShopChange('whatsapp', v)} placeholder="e.g. 233552130759" />
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-[var(--border-primary)]">
+                                    <FormInput label="MoMo Number (for payments)" id="shop-momo-number" value={localShopInfo.momoNumber || ''} onChange={(v) => handleShopChange('momoNumber', v)} placeholder="e.g. 0509680962" />
+                                    <FormInput label="MoMo Registered Name" id="shop-momo-name" value={localShopInfo.momoName || ''} onChange={(v) => handleShopChange('momoName', v)} placeholder="e.g. Claudette Cobbah" />
                                 </div>
                             </div>
                         </div>
@@ -218,8 +222,8 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
                     <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm border border-[var(--border-primary)]">
                         <h2 className="text-xl font-semibold text-[var(--text-primary)] mb-4">Cloudinary Storage</h2>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                            <FormInput label="Cloud Name" id="cloud-name" value={localCloudConfig.cloudName ?? ''} onChange={(v) => setLocalCloudConfig(p => ({...p, cloudName: v}))} />
-                            <FormInput label="Upload Preset" id="upload-preset" value={localCloudConfig.uploadPreset ?? ''} onChange={(v) => setLocalCloudConfig(p => ({...p, uploadPreset: v}))} />
+                            <FormInput label="Cloud Name" id="cloud-name" value={localCloudConfig.cloudName} onChange={(v) => setLocalCloudConfig(p => ({...p, cloudName: v}))} />
+                            <FormInput label="Upload Preset" id="upload-preset" value={localCloudConfig.uploadPreset} onChange={(v) => setLocalCloudConfig(p => ({...p, uploadPreset: v}))} />
                         </div>
                         <div className="mt-8 pt-6 border-t border-[var(--border-primary)] flex flex-col sm:flex-row items-center justify-between gap-4">
                             <button onClick={testCloudinary} disabled={isTestingCloud} className="flex items-center gap-2 text-sm font-bold text-amber-600 hover:text-amber-700 disabled:opacity-50">

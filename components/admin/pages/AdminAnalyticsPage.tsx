@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import SalesChart from '../charts/SalesChart';
-import { Product, AdminOrder } from '../../../types';
+import MOCK_PRODUCTS from '../../../mockProducts';
+import { Product } from '../../../types';
 
 // Mock Data for Categories (Percentage of sales/inventory)
 const CATEGORY_DATA = [
@@ -85,12 +86,7 @@ const LowStockTable = ({ products }: { products: Product[] }) => {
     );
 };
 
-interface AdminAnalyticsPageProps {
-    orders: AdminOrder[];
-    products: Product[];
-}
-
-const AdminAnalyticsPage: React.FC<AdminAnalyticsPageProps> = ({ orders, products }) => {
+const AdminAnalyticsPage: React.FC = () => {
     return (
         <div className="space-y-8 pb-8">
             <header>
@@ -114,7 +110,7 @@ const AdminAnalyticsPage: React.FC<AdminAnalyticsPageProps> = ({ orders, product
                         </select>
                     </div>
                     <div className="h-72 w-full">
-                        <SalesChart orders={orders} />
+                        <SalesChart /> 
                     </div>
                 </motion.div>
 
@@ -149,7 +145,7 @@ const AdminAnalyticsPage: React.FC<AdminAnalyticsPageProps> = ({ orders, product
                         View All Inventory &rarr;
                     </button>
                 </div>
-                <LowStockTable products={products} />
+                <LowStockTable products={MOCK_PRODUCTS} />
             </motion.div>
         </div>
     );

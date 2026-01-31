@@ -101,6 +101,7 @@ const AllProductsPage: React.FC<AllProductsPageProps> = ({ products, onProductCl
         >
           {displayedProducts.map((product) => (
             <ProductCard
+              key={product.id}
               product={product}
               onClick={onProductClick}
               onQuickView={onQuickView}

@@ -6,13 +6,8 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
       server: {
-        port: 9002,
+        port: 3000,
         host: '0.0.0.0',
-        hmr: {
-          host: '9000-firebase-craft-by-claudette-1767015415155.cluster-cbeiita7rbe7iuwhvjs5zww2i4.cloudworkstations.dev',
-          protocol: 'wss',
-          clientPort: 443
-        }
       },
       plugins: [react()],
       define: {

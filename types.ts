@@ -11,6 +11,8 @@ export interface ShopInfo {
   name: string;
   email: string;
   whatsapp: string;
+  momoNumber?: string;
+  momoName?: string;
   logoUrl?: string;
 }
 
@@ -192,7 +194,7 @@ export interface PopupStyle {
     buttonColor: string;
     buttonTextColor: string;
     overlayColor: string;
-    borderRadius: string;
+    borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
     fontFamily: 'sans' | 'serif' | 'mono';
     position: PopupPosition;
     entranceAnimation: AnimationType;
@@ -209,9 +211,9 @@ export interface PopupBehavior {
 export interface PopupConfig {
     enabled: boolean;
     type: PopupType;
-    content: Partial<PopupContent>;
-    style: Partial<PopupStyle>;
-    behavior: Partial<PopupBehavior>;
+    content: PopupContent;
+    style: PopupStyle;
+    behavior: PopupBehavior;
     spinnerSegments?: SpinnerSegment[];
 }
 

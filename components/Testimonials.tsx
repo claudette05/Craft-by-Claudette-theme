@@ -58,9 +58,9 @@ const Testimonials: React.FC<TestimonialsProps> = ({ testimonials }) => {
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.2 }}
                 >
-                    {testimonials.map((testimonial, index) => (
+                    {testimonials.map(testimonial => (
                         <motion.div 
-                            key={testimonial.id || index}
+                            key={testimonial.id}
                             className="bg-pink-50/50 p-6 md:p-8 rounded-lg shadow-sm"
                             variants={itemVariants}
                         >

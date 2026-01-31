@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { motion, Variants, AnimatePresence, PanInfo } from 'framer-motion';
 import { Product } from '../types';
-import { XIcon, ChevronLeftIcon, ChevronRightIcon } from './Icons';
+import { XIcon, ChevronLeftIcon, ChevronRightIcon, EyeIcon } from './Icons';
 import { useAppContext } from '../context/AppContext';
 import { optimizeCloudinaryUrl } from '../utils/cloudinaryUtils';
 
@@ -45,21 +45,27 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
     const [canScrollThumbLeft, setCanScrollThumbLeft] = React.useState(false);
     const [canScrollThumbRight, setCanScrollThumbRight] = React.useState(false);
 
+    // Filter out invalid URLs and duplicates, harvest from variants
     const allImages = React.useMemo(() => {
         const imgs = [product.imageUrl];
-        if (product.images) {
+        if (Array.isArray(product.images)) {
             imgs.push(...product.images);
         }
-        return Array.from(new Set(imgs));
-    }, [product]);
+        if (Array.isArray(product.variants)) {
+            product.variants.forEach(v => {
+                if (v.imageUrl) imgs.push(v.imageUrl);
+            });
+        }
+        return Array.from(new Set(imgs.filter(img => typeof img === 'string' && img.trim() !== '')));
+    }, [product.imageUrl, product.images, product.variants]);
 
     const currentIndex = allImages.indexOf(selectedImage);
 
     const checkThumbScroll = React.useCallback(() => {
         const el = thumbScrollRef.current;
         if (el) {
-            setCanScrollThumbLeft(el.scrollLeft > 0);
-            setCanScrollThumbRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+            setCanScrollThumbLeft(el.scrollLeft > 5);
+            setCanScrollThumbRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 5);
         }
     }, []);
 
@@ -188,7 +194,8 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
                                 >
                                     <ChevronRightIcon className="w-5 h-5" />
                                 </button>
-                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/30 backdrop-blur-md text-white text-[10px] font-bold md:hidden">
+                                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-black/30 backdrop-blur-md text-white text-[10px] font-bold md:hidden flex items-center gap-1">
+                                    <EyeIcon className="w-3 h-3" />
                                     {currentIndex + 1} / {allImages.length}
                                 </div>
                             </>

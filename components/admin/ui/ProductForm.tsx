@@ -39,7 +39,7 @@ const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: str
 );
 
 const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) => {
-    const { uploadImage, addToast, categories } = useAppContext();
+    const { uploadImage, addToast } = useAppContext();
     const [formData, setFormData] = React.useState<Product | Omit<Product, 'id'>>(product || emptyProduct);
     const [tagInput, setTagInput] = React.useState('');
     
@@ -228,9 +228,14 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                 <div>
                      <label htmlFor="category" className="block text-sm font-medium text-[var(--text-secondary)]">Category</label>
                      <select id="category" name="category" value={formData.category} onChange={handleChange} className="mt-1 block w-full rounded-md border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-700/50 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm p-2 text-[var(--text-primary)]">
-                         {categories.map((cat) => (
-                            <option key={cat.id} value={cat.name}>{cat.name}</option>
-                         ))}
+                         <option>Earrings</option>
+                         <option>Bracelets</option>
+                         <option>Necklaces</option>
+                         <option>Resin</option>
+                         <option>Keychains</option>
+                         <option>Ribbons</option>
+                         <option>Beads</option>
+                         <option>Lipgloss</option>
                      </select>
                 </div>
             </div>

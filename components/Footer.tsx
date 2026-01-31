@@ -62,6 +62,9 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
                 <button onClick={() => onNavigate('reportBug')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors">
                     Report a Bug
                 </button>
+                <button onClick={() => onNavigate('admin')} className="text-sm text-text-secondary/60 hover:text-accent-primary transition-colors">
+                    Internal
+                </button>
             </div>
         </div>
       </div>

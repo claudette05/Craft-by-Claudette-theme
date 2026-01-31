@@ -1,3 +1,4 @@
+
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Product, ProductReview } from '../types';
@@ -150,6 +151,7 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
         setIsFormOpen(false);
     };
 
+    // Defensive Check: Return null if product is temporarily unavailable during routing
     if (!product) return null;
 
     return (
@@ -171,11 +173,13 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
                             
                             <div className="flex items-center gap-4 mb-8">
                                 <div className="text-5xl font-black text-text-primary tabular-nums">
-                                    {stats.average.toFixed(1)}
+                                    {stats.average > 0 ? stats.average.toFixed(1) : '—'}
                                 </div>
                                 <div>
                                     <StarRating rating={stats.average} className="w-5 h-5" />
-                                    <p className="text-sm text-text-secondary mt-1 font-medium">Based on {stats.total} reviews</p>
+                                    <p className="text-sm text-text-secondary mt-1 font-medium">
+                                        {stats.total > 0 ? `Based on ${stats.total} reviews` : 'No ratings yet'}
+                                    </p>
                                 </div>
                             </div>
 
@@ -184,6 +188,12 @@ const ProductReviewsPage: React.FC<ProductReviewsPageProps> = ({ product, review
                                     <RatingBar key={row.stars} {...row} />
                                 ))}
                             </div>
+
+                            {stats.total === 0 && (
+                                <div className="mt-4 p-4 bg-bg-tertiary/50 rounded-xl text-center border border-dashed border-border-primary">
+                                    <p className="text-xs text-text-secondary italic">This product hasn't been rated yet. Help others by being the first!</p>
+                                </div>
+                            )}
 
                             <div className="mt-8 pt-8 border-t border-border-primary/50">
                                 <h3 className="font-bold text-text-primary mb-2">Review this product</h3>

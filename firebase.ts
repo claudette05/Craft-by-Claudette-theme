@@ -1,29 +1,41 @@
 
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+import { initializeFirestore, persistentLocalCache, _forceLongPolling } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
-// These are your provided credentials
+// --- FIRESTORE SECURITY RULES ---
+// To fix the "Permission Denied" error, go to your Firebase Console -> Firestore -> Rules 
+// and paste the following:
+/*
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+*/
+
 const firebaseConfig = {
-  apiKey: "AIzaSyC3i1PMINFJse7Iu_xZiM0Za9bSa0I5w5w",
-  authDomain: "craft-by-claudette-02467-36805.firebaseapp.com",
-  projectId: "craft-by-claudette-02467-36805",
-  storageBucket: "craft-by-claudette-02467-36805.firebasestorage.app",
-  messagingSenderId: "515691180906",
-  appId: "1:515691180906:web:ac0c1359bb73b40ff12b13"
+  apiKey: "AIzaSyALMO0s9a_SwsGpjKilVDQfqn5dPQAnIyE",
+  authDomain: "craft-by-claudette-04120-158b5.firebaseapp.com",
+  projectId: "craft-by-claudette-04120-158b5",
+  storageBucket: "craft-by-claudette-04120-158b5.firebasestorage.app",
+  messagingSenderId: "238977292587",
+  appId: "1:238977292587:web:6b415ab9dc372309bd0d6e"
 };
 
-/**
- * FIXED LOGIC: 
- * We check if the keys are NOT the default placeholders.
- * Since you've replaced them with real "AIza..." and "craft-..." strings,
- * this will now correctly return TRUE.
- */
 export const isFirebaseConfigured = 
   firebaseConfig.apiKey !== "YOUR_API_KEY" && 
   firebaseConfig.projectId !== "YOUR_PROJECT_ID";
 
 // Initialize Firebase
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const db = getFirestore(app);
+
+// Use initializeFirestore to pass settings that improve reliability in restricted environments
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache(),
+  experimentalForceLongPolling: true // Helps with connectivity errors in some networks
+});
 
 export { db };
