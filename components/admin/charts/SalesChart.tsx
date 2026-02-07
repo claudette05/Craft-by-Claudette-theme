@@ -26,13 +26,6 @@ const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
         return padding.top + height - (sales / maxSales) * height;
     };
 
-    const pathData = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.sales)}`).join(' ');
-
-    const yAxisLabels = Array.from({ length: 5 }, (_, i) => {
-        const value = maxSales > 0 ? (maxSales / 4) * i : 0;
-        return { value, y: yScale(value) };
-    });
-    
     const xScale = (index: number) => {
       if (data.length <= 1) {
         return padding.left + width / 2;
@@ -40,6 +33,12 @@ const SalesChart: React.FC<SalesChartProps> = ({ data }) => {
       return padding.left + (index / (data.length - 1)) * width;
     };
 
+    const pathData = data.map((d, i) => `${i === 0 ? 'M' : 'L'} ${xScale(i)} ${yScale(d.sales)}`).join(' ');
+
+    const yAxisLabels = Array.from({ length: 5 }, (_, i) => {
+        const value = maxSales > 0 ? (maxSales / 4) * i : 0;
+        return { value, y: yScale(value) };
+    });
 
     return (
         <svg width="100%" height="100%" viewBox={`0 0 ${parentWidth} ${parentHeight}`} className="text-[var(--text-secondary)]">

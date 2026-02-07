@@ -174,7 +174,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                     <div className="text-left space-y-4 text-sm text-text-secondary bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
                         <p className="font-bold text-amber-800 dark:text-amber-200">What happens next?</p>
                         <ol className="list-decimal list-inside space-y-2">
-                            <li>Check your WhatsApp tab to send the message.</li>
+                            <li>If you weren't automaticlly redirected to WhatsApp, try again using Google Chrome.</li>
                             <li>{shopInfo.name.split(' ').pop()} will reply to confirm delivery costs.</li>
                             <li>You can then complete payment via Mobile Money.</li>
                         </ol>
