@@ -286,7 +286,7 @@ const App: React.FC = () => {
   const searchResults = React.useMemo(() => searchQuery ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) : [], [searchQuery, products]);
   const dealsProducts = React.useMemo(() => products.filter(p => homepageSections?.deals?.includes(p.id)), [homepageSections, products]);
   const bestsellerProducts = React.useMemo(() => products.filter(p => homepageSections?.bestsellers?.includes(p.id)), [homepageSections, products]);
-  const resinProducts = React.useMemo(() => products.filter(p => p.category === 'Resin' && p.published).slice(0, 8), [products]);
+  const resinProducts = React.useMemo(() => products.filter(p => p.tags?.some(tag => tag.toLowerCase() === 'resin') && p.published).slice(0, 8), [products]);
   const giftProducts = React.useMemo(() => products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8), [products]);
 
   const renderPage = () => {
