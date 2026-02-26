@@ -8,6 +8,7 @@ interface DealsSectionProps {
   products: Product[];
   onProductClick: (product: Product) => void;
   onQuickView: (product: Product) => void;
+  title?: string;
 }
 
 const AnimatedDigit: React.FC<{ digit: string }> = ({ digit }) => (
@@ -88,7 +89,7 @@ const Countdown: React.FC = () => {
 };
 
 
-const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, onQuickView }) => {
+const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, onQuickView, title = 'Deals of the Day' }) => {
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [canScrollPrev, setCanScrollPrev] = React.useState(false);
@@ -138,7 +139,7 @@ const DealsSection: React.FC<DealsSectionProps> = ({ products, onProductClick, o
           className="text-center"
         >
           <h2 className="text-2xl md:text-3xl font-bold text-text-primary flex items-center justify-center gap-3">
-            <ClockIcon /> Deals of the Day
+            <ClockIcon /> {title}
           </h2>
           <p className="mt-2 mb-8 text-text-secondary">Hurry, these deals won't last long!</p>
           <Countdown />

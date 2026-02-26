@@ -1,9 +1,25 @@
 
-
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Product, HomepageSections } from '../../../types';
-import { HOMEPAGE_SECTIONS_CONFIG } from '../../../constants';
+import { Product, HomepageSections, HomepageSectionConfig } from '../../../types';
+
+const HOMEPAGE_SECTIONS_CONFIG: HomepageSectionConfig[] = [
+    {
+        id: 'bestsellers',
+        title: 'Featured Products',
+        description: 'These products will be displayed in the "Featured" section on the homepage.'
+    },
+    {
+        id: 'preorders',
+        title: 'Preorder Deals',
+        description: 'These products will be displayed in the "Preorder Deals" section on the homepage.'
+    },
+    {
+        id: 'deals',
+        title: 'New Arrivals',
+        description: 'These products will be displayed in the "New Arrivals" section on the homepage.'
+    },
+];
 
 interface HomepageSectionEditorProps {
     title: string;
@@ -132,7 +148,7 @@ const AdminHomepagePage: React.FC<AdminHomepagePageProps> = ({ allProducts, sect
                         title={config.title}
                         description={config.description}
                         allProducts={allProducts}
-                        selectedProductIds={currentSections[config.id as keyof HomepageSections]}
+                        selectedProductIds={currentSections[config.id] || []}
                         onUpdate={(newIds) => handleUpdateSection(config.id, newIds)}
                     />
                 ))}

@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page } from '../types';
+import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page, ProductReview } from '../types';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminDashboardHome from './admin/pages/AdminDashboardHome';
 import AdminProductsPage from './admin/pages/AdminProductsPage';
@@ -9,7 +9,7 @@ import AdminOrdersPage from './admin/pages/AdminOrdersPage';
 import AdminCustomersPage from './admin/pages/AdminCustomersPage';
 import AdminSettingsPage from './admin/pages/AdminSettingsPage';
 import AdminPromotionsPage from './admin/pages/AdminPromotionsPage';
-import AdminAnalyticsPage from './admin/pages/AdminAnalyticsPage';
+import AdminReviewsPage from './admin/pages/AdminReviewsPage';
 import AdminHeroPage from './admin/pages/AdminHeroPage';
 import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminHomepagePage from './admin/pages/AdminHomepagePage';
@@ -24,7 +24,7 @@ import Toast from './admin/ui/Toast';
 import { HamburgerIcon } from './Icons';
 
 // Fix: Removed local Page type definition that was shadowing and causing conflicts with the central Page type
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
 
 interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
@@ -46,6 +46,10 @@ interface AdminDashboardProps {
     promotions: Promotion[];
     onSavePromotion: (promotion: Promotion) => void;
     onDeletePromotion: (id: number) => void;
+
+    reviews: ProductReview[];
+    onSaveReview: (review: ProductReview, imageFile?: File) => Promise<void> | void;
+    onDeleteReview: (reviewId: number) => Promise<void> | void;
     
     homepageSections: HomepageSections;
     onSaveHomepageSections: (sections: HomepageSections) => Promise<void> | void;
@@ -61,7 +65,7 @@ const adminPageTitles: Record<AdminPage, string> = {
     orders: 'Orders',
     customers: 'Customers',
     promotions: 'Promotions',
-    analytics: 'Analytics',
+    reviews: 'Customer Reviews',
     hero: 'Hero Section',
     homepage: 'Homepage Sections',
     settings: 'Settings',
@@ -84,6 +88,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
         onNavigate, products, onSaveProduct, onDeleteProduct, categories,
         onSaveCategory, onDeleteCategory, heroSlides, onSaveHeroSlide, onDeleteHeroSlide,
         orders, customers, promotions, onSavePromotion, onDeletePromotion,
+        reviews, onSaveReview, onDeleteReview,
         homepageSections, onSaveHomepageSections,
         isDarkMode, toggleDarkMode
     } = props;
@@ -145,7 +150,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             case 'orders': return <AdminOrdersPage orders={orders} />;
             case 'customers': return <AdminCustomersPage customers={customers} />;
             case 'promotions': return <AdminPromotionsPage promotions={promotions} onAddPromotion={handleOpenAddPromotionModal} onEditPromotion={handleOpenEditPromotionModal} onDeletePromotion={onDeletePromotion} />;
-            case 'analytics': return <AdminAnalyticsPage />;
+            case 'reviews': return <AdminReviewsPage reviews={reviews} onSaveReview={onSaveReview} onDeleteReview={onDeleteReview} />;
             case 'hero': return <AdminHeroPage slides={heroSlides} onAddSlide={handleOpenAddHeroSlideModal} onEditSlide={handleOpenEditHeroSlideModal} onDeleteSlide={onDeleteHeroSlide} />;
             case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;

@@ -29,6 +29,8 @@ const emptyProduct: Omit<Product, 'id'> = {
     variants: [],
     tags: [],
     published: true,
+    isPreorder: false,
+    preorderReleaseDate: '',
 };
 
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string }> = ({ label, id, ...props }) => (
@@ -99,6 +101,15 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
     const handlePublishedChange = () => {
         setFormData(prev => ({ ...prev, published: !prev.published }));
     };
+
+    const handlePreorderChange = () => {
+        const isPreorder = !formData.isPreorder;
+        setFormData(prev => ({
+            ...prev,
+            isPreorder,
+            preorderReleaseDate: isPreorder ? prev.preorderReleaseDate : ''
+        }));
+    };
     
     const handleVariantChange = (variantId: string, field: keyof ProductVariant, value: string | number) => {
         const updatedVariants = formData.variants?.map(v => 
@@ -161,11 +172,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
         e.preventDefault();
         setIsSaving(true);
         
-        // Split gallery items into existing URLs and new Files
         const existingImageUrls = galleryItems.filter(item => !item.file).map(item => item.url);
         const newImageFiles = galleryItems.filter(item => item.file).map(item => item.file as File);
         
-        // Update product data with existing URLs before sending to parent
         const finalProductData = {
             ...formData,
             images: existingImageUrls
@@ -358,6 +367,23 @@ const ProductForm: React.FC<ProductFormProps> = ({ product, onSave, onCancel }) 
                 >
                     <span className="text-lg font-bold">+</span> Add Variant
                 </button>
+            </div>
+
+            <div className="bg-zinc-50 dark:bg-zinc-700/50 p-4 rounded-lg space-y-4">
+                <div className="flex items-center justify-between">
+                    <span className="font-medium text-[var(--text-primary)]">Preorder</span>
+                    <Toggle enabled={!!formData.isPreorder} onToggle={handlePreorderChange} />
+                </div>
+                {formData.isPreorder && (
+                    <Input
+                        label="Preorder Release Date"
+                        id="preorderReleaseDate"
+                        name="preorderReleaseDate"
+                        type="date"
+                        value={formData.preorderReleaseDate ? formData.preorderReleaseDate.split('T')[0] : ''}
+                        onChange={handleChange}
+                    />
+                )}
             </div>
 
             <div className="flex items-center justify-between bg-zinc-50 dark:bg-zinc-700/50 p-4 rounded-lg">

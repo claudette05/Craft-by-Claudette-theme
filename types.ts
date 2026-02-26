@@ -1,4 +1,3 @@
-
 // types.ts
 
 export interface User {
@@ -41,6 +40,8 @@ export interface Product {
   variants?: ProductVariant[];
   tags?: string[];
   published: boolean;
+  isPreorder?: boolean;
+  preorderReleaseDate?: string;
 }
 
 export interface Category {
@@ -61,11 +62,12 @@ export type Page =
   'shop' | 'cart' | 'productDetail' | 
   'checkout' | 'admin' | 'productReviews' | 'search' | 
   'searchHistory' | 'affiliate' | 'allProducts' | 'reportBug' | 'notFound' |
-  'login' | 'signup' | 'forgotPassword' | 'resetPassword' | 'myAccount';
+  'login' | 'signup' | 'forgotPassword' | 'resetPassword' | 'myAccount' | 'preorderPolicy' | 'customerLove';
 
 export interface CartItem {
   productId: number;
   quantity: number;
+  variant?: { [key: string]: string };
 }
 
 export interface ToastMessage {
@@ -93,6 +95,7 @@ export interface AdminOrder {
   status: OrderStatus;
   trackingNumber?: string;
   trackingHistory?: OrderTrackingEvent[];
+  items: CartItem[];
 }
 
 export interface AdminCustomer {
@@ -115,19 +118,21 @@ export interface Promotion {
 
 export interface ProductReview {
   id: number;
-  productId: number;
+  productId?: number; // Optional since some reviews might not be for a specific product
   author: string;
   rating: number;
   date: string;
   title: string;
   comment: string;
   verifiedPurchase: boolean;
-  images?: string[];
+  imageUrl?: string; // For screenshots
+  featured?: boolean; // To feature a review
 }
 
 export interface HomepageSections {
     deals: number[];
     bestsellers: number[];
+    preorders: number[];
 }
 
 export interface HomepageSectionConfig {

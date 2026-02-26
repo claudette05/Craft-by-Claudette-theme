@@ -27,8 +27,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
   
   const hasSale = typeof product.salePrice === 'number';
   const isInWishlist = wishlist.includes(product.id);
-  
-  // Use optimized thumbnail if available
+  const isPreorder = product.isPreorder;
+
   const displayImageUrl = React.useMemo(() => getCloudinaryThumbnail(product.imageUrl), [product.imageUrl]);
 
   const handleAddToCartClick = (e: React.MouseEvent) => {
@@ -46,6 +46,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
     onQuickView(product);
   };
   
+  const buttonText = isPreorder ? 'Preorder' : 'Add to Cart';
+  const successText = isPreorder ? 'Preordered!' : 'Added!';
+
   return (
     <motion.div
       layout
@@ -87,9 +90,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
           whileHover={{ scale: 1.05 }}
           transition={{ duration: 0.3 }}
         />
-        {hasSale && (
+        {hasSale && !isPreorder && (
             <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md">
                 SALE
+            </div>
+        )}
+        {isPreorder && (
+            <div className="absolute top-2 right-2 bg-amber-500 text-white text-xs font-bold px-2 py-1 rounded-md">
+                PREORDER
             </div>
         )}
       </div>
@@ -120,7 +128,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
             onClick={handleAddToCartClick}
             className="w-full font-bold py-2 px-2 sm:px-4 rounded-full text-sm overflow-hidden"
             animate={{ 
-                backgroundColor: isAdded ? '#22c55e' /* green-500 */ : '#f59e0b' /* amber-500 */,
+                backgroundColor: isAdded ? '#22c55e' : (isPreorder ? '#8b5cf6' : '#f59e0b'),
             }}
             whileHover={{ scale: isAdded ? 1 : 1.05 }}
             whileTap={{ scale: isAdded ? 1 : 0.95 }}
@@ -135,7 +143,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
                         transition={{ duration: 0.2 }}
                         className="inline-block"
                     >
-                        {isAdded ? 'Added!' : 'Add to Cart'}
+                        {isAdded ? successText : buttonText}
                     </motion.span>
                 </AnimatePresence>
             </span>

@@ -1,8 +1,8 @@
 
 import * as React from 'react';
-import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, ChartBarIcon, LayoutIcon, ExternalLinkIcon, SparklesIcon, MailIcon } from '../Icons';
+import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, LayoutIcon, ExternalLinkIcon, StarIcon } from '../Icons';
 
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'analytics' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
 
 interface AdminSidebarProps {
     activePage: AdminPage;
@@ -38,7 +38,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, 
         { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
         { id: 'customers', label: 'Customers', icon: UsersIcon },
         { id: 'promotions', label: 'Promotions', icon: TagIcon },
-        { id: 'analytics', label: 'Analytics', icon: ChartBarIcon },
+        { id: 'reviews', label: 'Reviews', icon: StarIcon },
         { id: 'hero', label: 'Hero Section', icon: LayoutIcon },
         { id: 'homepage', label: 'Homepage', icon: LayoutIcon },
         { id: 'settings', label: 'Settings', icon: SettingsIcon }, // Moved here

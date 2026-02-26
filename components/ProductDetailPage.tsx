@@ -99,17 +99,14 @@ const ReviewCard: React.FC<{ review: ProductReview, onImageClick: (src: string) 
             <h4 className="ml-2 font-semibold text-text-primary text-sm">{review.title}</h4>
         </div>
         <div className="text-text-secondary text-sm leading-relaxed mb-4">{review.comment}</div>
-        {review.images && review.images.length > 0 && (
+        {review.imageUrl && (
             <div className="flex gap-3 mt-2">
-                {review.images.map((img, idx) => (
-                    <img
-                        key={idx}
-                        src={optimizeCloudinaryUrl(img, 200)}
-                        alt="Review attachment"
-                        className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 border border-border-primary transition-opacity"
-                        onClick={() => onImageClick(img)}
-                    />
-                ))}
+                <img
+                    src={optimizeCloudinaryUrl(review.imageUrl, 200)}
+                    alt="Review attachment"
+                    className="w-20 h-20 object-cover rounded-lg cursor-pointer hover:opacity-80 border border-border-primary transition-opacity"
+                    onClick={() => onImageClick(review.imageUrl ? review.imageUrl : '')}
+                />
             </div>
         )}
     </div>
@@ -145,25 +142,22 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
 
     const hasSale = typeof product?.salePrice === 'number';
     const isInWishlist = product ? wishlist.includes(product.id) : false;
+    const isPreorder = product.isPreorder;
 
-    // BUILD COMPREHENSIVE GALLERY: Harvest from main image, gallery array, AND variants
     const allImages = React.useMemo(() => {
         if (!product) return [];
         const imgs = [product.imageUrl];
         
-        // Add images from explicit gallery array
         if (Array.isArray(product.images)) {
             imgs.push(...product.images);
         }
 
-        // Harvest images from variants (crucial for older products)
         if (Array.isArray(product.variants)) {
             product.variants.forEach(v => {
                 if (v.imageUrl) imgs.push(v.imageUrl);
             });
         }
 
-        // Return unique, non-empty, string URLs only
         return Array.from(new Set(imgs.filter(img => typeof img === 'string' && img.trim() !== '')));
     }, [product]);
 
@@ -183,7 +177,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     }, []);
 
-    // Effect to reset state when product changes
     React.useEffect(() => {
         if (!product) return;
         setQuantity(1);
@@ -210,7 +203,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     }, [checkThumbScroll, allImages.length]);
 
-    // Update image when variant changes, UNLESS the user manually picked an image
     React.useEffect(() => {
         if (!product?.variants || isManualImageSelection) return;
         
@@ -332,7 +324,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         return selectedVariant ? selectedVariant.stock : 0;
     }, [product, selectedColor, selectedSize, hasVariants, hasColorOptions, hasSizeOptions]);
 
-    const isAddToCartDisabled = (hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) || stockLevel === 0;
+    const isAddToCartDisabled = (hasVariants && ((hasColorOptions && !selectedColor) || (hasSizeOptions && !selectedSize))) || (!isPreorder && stockLevel === 0);
 
     const handleAddToCartClick = () => {
         if (isAdded || isAddToCartDisabled) return;
@@ -341,8 +333,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         setTimeout(() => setIsAdded(false), 2000);
     };
     
-    const addToCartText = stockLevel === 0 ? 'Out of Stock' :
-        (isAddToCartDisabled ? 'Select Options' : 'Add to Cart');
+    const buttonText = isPreorder ? 'Preorder Now' : 'Add to Cart';
+    const successText = isPreorder ? 'Preordered!' : 'Added to Cart!';
+    const addToCartText = !isPreorder && stockLevel === 0 ? 'Out of Stock' :
+        (isAddToCartDisabled ? 'Select Options' : buttonText);
 
     const handleCopyToClipboard = () => {
         navigator.clipboard.writeText(window.location.href).then(() => {
@@ -361,9 +355,14 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     };
 
-    // Prefilled WhatsApp Enquiry Link
     const whatsappEnquiryMessage = encodeURIComponent(
-        `Hello ${shopInfo.name}! 👋🏽\n\nI'm interested in the ${product.name} priced at GH₵${(product.salePrice ?? product.price).toFixed(2)}.\n\nCan you please tell me more about this item?\n\nProduct Link: ${window.location.href}`
+        `Hello ${shopInfo.name}! 👋🏽
+
+I'm interested in the ${product.name} priced at GH₵${(product.salePrice ?? product.price).toFixed(2)}.
+
+Can you please tell me more about this item?
+
+Product Link: ${window.location.href}`
     );
     const whatsappEnquiryUrl = `https://wa.me/${shopInfo.whatsapp}?text=${whatsappEnquiryMessage}`;
 
@@ -412,7 +411,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 />
                             </AnimatePresence>
 
-                            {/* Main Image Navigation Arrows */}
                             {allImages.length > 1 && (
                                 <>
                                     <button 
@@ -433,7 +431,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                         <EyeIcon className="w-3 h-3" />
                                         <span>{currentIndex + 1} / {allImages.length}</span>
                                     </div>
-                                </>
+                                </> 
                             )}
                         </div>
 
@@ -513,7 +511,19 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                             <p className="text-4xl font-black text-accent-primary mb-4">GH₵{product.price.toFixed(2)}</p>
                         )}
 
-                        <StockIndicator stock={stockLevel} />
+                        {isPreorder ? (
+                            <div className="mb-4 text-sm font-semibold text-accent-primary bg-accent-primary/10 p-3 rounded-lg flex items-center gap-3 border border-accent-primary/20">
+                                <SparklesIcon className="w-5 h-5 flex-shrink-0" />
+                                <div>
+                                    <div className="uppercase tracking-wider">Preorder Item</div>
+                                    {product.preorderReleaseDate && (
+                                        <div className="text-xs font-normal text-text-secondary">Expected to be delivered around {new Date(product.preorderReleaseDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</div>
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <StockIndicator stock={stockLevel} />
+                        )}
 
                         <p className="text-text-secondary mb-8 leading-relaxed text-lg">{product.description}</p>
                         
@@ -611,7 +621,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                             transition={{ duration: 0.2 }}
                                             className="inline-block"
                                         >
-                                            {isAdded ? 'Added to Cart!' : addToCartText}
+                                            {isAdded ? successText : addToCartText}
                                         </motion.span>
                                     </AnimatePresence>
                                 </span>
@@ -627,30 +637,34 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                 <HeartIcon className="h-7 w-7" filled={isInWishlist} />
                             </motion.button>
                         </div>
-                        <div className="mt-8 pt-8 border-t border-border-primary/50 flex flex-col sm:flex-row gap-4">
-                            <a
-                                href={whatsappEnquiryUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-[#25D366]/30 rounded-2xl bg-[#25D366]/5 text-[#25D366] hover:bg-[#25D366]/10 transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
-                                aria-label="Send WhatsApp Enquiry for this product"
-                            >
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                                </svg>
-                                <span>Send Enquiry</span>
-                            </a>
-                            <button
-                                onClick={handleCopyToClipboard}
-                                className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
-                                aria-label="Share this product by copying the link"
-                            >
-                                <LinkIcon className="h-4 w-4" />
-                                <span>Copy Link</span>
-                            </button>
+                        <div className="mt-8 pt-8 border-t border-border-primary/50 flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <a
+                                    href={whatsappEnquiryUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-[#25D366]/30 rounded-2xl bg-[#25D366]/5 text-[#25D366] hover:bg-[#25D366]/10 transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
+                                    aria-label="Send WhatsApp Enquiry for this product"
+                                >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                                    </svg>
+                                    <span>Send Enquiry</span>
+                                </a>
+                                <button
+                                    onClick={handleCopyToClipboard}
+                                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 border border-border-primary rounded-2xl bg-bg-secondary text-text-primary hover:bg-bg-tertiary transition-colors font-bold text-xs uppercase tracking-widest shadow-sm"
+                                    aria-label="Share this product by copying the link"
+                                >
+                                    <LinkIcon className="h-4 w-4" />
+                                    <span>Copy Link</span>
+                                </button>
+                            </div>
+                            <p className="text-center text-xs text-zinc-600/90 dark:text-zinc-400/90 mt-2">
+                                Want a custom version? Click “Send Inquiry” to request personalization.
+                            </p>
                         </div>
 
-                        {/* Customer Reviews Section */}
                         <div className="mt-16 border-t border-border-primary/50 pt-12">
                             <div className="flex justify-between items-end mb-8">
                                 <h2 className="text-3xl font-black text-text-primary">Reviews</h2>
@@ -697,7 +711,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
             <AnimatePresence>
                 {isSizeGuideOpen && <SizeGuideModal onClose={() => setIsSizeGuideOpen(false)} category={product.category} />}
                 
-                {/* Review Lightbox */}
                 {expandedReviewImage && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -718,7 +731,6 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                     </motion.div>
                 )}
 
-                {/* Product Image Lightbox */}
                 {isProductLightboxOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -793,11 +805,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                                     >
                                         <ChevronRightIcon className="w-10 h-10" />
                                     </button>
-                                </>
+                                </> 
                             )}
                         </div>
 
-                        {/* Lightbox Thumbnails */}
                         {allImages.length > 1 && !isZoomed && (
                             <motion.div 
                                 initial={{ y: 50, opacity: 0 }}

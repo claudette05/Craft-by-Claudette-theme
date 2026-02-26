@@ -40,6 +40,8 @@ import ForgotPasswordPage from './components/ForgotPasswordPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import MyAccountPage from './components/MyAccountPage';
 import { databaseService } from './services/databaseService';
+import PreorderPolicyPage from './components/PreorderPolicyPage';
+import CustomerLovePage from './components/CustomerLovePage';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
@@ -89,7 +91,7 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
         shop: 'shop',
         login: 'login', signup: 'signup',
         forgotPassword: 'forgotPassword', resetPassword: 'resetPassword',
-        myAccount: 'myAccount'
+        myAccount: 'myAccount', preorderPolicy: 'preorderPolicy', customerLove: 'customerLove',
     };
 
     if (hash === '' || hash === '/') return { page: 'shop', productId: null };
@@ -116,7 +118,7 @@ const App: React.FC = () => {
   const [orders, setOrders] = React.useState<AdminOrder[]>([]);
   const [customers, setCustomers] = React.useState<AdminCustomer[]>([]);
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);
-  const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [] });
+  const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [], preorders: [] });
   const [isLoading, setIsLoading] = React.useState(true);
 
   const initialRoute = getRouteFromHash();
@@ -225,7 +227,7 @@ const App: React.FC = () => {
   };
 
   const handleDeleteHeroSlide = async (slideId: number) => {
-    if(window.confirm('Delete slide?')){
+    if(window.confirm('Delete slide?')) {
       await databaseService.deleteHeroSlide(slideId);
       setHeroSlides(heroSlides.filter(s => s.id !== slideId));
       addToast('Slide deleted');
@@ -261,7 +263,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
   
-  // This is the corrected navigation effect
   React.useEffect(() => {
     if (user && currentPage === 'login') {
       if (isAdmin) {
@@ -281,11 +282,19 @@ const App: React.FC = () => {
   const onNavigate = React.useCallback((page: Page) => { setCurrentPage(page); if (page === 'shop') setSelectedProductId(null); }, []);
 
   const selectedProduct = React.useMemo(() => products.find(p => p.id === selectedProductId), [selectedProductId, products]);
-  const filteredProducts = React.useMemo(() => activeCategory === 'All' ? products.filter(p => p.published) : products.filter(p => p.category === activeCategory && p.published), [activeCategory, products]);
   const newArrivals = React.useMemo(() => [...products].filter(p => p.published).sort((a, b) => b.id - a.id).slice(0, 8), [products]);
   const searchResults = React.useMemo(() => searchQuery ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) : [], [searchQuery, products]);
   const dealsProducts = React.useMemo(() => products.filter(p => homepageSections?.deals?.includes(p.id)), [homepageSections, products]);
   const bestsellerProducts = React.useMemo(() => products.filter(p => homepageSections?.bestsellers?.includes(p.id)), [homepageSections, products]);
+  const preorderProducts = React.useMemo(() => products.filter(p => homepageSections?.preorders?.includes(p.id)), [homepageSections, products]);
+  
+  const filteredProducts = React.useMemo(() => {
+    if (activeCategory === 'All') {
+      return bestsellerProducts;
+    }
+    return products.filter(p => p.category === activeCategory && p.published);
+  }, [activeCategory, products, bestsellerProducts]);
+
   const resinProducts = React.useMemo(() => products.filter(p => p.tags?.some(tag => tag.toLowerCase() === 'resin') && p.published).slice(0, 8), [products]);
   const giftProducts = React.useMemo(() => products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8), [products]);
 
@@ -306,7 +315,9 @@ const App: React.FC = () => {
       case 'forgotPassword': return <ForgotPasswordPage onNavigate={onNavigate} />;
       case 'resetPassword': return <ResetPasswordPage onResetPassword={() => { addToast('Password reset!'); onNavigate('login'); }} onNavigate={onNavigate} />;
       case 'myAccount': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
-      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title="Featured Products" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<CTA onShopNowClick={() => onNavigate('allProducts')} />{bestsellerProducts.length > 0 && <Bestsellers products={bestsellerProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /></>);
+      case 'preorderPolicy': return <PreorderPolicyPage />;
+      case 'customerLove': return <CustomerLovePage />;
+      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title={activeCategory === 'All' ? 'Featured Products' : activeCategory} onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{preorderProducts.length > 0 && <DealsSection products={preorderProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title="Preorder Deals" />}<ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><CTA onShopNowClick={() => onNavigate('allProducts')} />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /></>);
     }
   };
 

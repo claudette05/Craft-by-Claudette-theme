@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useAppContext } from '../context/AppContext';
 import { Product, AdminOrder } from '../types';
 
@@ -56,7 +56,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
     const [isSuccess, setIsSuccess] = React.useState(false);
     const [isProcessing, setIsProcessing] = React.useState(false);
     
-    // Generate a professional Order ID: CBC-YYMM-XXXX
     const [orderId] = React.useState(() => {
         const now = new Date();
         const yearMonth = `${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}`;
@@ -91,7 +90,6 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
         setIsProcessing(true);
         
         try {
-            // 1. Create the AdminOrder object for Bookkeeping
             const newOrder: AdminOrder = {
                 id: orderId,
                 customerName: formData.fullName,
@@ -99,6 +97,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                 date: new Date().toISOString().split('T')[0],
                 total: total,
                 status: 'Pending',
+                items: cartDetails.map(({ product, ...item }) => item),
                 trackingHistory: [
                     { 
                         status: 'Order Placed', 
@@ -108,19 +107,25 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                 ]
             };
 
-            // 2. Synchronize to Firestore and Local Cache
             await onPlaceOrder(newOrder);
 
-            // 3. Construct the WhatsApp message with requested template
-            const productNamesList = cartDetails
-                .map(item => `${item.quantity}x ${item.product?.name}`)
-                .filter(Boolean)
-                .join(', ');
+            const productDetailsForMessage = cartDetails.map(item => {
+                let detail = `${item.quantity}x ${item.product?.name}`;
+                if (item.variant) {
+                    const variantDetails = Object.entries(item.variant)
+                        .map(([key, value]) => `${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`)
+                        .join(', ');
+                    if (variantDetails) {
+                        detail += ` (${variantDetails})`;
+                    }
+                }
+                return detail;
+            }).join('\n');
             
             const message = `Hello \n` +
                 `I’d like to complete my order from ${shopInfo.name}.\n\n` +
                 `Order ID: ${orderId}\n` +
-                `Product(s): ${productNamesList}\n` +
+                `Product(s):\n${productDetailsForMessage}\n\n` +
                 `Subtotal: GHS ${total.toFixed(2)}\n\n` +
                 `Delivery Details:\n` +
                 `Name: ${formData.fullName}\n` +
@@ -137,11 +142,9 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
             const encodedMessage = encodeURIComponent(message);
             const whatsappUrl = `https://wa.me/${shopInfo.whatsapp}?text=${encodedMessage}`;
 
-            // 4. Open WhatsApp
-            window.open(whatsappUrl, '_blank');
-
-            // 5. Show success state
+            window.location.href = whatsappUrl;
             setIsSuccess(true);
+
         } catch (error) {
             console.error("Order processing error:", error);
             addToast("Failed to record order. Please try again.", "error");
@@ -174,7 +177,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                     <div className="text-left space-y-4 text-sm text-text-secondary bg-amber-50 dark:bg-amber-900/10 p-4 rounded-xl border border-amber-100 dark:border-amber-900/30">
                         <p className="font-bold text-amber-800 dark:text-amber-200">What happens next?</p>
                         <ol className="list-decimal list-inside space-y-2">
-                            <li>If you weren't automaticlly redirected to WhatsApp, try again using Google Chrome.</li>
+                            <li>If you weren't automatically redirected to WhatsApp, please check your browser settings or use a different browser.</li>
                             <li>{shopInfo.name.split(' ').pop()} will reply to confirm delivery costs.</li>
                             <li>You can then complete payment via Mobile Money.</li>
                         </ol>
@@ -206,48 +209,12 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-                    {/* Form */}
                     <form onSubmit={handleSubmit} className="bg-bg-secondary p-6 sm:p-8 rounded-3xl shadow-lg border border-border-primary space-y-6 order-2 lg:order-1">
                         <h2 className="text-xl font-bold text-text-primary border-b border-border-primary pb-4 mb-2">Your Details</h2>
-                        
-                        <FormInput 
-                            label="Full Name" 
-                            id="fullName" 
-                            name="fullName" 
-                            placeholder="e.g. Ama Serwaa" 
-                            value={formData.fullName} 
-                            onChange={handleInputChange} 
-                        />
-                        
-                        <FormInput 
-                            label="WhatsApp Phone Number" 
-                            id="phone" 
-                            name="phone" 
-                            type="tel" 
-                            placeholder="e.g. 024XXXXXXX" 
-                            value={formData.phone} 
-                            onChange={handleInputChange} 
-                        />
-
-                        <FormInput 
-                            label="Delivery Area / Location" 
-                            id="location" 
-                            name="location" 
-                            placeholder="e.g. East Legon, near the Shell station" 
-                            value={formData.location} 
-                            onChange={handleInputChange} 
-                        />
-
-                        <FormInput 
-                            label={`Note to ${shopInfo.name.split(' ').pop()} (Optional)`}
-                            id="note" 
-                            name="note" 
-                            placeholder="Any special requests or color preferences?" 
-                            value={formData.note} 
-                            onChange={handleInputChange} 
-                            isTextArea
-                        />
-
+                        <FormInput label="Full Name" id="fullName" name="fullName" placeholder="e.g. Ama Serwaa" value={formData.fullName} onChange={handleInputChange} />
+                        <FormInput label="WhatsApp Phone Number" id="phone" name="phone" type="tel" placeholder="e.g. 024XXXXXXX" value={formData.phone} onChange={handleInputChange} />
+                        <FormInput label="Delivery Area / Location" id="location" name="location" placeholder="e.g. East Legon, near the Shell station" value={formData.location} onChange={handleInputChange} />
+                        <FormInput label={`Note to ${shopInfo.name.split(' ').pop()} (Optional)`} id="note" name="note" placeholder="Any special requests or color preferences?" value={formData.note} onChange={handleInputChange} isTextArea />
                         <div className="pt-4">
                             <button
                                 type="submit"
@@ -257,9 +224,7 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                                 {isProcessing ? (
                                     <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
                                 ) : (
-                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
-                                    </svg>
+                                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" /></svg>
                                 )}
                                 {isProcessing ? 'Processing Order...' : 'Pay via WhatsApp'}
                             </button>
@@ -267,16 +232,22 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
                         </div>
                     </form>
 
-                    {/* Order Summary - lg:sticky to prevent mobile layout issues */}
                     <div className="bg-bg-secondary p-6 sm:p-8 rounded-3xl shadow-lg border border-border-primary lg:sticky lg:top-28 order-1 lg:order-2">
                         <h2 className="text-xl font-bold text-text-primary border-b border-border-primary pb-4 mb-4">Your Order</h2>
                         <div className="space-y-4 max-h-64 overflow-y-auto pr-2 mb-6 hide-scrollbar">
-                            {cartDetails.map(({ product, quantity }) => product && (
-                                <div key={product.id} className="flex items-center gap-4">
+                            {cartDetails.map(({ product, quantity, variant }, index) => product && (
+                                <div key={`${product.id}-${index}`} className="flex items-center gap-4">
                                     <img src={product.imageUrl} alt={product.name} className="w-14 h-14 object-cover rounded-xl" />
                                     <div className="flex-grow">
                                         <p className="font-bold text-text-primary text-sm leading-tight">{product.name}</p>
-                                        <p className="text-text-secondary text-xs">Qty: {quantity}</p>
+                                        {variant && (
+                                            <div className="text-xs text-text-secondary">
+                                                {Object.entries(variant).map(([key, value]) => (
+                                                    <div key={key}>{`${key.charAt(0).toUpperCase() + key.slice(1)}: ${value}`}</div>
+                                                ))}
+                                            </div>
+                                        )}
+                                        <p className="text-text-secondary text-xs mt-1">Qty: {quantity}</p>
                                     </div>
                                     <p className="font-bold text-accent-primary text-sm">GH₵{((product.salePrice ?? product.price) * quantity).toFixed(2)}</p>
                                 </div>
