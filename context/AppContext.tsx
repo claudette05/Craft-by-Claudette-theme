@@ -1,8 +1,10 @@
 
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig, User, CloudinaryConfig, ShopInfo } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig, User, CloudinaryConfig, ShopInfo, Product } from '../types';
 import { MOCK_REVIEWS } from '../constants';
 import { databaseService } from '../services/databaseService';
+import { db } from '../firebase';
+import { addDoc, collection, serverTimestamp, getDocs, writeBatch, doc } from 'firebase/firestore';
 
 // Hardcoded admin email for this example
 const ADMIN_EMAIL = 'cobbahclaudette@gmail.com';
@@ -166,6 +168,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         else { root.classList.remove('dark'); localStorage.setItem('theme', 'light'); }
     }, [isDarkMode]);
 
+    // One-time migration of old product images to the new central media library.
+    React.useEffect(() => {
+        const migrateOldImages = async () => {
+            if (localStorage.getItem('hasMigratedOldImages') === 'true') {
+                return;
+            }
+            
+            addToast("Syncing previously uploaded images...", "info");
+
+            try {
+                const mediaSnapshot = await getDocs(collection(db, "media"));
+                const existingMediaUrls = new Set(mediaSnapshot.docs.map(doc => doc.data().url));
+                
+                const productsSnapshot = await getDocs(collection(db, "products"));
+                const allProducts = productsSnapshot.docs.map(doc => doc.data() as Product);
+
+                const productImageUrls = new Set<string>();
+                for (const product of allProducts) {
+                    if (product.imageUrl && product.imageUrl.includes('cloudinary')) {
+                        productImageUrls.add(product.imageUrl);
+                    }
+                    if (Array.isArray(product.images)) {
+                        product.images.forEach(url => {
+                            if (url && url.includes('cloudinary')) productImageUrls.add(url);
+                        });
+                    }
+                    if (Array.isArray(product.variants)) {
+                        product.variants.forEach(variant => {
+                            if (variant.imageUrl && variant.imageUrl.includes('cloudinary')) productImageUrls.add(variant.imageUrl);
+                        });
+                    }
+                }
+                
+                const newUrlsToAdd = Array.from(productImageUrls).filter(url => !existingMediaUrls.has(url));
+
+                if (newUrlsToAdd.length === 0) {
+                    addToast("Image library is already up to date.", "success");
+                    localStorage.setItem('hasMigratedOldImages', 'true');
+                    return;
+                }
+
+                const batch = writeBatch(db);
+                newUrlsToAdd.forEach(url => {
+                    const mediaRef = doc(collection(db, "media"));
+                    batch.set(mediaRef, { url: url, createdAt: serverTimestamp() });
+                });
+
+                await batch.commit();
+                addToast(`Synced ${newUrlsToAdd.length} new images to the library!`, "success");
+                localStorage.setItem('hasMigratedOldImages', 'true');
+
+            } catch (error) {
+                console.error("Failed to migrate old images:", error);
+                addToast("Could not sync old images. Check console.", "error");
+            }
+        };
+
+        if (isAdmin) {
+          migrateOldImages();
+        }
+    }, [isAdmin, addToast]);
+
     const uploadImage = async (file: File): Promise<string> => {
         if (!cloudinaryConfig.cloudName || !cloudinaryConfig.uploadPreset) {
             throw new Error("Cloudinary not configured in Admin Settings.");
@@ -179,7 +243,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             throw new Error(err.error?.message || "Cloudinary upload failed");
         }
         const data = await response.json();
-        return data.secure_url;
+        const imageUrl = data.secure_url;
+
+        // Save the URL to our Firestore media library
+        try {
+            await addDoc(collection(db, "media"), {
+                url: imageUrl,
+                createdAt: serverTimestamp(),
+            });
+        } catch (error) {
+            console.error("Failed to save image to media library:", error);
+            // We can choose to ignore this error or notify the user
+        }
+
+        return imageUrl;
     };
 
     const login = async (email: string, pass: string) => {

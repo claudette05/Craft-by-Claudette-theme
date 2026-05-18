@@ -88,6 +88,14 @@ const CheckoutPage: React.FC<CheckoutPageProps> = ({ products, onBackToCart, onP
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsProcessing(true);
+
+        for (const item of cartDetails) {
+            if (item.product && item.product.stock !== undefined && item.product.stock < item.quantity) {
+                addToast(`Not enough stock for ${item.product.name}. Only ${item.product.stock} left.`, 'error');
+                setIsProcessing(false);
+                return;
+            }
+        }
         
         try {
             const newOrder: AdminOrder = {

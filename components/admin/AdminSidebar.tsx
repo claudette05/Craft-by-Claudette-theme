@@ -1,88 +1,50 @@
 
 import * as React from 'react';
-import { HomeIcon, PackageIcon, ShoppingCartIcon, UsersIcon, SettingsIcon, TagIcon, LayoutIcon, ExternalLinkIcon, StarIcon } from '../Icons';
+import { HomeIcon, PackageIcon as ProductsIcon, ClipboardListIcon as OrdersIcon, TagIcon as DiscountsIcon, SettingsIcon, StarIcon as ReviewsIcon, PhotoIcon as HeroIcon, LayoutIcon as ContentIcon, EyeIcon as AppearanceIcon, LogoutIcon } from '../Icons';
 
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
+const AdminSidebar = ({ activePage, setActivePage, onLinkClick, onNavigateToShop }) => (
+    <aside className="w-64 bg-[var(--bg-secondary)] text-[var(--text-secondary)] h-full fixed top-0 left-0 shadow-lg flex flex-col z-40">
+        <div className="p-6">
+            <h1 className="text-2xl font-bold text-amber-500">Craft by Claudette</h1>
+            <p className="text-sm mt-1">Admin Panel</p>
+        </div>
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto">
+            <SidebarLink icon={<HomeIcon />} label="Dashboard" page="dashboard" activePage={activePage} onClick={() => { setActivePage('dashboard'); onLinkClick?.(); }} />
 
-interface AdminSidebarProps {
-    activePage: AdminPage;
-    setActivePage: (page: AdminPage) => void;
-    onLinkClick?: () => void;
-    onNavigateToShop?: () => void;
-}
+            <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase text-[var(--text-accent)]">Content</p>
+            <SidebarLink icon={<HeroIcon />} label="Hero Section" page="hero" activePage={activePage} onClick={() => { setActivePage('hero'); onLinkClick?.(); }} />
+            <SidebarLink icon={<ContentIcon />} label="Homepage Sections" page="homepage" activePage={activePage} onClick={() => { setActivePage('homepage'); onLinkClick?.(); }} />
+            <SidebarLink icon={<ContentIcon />} label="Homepage Manager" page="homepageManager" activePage={activePage} onClick={() => { setActivePage('homepageManager'); onLinkClick?.(); }} />
+            <SidebarLink icon={<ReviewsIcon />} label="Customer Reviews" page="reviews" activePage={activePage} onClick={() => { setActivePage('reviews'); onLinkClick?.(); }} />
 
-const NavLink: React.FC<{
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    isActive: boolean;
-    onClick: () => void;
-}> = ({ icon: Icon, label, isActive, onClick }) => (
-    <button
-        onClick={onClick}
-        className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors text-sm font-medium ${
-            isActive 
-                ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300' 
-                : 'text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200'
-        }`}
-    >
-        <Icon className="h-5 w-5 mr-3" />
-        <span>{label}</span>
-    </button>
+            <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase text-[var(--text-accent)]">Store</p>
+            <SidebarLink icon={<ProductsIcon />} label="Products" page="products" activePage={activePage} onClick={() => { setActivePage('products'); onLinkClick?.(); }} />
+            <SidebarLink icon={<ProductsIcon />} label="Categories" page="categories" activePage={activePage} onClick={() => { setActivePage('categories'); onLinkClick?.(); }} />
+            <SidebarLink icon={<OrdersIcon />} label="Orders" page="orders" activePage={activePage} onClick={() => { setActivePage('orders'); onLinkClick?.(); }} />
+            <SidebarLink icon={<DiscountsIcon />} label="Promotions" page="promotions" activePage={activePage} onClick={() => { setActivePage('promotions'); onLinkClick?.(); }} />
+            
+            <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase text-[var(--text-accent)]">Settings</p>
+            <SidebarLink icon={<SettingsIcon />} label="General Settings" page="settings" activePage={activePage} onClick={() => { setActivePage('settings'); onLinkClick?.(); }} />
+            <SidebarLink icon={<AppearanceIcon />} label="Popup Manager" page="popup" activePage={activePage} onClick={() => { setActivePage('popup'); onLinkClick?.(); }} />
+        </nav>
+        <div className="p-4 border-t border-[var(--border-primary)]">
+            <button onClick={onNavigateToShop} className="w-full text-left flex items-center gap-3 py-2 px-3 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors duration-200">
+                <LogoutIcon className="w-5 h-5" />
+                <span className="font-medium">Back to Shop</span>
+            </button>
+        </div>
+    </aside>
 );
 
-const AdminSidebar: React.FC<AdminSidebarProps> = ({ activePage, setActivePage, onLinkClick, onNavigateToShop }) => {
-    const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: HomeIcon },
-        { id: 'products', label: 'Products', icon: PackageIcon },
-        { id: 'categories', label: 'Categories', icon: LayoutIcon },
-        { id: 'orders', label: 'Orders', icon: ShoppingCartIcon },
-        { id: 'customers', label: 'Customers', icon: UsersIcon },
-        { id: 'promotions', label: 'Promotions', icon: TagIcon },
-        { id: 'reviews', label: 'Reviews', icon: StarIcon },
-        { id: 'hero', label: 'Hero Section', icon: LayoutIcon },
-        { id: 'homepage', label: 'Homepage', icon: LayoutIcon },
-        { id: 'settings', label: 'Settings', icon: SettingsIcon }, // Moved here
-    ];
-
-    const handleNavClick = (page: AdminPage) => {
-        setActivePage(page);
-        onLinkClick?.();
-    };
-
-    const handleViewStoreClick = () => {
-        onNavigateToShop?.();
-        onLinkClick?.();
-    };
-    
-    return (
-        <aside className="fixed top-0 left-0 h-screen w-64 bg-[var(--bg-secondary)] shadow-md z-40 flex flex-col">
-            <div className="h-16 sm:h-20 flex items-center justify-center border-b border-[var(--border-primary)]">
-                <h1 className="text-xl font-bold text-amber-600">Admin Panel</h1>
-            </div>
-            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-                {navItems.map(item => (
-                    <NavLink
-                        key={item.id}
-                        label={item.label}
-                        icon={item.icon}
-                        isActive={activePage === item.id}
-                        onClick={() => handleNavClick(item.id as AdminPage)}
-                    />
-                ))}
-            </nav>
-            <div className="p-4 border-t border-[var(--border-primary)]">
-                {onNavigateToShop && (
-                     <button
-                        onClick={handleViewStoreClick}
-                        className={`flex items-center w-full px-4 py-3 rounded-lg transition-colors text-sm font-medium text-zinc-600 hover:bg-zinc-200/50 hover:text-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700/50 dark:hover:text-zinc-200`}
-                    >
-                        <ExternalLinkIcon className="h-5 w-5 mr-3" />
-                        <span>View Store</span>
-                    </button>
-                )}
-            </div>
-        </aside>
-    );
-};
+const SidebarLink = ({ icon, label, page, activePage, onClick }) => (
+    <button 
+        onClick={onClick} 
+        className={`w-full text-left flex items-center gap-3 py-2 px-3 rounded-md transition-colors duration-200 ${
+            activePage === page ? 'bg-amber-500/10 text-amber-500' : 'hover:bg-[var(--bg-tertiary)]'
+        }`}>
+        {React.cloneElement(icon, { className: 'w-5 h-5' })}
+        <span className="font-medium">{label}</span>
+    </button>
+);
 
 export default AdminSidebar;

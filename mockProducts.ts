@@ -17,6 +17,8 @@ const MOCK_PRODUCTS: Product[] = [
     stock: 15,
     tags: ['resin', 'earrings', 'pastel', 'handmade'],
     published: true,
+    isPreorder: true,
+    preorderReleaseDate: "Made to order. Ships in 4-6 weeks.",
     variants: [
       { id: 'v1', color: 'Pink Swirl', colorHex: '#FBCFE8', size: 'One Size', stock: 5, imageUrl: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?q=80&w=200&auto=format&fit=crop' },
       { id: 'v2', color: 'Blue Swirl', colorHex: '#BFDBFE', size: 'One Size', stock: 8, imageUrl: 'https://images.unsplash.com/photo-1611151923205-3333575303a1?q=80&w=200&auto=format&fit=crop' },

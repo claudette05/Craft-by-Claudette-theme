@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import { Product, ProductReview, ProductVariant } from '../types';
-import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, LinkIcon, CheckBadgeIcon, XIcon, SparklesIcon, EyeIcon } from './Icons';
+import { ChevronLeftIcon, ChevronRightIcon, HeartIcon, LinkIcon, CheckBadgeIcon, XIcon, SparklesIcon, EyeIcon, PlayIcon } from './Icons';
 import ProductGrid from './ProductGrid';
 import { useAppContext } from '../context/AppContext';
 import SizeGuideModal from './SizeGuideModal';
@@ -129,7 +129,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const [isAdded, setIsAdded] = React.useState(false);
     const [selectedColor, setSelectedColor] = React.useState<string | null>(null);
     const [selectedSize, setSelectedSize] = React.useState<string | null>(null);
-    const [selectedImage, setSelectedImage] = React.useState(product?.imageUrl || '');
+    const [selectedMedia, setSelectedMedia] = React.useState({ url: product?.videoUrl || product?.imageUrl || '', type: product?.videoUrl ? 'video' : 'image' });
     const [isSizeGuideOpen, setIsSizeGuideOpen] = React.useState(false);
     const [expandedReviewImage, setExpandedReviewImage] = React.useState<string | null>(null);
     const [isProductLightboxOpen, setIsProductLightboxOpen] = React.useState(false);
@@ -144,24 +144,27 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
     const isInWishlist = product ? wishlist.includes(product.id) : false;
     const isPreorder = product.isPreorder;
 
-    const allImages = React.useMemo(() => {
+    const allMedia = React.useMemo(() => {
         if (!product) return [];
-        const imgs = [product.imageUrl];
+        const media: {url: string, type: 'image' | 'video'}[] = [];
+
+        if (product.videoUrl) media.push({ url: product.videoUrl, type: 'video' });
+        if (product.imageUrl) media.push({ url: product.imageUrl, type: 'image' });
         
         if (Array.isArray(product.images)) {
-            imgs.push(...product.images);
+            product.images.forEach(img => media.push({ url: img, type: 'image' }));
         }
 
         if (Array.isArray(product.variants)) {
             product.variants.forEach(v => {
-                if (v.imageUrl) imgs.push(v.imageUrl);
+                if (v.imageUrl) media.push({ url: v.imageUrl, type: 'image' });
             });
         }
-
-        return Array.from(new Set(imgs.filter(img => typeof img === 'string' && img.trim() !== '')));
+        
+        return [...new Map(media.map(item => [item.url, item])).values()].filter(m => m.url && m.url.trim() !== '');
     }, [product]);
 
-    const currentIndex = allImages.indexOf(selectedImage);
+    const currentIndex = allMedia.findIndex(m => m.url === selectedMedia.url);
 
     const averageRating = React.useMemo(() => {
         if (reviews.length === 0) return 0;
@@ -182,10 +185,10 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         setQuantity(1);
         setSelectedColor(null);
         setSelectedSize(null);
-        setSelectedImage(product.imageUrl);
+        setSelectedMedia({ url: product.videoUrl || product.imageUrl, type: product.videoUrl ? 'video' : 'image' });
         setIsAdded(false);
         setIsManualImageSelection(false);
-    }, [product?.id, product?.imageUrl]);
+    }, [product?.id, product?.imageUrl, product?.videoUrl]);
 
     React.useLayoutEffect(() => {
         const el = thumbScrollRef.current;
@@ -201,7 +204,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
                 observer.disconnect();
             };
         }
-    }, [checkThumbScroll, allImages.length]);
+    }, [checkThumbScroll, allMedia.length]);
 
     React.useEffect(() => {
         if (!product?.variants || isManualImageSelection) return;
@@ -213,7 +216,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         });
 
         if (matchingVariant?.imageUrl) {
-            setSelectedImage(matchingVariant.imageUrl);
+            setSelectedMedia({ url: matchingVariant.imageUrl, type: 'image' });
         }
     }, [selectedColor, selectedSize, product?.variants, isManualImageSelection]);
 
@@ -232,9 +235,9 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         }
     };
 
-    const handleThumbnailClick = (img: string) => {
+    const handleThumbnailClick = (media: { url: string, type: 'image' | 'video' }) => {
         setIsManualImageSelection(true);
-        setSelectedImage(img);
+        setSelectedMedia(media);
     };
 
     const navigateImage = (direction: 'prev' | 'next') => {
@@ -242,11 +245,11 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         if (isZoomed) setIsZoomed(false);
         let newIndex = currentIndex;
         if (direction === 'next') {
-            newIndex = (currentIndex + 1) % allImages.length;
+            newIndex = (currentIndex + 1) % allMedia.length;
         } else {
-            newIndex = (currentIndex - 1 + allImages.length) % allImages.length;
+            newIndex = (currentIndex - 1 + allMedia.length) % allMedia.length;
         }
-        setSelectedImage(allImages[newIndex]);
+        setSelectedMedia(allMedia[newIndex]);
     };
 
     const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -270,7 +273,7 @@ const ProductDetailPage: React.FC<ProductDetailPageProps> = ({ product, relatedP
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isProductLightboxOpen, currentIndex, allImages, isZoomed]);
+    }, [isProductLightboxOpen, currentIndex, allMedia, isZoomed]);
 
     if (!product) return null;
     
@@ -393,25 +396,42 @@ Product Link: ${window.location.href}`
                         transition={{ duration: 0.5 }}
                     >
                         <div className="relative group/main overflow-hidden rounded-2xl aspect-square bg-bg-tertiary touch-pan-y">
-                            <AnimatePresence mode="wait">
-                                <motion.img 
-                                    key={selectedImage}
-                                    src={optimizeCloudinaryUrl(selectedImage, 1000)} 
-                                    alt={product.name} 
+                             <AnimatePresence mode="wait">
+                                <motion.div
+                                    key={selectedMedia.url}
+                                    className="w-full h-full"
                                     initial={{ opacity: 0, scale: 1.1 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ duration: 0.4, ease: "circOut" }}
-                                    className="w-full h-full object-cover cursor-zoom-in"
-                                    onClick={() => setIsProductLightboxOpen(true)}
                                     drag="x"
                                     dragConstraints={{ left: 0, right: 0 }}
                                     dragElastic={0.2}
                                     onDragEnd={handleDragEnd}
-                                />
+                                >
+                                    {selectedMedia.type === 'image' ? (
+                                        <img 
+                                            src={optimizeCloudinaryUrl(selectedMedia.url, 1000)} 
+                                            alt={product.name} 
+                                            className="w-full h-full object-cover cursor-zoom-in"
+                                            onClick={() => setIsProductLightboxOpen(true)}
+                                        />
+                                    ) : (
+                                        <video 
+                                            src={selectedMedia.url} 
+                                            className="w-full h-full object-contain" 
+                                            controls 
+                                            autoPlay 
+                                            muted 
+                                            loop 
+                                            playsInline
+                                        />
+                                    )}
+                                </motion.div>
                             </AnimatePresence>
 
-                            {allImages.length > 1 && (
+
+                            {allMedia.length > 1 && (
                                 <>
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
@@ -429,13 +449,13 @@ Product Link: ${window.location.href}`
                                     </button>
                                     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-bold uppercase tracking-widest pointer-events-none opacity-0 group-hover/main:opacity-100 transition-opacity flex items-center gap-2">
                                         <EyeIcon className="w-3 h-3" />
-                                        <span>{currentIndex + 1} / {allImages.length}</span>
+                                        <span>{currentIndex + 1} / {allMedia.length}</span>
                                     </div>
                                 </> 
                             )}
                         </div>
 
-                        {allImages.length > 1 && (
+                        {allMedia.length > 1 && (
                             <div className="relative group/thumbs mt-4 overflow-hidden rounded-xl min-h-[90px]">
                                 <AnimatePresence>
                                     {canScrollThumbLeft && (
@@ -456,14 +476,21 @@ Product Link: ${window.location.href}`
                                     ref={thumbScrollRef}
                                     className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar scroll-smooth"
                                 >
-                                    {allImages.map((img, index) => (
+                                    {allMedia.map((media, index) => (
                                         <button
                                             key={index}
-                                            onClick={() => handleThumbnailClick(img)}
-                                            className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
-                                            aria-label={`View image ${index + 1}`}
+                                            onClick={() => handleThumbnailClick(media)}
+                                            className={`relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${selectedMedia.url === media.url ? 'border-accent-primary ring-2 ring-accent-primary/30' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                                            aria-label={`View media ${index + 1}`}
                                         >
-                                            <img src={optimizeCloudinaryUrl(img, 200)} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                            {media.type === 'image' ? (
+                                                <img src={optimizeCloudinaryUrl(media.url, 200)} alt={`${product.name} view ${index + 1}`} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-black flex items-center justify-center">
+                                                    <PlayIcon className="w-8 h-8 text-white opacity-70" />
+                                                    <video src={media.url} className="absolute w-full h-full object-cover top-0 left-0 -z-10" />
+                                                </div>
+                                            )}
                                         </button>
                                     ))}
                                 </div>
@@ -517,7 +544,9 @@ Product Link: ${window.location.href}`
                                 <div>
                                     <div className="uppercase tracking-wider">Preorder Item</div>
                                     {product.preorderReleaseDate && (
-                                        <div className="text-xs font-normal text-text-secondary">Expected to be delivered around {new Date(product.preorderReleaseDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}</div>
+                                        <div className="text-xs font-normal text-text-secondary">
+                                            <span className="font-semibold text-text-primary">Estimated Arrival: </span>{product.preorderReleaseDate}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -731,7 +760,7 @@ Product Link: ${window.location.href}`
                     </motion.div>
                 )}
 
-                {isProductLightboxOpen && (
+                {isProductLightboxOpen && allMedia.filter(m => m.type === 'image').length > 0 && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -742,7 +771,7 @@ Product Link: ${window.location.href}`
                         <div className="absolute top-6 right-6 flex items-center gap-6 z-[100]">
                             {!isZoomed && (
                                 <span className="text-white/60 font-bold tracking-widest text-xs uppercase hidden md:block">
-                                    {currentIndex + 1} / {allImages.length}
+                                    {currentIndex + 1} / {allMedia.length}
                                 </span>
                             )}
                             <button 
@@ -763,7 +792,7 @@ Product Link: ${window.location.href}`
                         >
                             <AnimatePresence mode="wait" initial={false}>
                                 <motion.div
-                                    key={selectedImage}
+                                    key={selectedMedia.url}
                                     className="w-full h-full flex items-center justify-center p-4"
                                     initial={{ opacity: 0, x: 100 }}
                                     animate={{ opacity: 1, x: 0 }}
@@ -771,7 +800,7 @@ Product Link: ${window.location.href}`
                                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                                 >
                                     <motion.img 
-                                        src={optimizeCloudinaryUrl(selectedImage, 1800)} 
+                                        src={optimizeCloudinaryUrl(selectedMedia.url, 1800)} 
                                         className={`max-w-full max-h-full object-contain shadow-2xl transition-transform duration-300 ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`} 
                                         animate={{ 
                                             scale: isZoomed ? 2.5 : 1,
@@ -789,7 +818,7 @@ Product Link: ${window.location.href}`
                                 </motion.div>
                             </AnimatePresence>
 
-                            {allImages.length > 1 && !isZoomed && (
+                            {allMedia.length > 1 && !isZoomed && (
                                 <>
                                     <button 
                                         onClick={(e) => { e.stopPropagation(); navigateImage('prev'); }}
@@ -809,23 +838,29 @@ Product Link: ${window.location.href}`
                             )}
                         </div>
 
-                        {allImages.length > 1 && !isZoomed && (
+                        {allMedia.length > 1 && !isZoomed && (
                             <motion.div 
                                 initial={{ y: 50, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 className="mt-8 flex gap-3 overflow-x-auto max-w-full px-12 py-4 hide-scrollbar bg-black/40 backdrop-blur-md rounded-2xl border border-white/10" 
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {allImages.map((img, idx) => (
+                                {allMedia.map((media, idx) => (
                                     <button
                                         key={idx}
                                         onClick={() => {
                                             if (isZoomed) setIsZoomed(false);
-                                            setSelectedImage(img);
+                                            setSelectedMedia(media);
                                         }}
-                                        className={`flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${selectedImage === img ? 'border-accent-primary ring-4 ring-accent-primary/20' : 'border-white/10 opacity-40 hover:opacity-100'}`}
+                                        className={`relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-all ${selectedMedia.url === media.url ? 'border-accent-primary ring-4 ring-accent-primary/20' : 'border-white/10 opacity-40 hover:opacity-100'}`}
                                     >
-                                        <img src={optimizeCloudinaryUrl(img, 200)} className="w-full h-full object-cover" alt={`Thumb ${idx}`} />
+                                         {media.type === 'image' ? (
+                                                <img src={optimizeCloudinaryUrl(media.url, 200)} alt={`${product.name} view ${idx + 1}`} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-black flex items-center justify-center">
+                                                    <PlayIcon className="w-6 h-6 text-white opacity-70" />
+                                                </div>
+                                            )}
                                     </button>
                                 ))}
                             </motion.div>

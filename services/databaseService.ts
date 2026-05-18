@@ -8,10 +8,11 @@ import {
   getDoc,
   query,
   orderBy,
-  onSnapshot
+  onSnapshot,
+  runTransaction
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase';
-import { Product, Category, HeroSlide, AdminOrder } from '../types';
+import { Product, Category, HeroSlide, AdminOrder, HomepageSection } from '../types';
 import MOCK_PRODUCTS from '../mockProducts';
 
 // Track if we've encountered a permission error to stop spamming requests
@@ -22,7 +23,8 @@ const LOCAL_KEYS = {
   CATEGORIES: 'craft_data_categories',
   HERO: 'craft_data_hero',
   ORDERS: 'craft_data_orders',
-  SETTINGS: 'craft_data_settings'
+  SETTINGS: 'craft_data_settings',
+  CUSTOM_SECTIONS: 'craft_data_custom_sections'
 };
 
 /**
@@ -302,21 +304,96 @@ export const databaseService = {
   },
 
   async saveOrder(order: AdminOrder): Promise<void> {
-    const orders = getLocal<AdminOrder[]>(LOCAL_KEYS.ORDERS) || [];
-    const updated = [order, ...orders.filter(o => o.id !== order.id)];
-    saveLocal(LOCAL_KEYS.ORDERS, updated);
+    if (cloudDisabled) {
+      const orders = getLocal<AdminOrder[]>(LOCAL_KEYS.ORDERS) || [];
+      const updated = [order, ...orders.filter(o => o.id !== order.id)];
+      saveLocal(LOCAL_KEYS.ORDERS, updated);
+      // Note: Stock updates won't happen in local-only mode
+      return;
+    }
+
+    try {
+      await runTransaction(db, async (transaction) => {
+        const orderRef = doc(db, 'orders', order.id);
+        
+        // 1. Update stock for each product in the order
+        for (const item of order.items) {
+          const productRef = doc(db, 'products', String(item.productId));
+          const productDoc = await transaction.get(productRef);
+
+          if (!productDoc.exists()) {
+            throw new Error(`Product with ID ${item.productId} not found!`);
+          }
+
+          const productData = productDoc.data() as Product;
+          const newStock = (productData.stock || 0) - item.quantity;
+
+          if (newStock < 0) {
+            throw new Error(`Not enough stock for ${productData.name}. Requested ${item.quantity}, but only ${productData.stock} available.`);
+          }
+
+          transaction.update(productRef, { stock: newStock });
+        }
+
+        // 2. Save the new order
+        const cleanedOrder = removeUndefined({ ...order, createdAt: new Date().toISOString() });
+        transaction.set(orderRef, cleanedOrder, { merge: true });
+      });
+
+      // 3. Update local cache after successful transaction
+      const orders = getLocal<AdminOrder[]>(LOCAL_KEYS.ORDERS) || [];
+      const updatedOrders = [order, ...orders.filter(o => o.id !== order.id)];
+      saveLocal(LOCAL_KEYS.ORDERS, updatedOrders);
+
+    } catch (error: any) {
+      console.error("Firestore order transaction failed:", error.message);
+      if (error.code === 'permission-denied') cloudDisabled = true;
+      throw error; // Re-throw the error to be caught by the calling function
+    }
+  },
+
+  async deleteOrder(orderId: string): Promise<void> {
+    const orders = (getLocal<AdminOrder[]>(LOCAL_KEYS.ORDERS) || []).filter(o => o.id !== orderId);
+    saveLocal(LOCAL_KEYS.ORDERS, orders);
 
     if (!cloudDisabled) {
       try {
-        const orderRef = doc(db, 'orders', order.id);
-        const cleanedOrder = removeUndefined({
-            ...order,
-            createdAt: new Date().toISOString()
-        });
-        await setDoc(orderRef, cleanedOrder, { merge: true });
+        await deleteDoc(doc(db, 'orders', orderId));
       } catch (error: any) {
         if (error.code === 'permission-denied') cloudDisabled = true;
-        console.error("Firestore order sync failed:", error.message);
+        throw error;
+      }
+    }
+  },
+  
+    // --- Custom Homepage Sections ---
+  async getCustomHomepageSections(): Promise<HomepageSection[]> {
+    if (!cloudDisabled) {
+      try {
+        const docRef = doc(db, 'siteContent', 'homepageSections');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const sections = data.sections || [];
+          saveLocal(LOCAL_KEYS.CUSTOM_SECTIONS, sections);
+          return sections;
+        }
+      } catch (error: any) {
+        console.warn("Cloud homepage sections fetch failed:", error.message);
+      }
+    }
+    return getLocal<HomepageSection[]>(LOCAL_KEYS.CUSTOM_SECTIONS) || [];
+  },
+
+  async saveCustomHomepageSections(sections: HomepageSection[]): Promise<void> {
+    saveLocal(LOCAL_KEYS.CUSTOM_SECTIONS, sections);
+    if (!cloudDisabled) {
+      try {
+        const docRef = doc(db, 'siteContent', 'homepageSections');
+        await setDoc(docRef, { sections: removeUndefined(sections) }, { merge: true });
+      } catch (error: any) {
+        console.error("Firestore Homepage Sections Save Error:", error);
+        throw error;
       }
     }
   }

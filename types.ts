@@ -1,73 +1,129 @@
-// types.ts
 
-export interface User {
-  id: string;
-  email: string;
-  name: string;
-}
-
-export interface ShopInfo {
-  name: string;
-  email: string;
-  whatsapp: string;
-  logoUrl?: string;
-}
-
-export interface CloudinaryConfig {
-  cloudName: string;
-  uploadPreset: string;
-}
-
-export interface ProductVariant {
-  id: string;
-  color: string;
-  colorHex?: string;
-  imageUrl?: string;
-  size: string;
-  stock: number;
-}
-
-export interface Product {
+export type Product = {
   id: number;
   name: string;
   price: number;
   salePrice?: number;
   imageUrl: string;
   images?: string[];
+  videoUrl?: string;
   category: string;
   description: string;
   stock: number;
-  variants?: ProductVariant[];
-  tags?: string[];
   published: boolean;
+  tags?: string[];
+  isNew?: boolean;
+  sku?: string;
+  weight?: number;
+  dimensions?: string;
+  variants?: ProductVariant[];
   isPreorder?: boolean;
   preorderReleaseDate?: string;
-}
+  relatedProductIds?: number[];
+};
 
-export interface Category {
-  id: number;
+export type ProductVariant = {
+  id: string;
+  color?: string;
+  colorHex?: string;
+  size?: string;
+  stock: number;
+  imageUrl?: string;
+};
+
+export type Category = {
+  id: string;
   name: string;
   imageUrl: string;
-}
+  productCount?: number;
+};
 
-export interface HeroSlide {
+export type CartItem = {
+  productId: number;
+  variantId?: string; 
+  quantity: number;
+};
+
+export type Page = 
+  | 'shop' 
+  | 'cart' 
+  | 'productDetail' 
+  | 'checkout' 
+  | 'admin' 
+  | 'productReviews'
+  | 'search'
+  | 'searchHistory'
+  | 'affiliate'
+  | 'allProducts'
+  | 'reportBug'
+  | 'notFound'
+  | 'login'
+  | 'signup'
+  | 'forgotPassword'
+  | 'resetPassword'
+  | 'myAccount'
+  | 'preorderPolicy'
+  | 'customerLove';
+
+export type HeroSlide = {
   id: number;
   title: string;
   subtitle: string;
   imageUrl: string;
-  buttonText: string;
+  videoUrl?: string;
+  ctaText: string;
+  ctaLink: string;
+};
+
+export type HomepageSections = {
+  bestsellers: number[];
+  deals: number[];
+  preorders: number[];
+};
+
+export type HomepageSection = {
+  id: string;
+  title: string;
+  filterType: 'category' | 'tag';
+  filterValue: string;
 }
 
-export type Page = 
-  'shop' | 'cart' | 'productDetail' | 
-  'checkout' | 'admin' | 'productReviews' | 'search' | 
-  'searchHistory' | 'affiliate' | 'allProducts' | 'reportBug' | 'notFound' |
-  'login' | 'signup' | 'forgotPassword' | 'resetPassword' | 'myAccount' | 'preorderPolicy' | 'customerLove';
+export type HomepageSectionConfig = {
+    id: keyof HomepageSections;
+    title: string;
+    description: string;
+};
 
-export interface CartItem {
-  productId: number;
-  quantity: number;
-  variant?: { [key: string]: string };
+export type OrderStatus = 'Pending' | 'Shipped' | 'Delivered' | 'Cancelled' | 'Completed';
+
+export interface AdminOrder {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  date: string;
+  total: number;
+  status: OrderStatus;
+  items: { productId: number; quantity: number; price?: number }[];
+  shippingAddress?: string;
+  trackingHistory?: { status: string; date: string; location: string }[];
+}
+
+export interface AdminCustomer {
+  id: number;
+  name: string;
+  email: string;
+  firstOrderDate: string;
+  totalOrders: number;
+  totalSpent: number;
+}
+
+export interface Promotion {
+  id: number;
+  code: string;
+  discount: number; // Percentage
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
 }
 
 export interface ToastMessage {
@@ -76,158 +132,69 @@ export interface ToastMessage {
   type: 'success' | 'error' | 'info';
 }
 
-export type OrderStatus = 'Completed' | 'Processing' | 'Pending' | 'Cancelled' | 'Shipped';
-
-export type TrackingStatus = 'Order Placed' | 'Shipped' | 'Out for Delivery' | 'Delivered';
-
-export interface OrderTrackingEvent {
-    status: TrackingStatus;
-    date: string;
-    location: string;
-}
-
-export interface AdminOrder {
-  id: string;
-  customerName: string;
-  customerEmail?: string;
-  date: string;
-  total: number;
-  status: OrderStatus;
-  trackingNumber?: string;
-  trackingHistory?: OrderTrackingEvent[];
-  items: CartItem[];
-}
-
-export interface AdminCustomer {
-  id: number;
-  name: string;
-  avatarUrl: string;
-  email: string;
-  orders: number;
-  totalSpent: number;
-}
-
-export interface Promotion {
-    id: number;
-    code: string;
-    type: 'Percentage' | 'Fixed';
-    value: number;
-    status: 'Active' | 'Expired' | 'Scheduled';
-    usageCount: number;
-}
-
 export interface ProductReview {
   id: number;
-  productId?: number; // Optional since some reviews might not be for a specific product
+  productId: number;
   author: string;
   rating: number;
-  date: string;
   title: string;
   comment: string;
+  date: string;
   verifiedPurchase: boolean;
-  imageUrl?: string; // For screenshots
-  featured?: boolean; // To feature a review
-}
-
-export interface HomepageSections {
-    deals: number[];
-    bestsellers: number[];
-    preorders: number[];
-}
-
-export interface HomepageSectionConfig {
-    id: keyof HomepageSections;
-    title: string;
-    description: string;
-}
-
-export interface Testimonial {
-    id: number;
-    name: string;
-    quote: string;
-    rating: number;
-}
-
-export interface LookbookPost {
-    id: number;
-    imageUrl: string;
-    caption: string;
-}
-
-export type AccountPage = 'dashboard' | 'orders' | 'profile' | 'addresses' | 'wishlist' | 'notifications' | 'tracking';
-
-export interface AdminTopProduct {
-    id: number;
-    name: string;
-    imageUrl: string;
-    sales: number;
-}
-
-export interface PopupContent {
-    title: string;
-    description: string;
-    imageUrl: string;
-    buttonText: string;
-    successTitle: string;
-    successMessage: string;
-    discountCode: string;
-    placeholderText: string;
-    disclaimerText: string;
-    timerDurationMinutes?: number;
-}
-
-export type PopupPosition = 'center' | 'bottom-right' | 'bottom-left' | 'top-center';
-export type AnimationType = 'fade' | 'scale' | 'slide-up' | 'slide-down' | 'slide-left' | 'slide-right' | 'rotate';
-export type PopupType = 'standard' | 'spinner' | 'countdown';
-
-export interface SpinnerSegment {
-    id: string;
-    label: string;
-    value: string; // The code or text to display on win
-    color: string;
-    textColor: string;
-    probability: number; // 0-100 (relative weight)
-}
-
-export interface PopupStyle {
-    layout: 'image-left' | 'image-right' | 'image-top' | 'no-image' | 'background-image';
-    width: 'sm' | 'md' | 'lg';
-    backgroundColor: string;
-    textColor: string;
-    buttonColor: string;
-    buttonTextColor: string;
-    overlayColor: string;
-    borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
-    fontFamily: 'sans' | 'serif' | 'mono';
-    position: PopupPosition;
-    entranceAnimation: AnimationType;
-    exitAnimation: AnimationType;
-}
-
-export interface PopupBehavior {
-    delay: number; // seconds
-    showOnExit: boolean;
-    showOnScroll: boolean;
-    scrollPercentage: number; // 0-100
+  imageUrl?: string;
 }
 
 export interface PopupConfig {
     enabled: boolean;
-    type: PopupType;
-    content: PopupContent;
-    style: PopupStyle;
-    behavior: PopupBehavior;
-    spinnerSegments?: SpinnerSegment[];
+    type: 'standard' | 'spin-the-wheel';
+    content: {
+        title: string;
+        description: string;
+        imageUrl: string;
+        buttonText: string;
+        successTitle: string;
+        successMessage: string;
+        discountCode: string;
+        placeholderText: string;
+        disclaimerText: string;
+    };
+    style: {
+        layout: 'image-left' | 'image-right' | 'image-top';
+        width: 'sm' | 'md' | 'lg';
+        backgroundColor: string;
+        textColor: string;
+        buttonColor: string;
+        buttonTextColor: string;
+        overlayColor: string;
+        borderRadius: 'none' | 'sm' | 'md' | 'lg' | 'full';
+        fontFamily: string;
+        position: 'center' | 'bottom-left' | 'bottom-right';
+        entranceAnimation: 'fade' | 'slide-up' | 'scale';
+        exitAnimation: 'fade' | 'slide-down' | 'scale';
+    };
+    behavior: {
+        delay: number;
+        showOnExit: boolean;
+        showOnScroll: boolean;
+        scrollPercentage: number;
+    };
+    spinnerSegments: {
+        id: string;
+        label: string;
+        value: string;
+        color: string;
+        textColor: string;
+        probability: number;
+    }[];
 }
 
 export interface EmailLog {
     id: string;
     recipient: string;
     subject: string;
-    template: 'welcome' | 'order_confirmation' | 'password_reset' | 'marketing';
-    status: 'Sent' | 'Failed' | 'Queued';
-    date: string;
-    content: string; // HTML string simulation
+    template: 'welcome' | 'order-confirmation' | 'shipping-update';
+    timestamp: string;
+    status: 'sent' | 'failed';
 }
 
 export interface FreeGiftConfig {
@@ -235,4 +202,22 @@ export interface FreeGiftConfig {
     threshold: number;
     message: string;
     successMessage: string;
+}
+
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+}
+
+export interface CloudinaryConfig {
+    cloudName: string;
+    uploadPreset: string;
+}
+
+export interface ShopInfo {
+    name: string;
+    email: string;
+    whatsapp: string;
+    logoUrl: string;
 }

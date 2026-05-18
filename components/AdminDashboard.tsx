@@ -1,20 +1,19 @@
 
 import * as React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Product, AdminOrder, AdminCustomer, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page, ProductReview } from '../types';
+import { Product, AdminOrder, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page, ProductReview, HomepageSection } from '../types';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminDashboardHome from './admin/pages/AdminDashboardHome';
 import AdminProductsPage from './admin/pages/AdminProductsPage';
+import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminOrdersPage from './admin/pages/AdminOrdersPage';
-import AdminCustomersPage from './admin/pages/AdminCustomersPage';
 import AdminSettingsPage from './admin/pages/AdminSettingsPage';
 import AdminPromotionsPage from './admin/pages/AdminPromotionsPage';
 import AdminReviewsPage from './admin/pages/AdminReviewsPage';
 import AdminHeroPage from './admin/pages/AdminHeroPage';
-import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminHomepagePage from './admin/pages/AdminHomepagePage';
+import AdminHomepageManagerPage from './admin/pages/AdminHomepageManagerPage';
 import AdminPopupSettingsPage from './admin/pages/AdminPopupSettingsPage';
-import AdminEmailsPage from './admin/pages/AdminEmailsPage'; // Import new page
 import Modal from './admin/ui/Modal';
 import ProductForm from './admin/ui/ProductForm';
 import CategoryForm from './admin/ui/CategoryForm';
@@ -24,13 +23,13 @@ import Toast from './admin/ui/Toast';
 import { HamburgerIcon } from './Icons';
 
 // Fix: Removed local Page type definition that was shadowing and causing conflicts with the central Page type
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'customers' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'settings' | 'popup' | 'emails';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'homepageManager' | 'settings' | 'popup';
 
 interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
     
     products: Product[];
-    onSaveProduct: (product: Product, imageFile?: File, additionalImageFiles?: File[]) => Promise<void> | void;
+    onSaveProduct: (product: Product, imageFile?: File, additionalImageFiles?: File[], videoFile?: File) => Promise<void> | void;
     onDeleteProduct: (productId: number) => Promise<void> | void;
 
     categories: Category[];
@@ -38,11 +37,13 @@ interface AdminDashboardProps {
     onDeleteCategory: (categoryId: number) => Promise<void> | void;
 
     heroSlides: HeroSlide[];
-    onSaveHeroSlide: (slide: HeroSlide, imageFile?: File) => Promise<void> | void;
+    onSaveHeroSlide: (slide: HeroSlide, imageFile?: File, videoFile?: File) => Promise<void> | void;
     onDeleteHeroSlide: (slideId: number) => Promise<void> | void;
 
     orders: AdminOrder[];
-    customers: AdminCustomer[];
+    onSaveOrder: (order: Partial<AdminOrder>) => Promise<void>;
+    onDeleteOrder: (orderId: string) => Promise<void>;
+
     promotions: Promotion[];
     onSavePromotion: (promotion: Promotion) => void;
     onDeletePromotion: (id: number) => void;
@@ -53,6 +54,9 @@ interface AdminDashboardProps {
     
     homepageSections: HomepageSections;
     onSaveHomepageSections: (sections: HomepageSections) => Promise<void> | void;
+    
+    customHomepageSections: HomepageSection[];
+    onSaveCustomHomepageSections: (sections: HomepageSection[]) => Promise<void> | void;
 
     isDarkMode: boolean;
     toggleDarkMode: () => void;
@@ -63,14 +67,13 @@ const adminPageTitles: Record<AdminPage, string> = {
     products: 'Products',
     categories: 'Categories',
     orders: 'Orders',
-    customers: 'Customers',
     promotions: 'Promotions',
     reviews: 'Customer Reviews',
     hero: 'Hero Section',
     homepage: 'Homepage Sections',
+    homepageManager: 'Homepage Manager',
     settings: 'Settings',
     popup: 'Popup Manager',
-    emails: 'Email Logs',
 };
 
 const AdminMobileHeader: React.FC<{ onMenuClick: () => void, title: string }> = ({ onMenuClick, title }) => (
@@ -87,9 +90,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const {
         onNavigate, products, onSaveProduct, onDeleteProduct, categories,
         onSaveCategory, onDeleteCategory, heroSlides, onSaveHeroSlide, onDeleteHeroSlide,
-        orders, customers, promotions, onSavePromotion, onDeletePromotion,
+        orders, onSaveOrder, onDeleteOrder, promotions, onSavePromotion, onDeletePromotion,
         reviews, onSaveReview, onDeleteReview,
         homepageSections, onSaveHomepageSections,
+        customHomepageSections, onSaveCustomHomepageSections,
         isDarkMode, toggleDarkMode
     } = props;
 
@@ -110,8 +114,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const handleOpenAddProductModal = () => { setEditingProduct(null); setIsProductModalOpen(true); };
     const handleOpenEditProductModal = (product: Product) => { setEditingProduct(product); setIsProductModalOpen(true); };
     const handleCloseProductModal = () => { setIsProductModalOpen(false); setEditingProduct(null); };
-    const handleSaveProductWithModal = async (productData: Product, imageFile?: File, additionalImageFiles?: File[]) => {
-        await onSaveProduct(productData, imageFile, additionalImageFiles);
+    const handleSaveProductWithModal = async (productData: Product, imageFile?: File, additionalImageFiles?: File[], videoFile?: File) => {
+        await onSaveProduct(productData, imageFile, additionalImageFiles, videoFile);
         handleCloseProductModal();
     };
 
@@ -128,8 +132,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
     const handleOpenAddHeroSlideModal = () => { setEditingHeroSlide(null); setIsHeroModalOpen(true); };
     const handleOpenEditHeroSlideModal = (slide: HeroSlide) => { setEditingHeroSlide(slide); setIsHeroModalOpen(true); };
     const handleCloseHeroModal = () => { setIsHeroModalOpen(false); setEditingHeroSlide(null); };
-    const handleSaveHeroSlideWithModal = async (slideData: HeroSlide, imageFile?: File) => {
-        await onSaveHeroSlide(slideData, imageFile);
+    const handleSaveHeroSlideWithModal = async (slideData: HeroSlide, imageFile?: File, videoFile?: File) => {
+        await onSaveHeroSlide(slideData, imageFile, videoFile);
         handleCloseHeroModal();
     };
 
@@ -147,15 +151,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             case 'dashboard': return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
             case 'products': return <AdminProductsPage products={products} onAddProduct={handleOpenAddProductModal} onEditProduct={handleOpenEditProductModal} onDeleteProduct={onDeleteProduct} />;
             case 'categories': return <AdminCategoriesPage categories={categories} products={products} onAddCategory={handleOpenAddCategoryModal} onEditCategory={handleOpenEditCategoryModal} onDeleteCategory={onDeleteCategory} />;
-            case 'orders': return <AdminOrdersPage orders={orders} />;
-            case 'customers': return <AdminCustomersPage customers={customers} />;
+            case 'orders': return <AdminOrdersPage orders={orders} products={products} customers={[]} onSaveOrder={onSaveOrder} onDeleteOrder={onDeleteOrder} />;
             case 'promotions': return <AdminPromotionsPage promotions={promotions} onAddPromotion={handleOpenAddPromotionModal} onEditPromotion={handleOpenEditPromotionModal} onDeletePromotion={onDeletePromotion} />;
             case 'reviews': return <AdminReviewsPage reviews={reviews} onSaveReview={onSaveReview} onDeleteReview={onDeleteReview} />;
-            case 'hero': return <AdminHeroPage slides={heroSlides} onAddSlide={handleOpenAddHeroSlideModal} onEditSlide={handleOpenEditHeroSlideModal} onDeleteSlide={onDeleteHeroSlide} />;
+            case 'hero': return <AdminHeroPage slides={heroSlides} categories={categories} onAddSlide={handleOpenAddHeroSlideModal} onEditSlide={handleOpenEditHeroSlideModal} onDeleteSlide={onDeleteHeroSlide} />;
             case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
+            case 'homepageManager': return <AdminHomepageManagerPage sections={customHomepageSections} onUpdate={onSaveCustomHomepageSections} allCategories={categories} allProducts={products} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
             case 'popup': return <AdminPopupSettingsPage />;
-            case 'emails': return <AdminEmailsPage />; 
             default: return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
         }
     };
@@ -180,7 +183,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     </AnimatePresence>
 
                     <div className="hidden sm:block">
-                        <AdminSidebar activePage={activePage} setActivePage={setActivePage} onNavigateToShop={() => onNavigate('shop')} />
+                        <AdminSidebar activePage={activePage} setActivePage={setActivePage} onLinkClick={() => {}} onNavigateToShop={() => onNavigate('shop')} />
                     </div>
 
                     <div className="flex-1 ml-0 sm:ml-64">
@@ -200,7 +203,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                 <AnimatePresence>
                     {isProductModalOpen && (
                         <Modal title={editingProduct ? 'Edit Product' : 'Add New Product'} onClose={handleCloseProductModal}>
-                            <ProductForm product={editingProduct} onSave={handleSaveProductWithModal} onCancel={handleCloseProductModal} />
+                            <ProductForm product={editingProduct} onSave={handleSaveProductWithModal} onCancel={handleCloseProductModal} allCategories={categories} allProducts={products}/>
                         </Modal>
                     )}
                     {isCategoryModalOpen && (
@@ -210,7 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
                     )}
                     {isHeroModalOpen && (
                         <Modal title={editingHeroSlide ? 'Edit Hero Slide' : 'Add New Hero Slide'} onClose={handleCloseHeroModal}>
-                            <HeroSlideForm slide={editingHeroSlide} onSave={handleSaveHeroSlideWithModal} onCancel={handleCloseHeroModal} />
+                            <HeroSlideForm slide={editingHeroSlide} categories={categories} onSave={handleSaveHeroSlideWithModal} onCancel={handleCloseHeroModal} />
                         </Modal>
                     )}
                     {isPromotionModalOpen && (

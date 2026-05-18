@@ -2,7 +2,8 @@
 import * as React from 'react';
 import { motion } from 'framer-motion';
 import { ProductReview } from '../../../types';
-import { StarIcon, PencilIcon, TrashIcon, PhotoIcon } from '../../Icons';
+import { StarIcon, PencilIcon, TrashIcon, PhotoIcon, PlusIcon } from '../../Icons';
+import ReviewFormModal from '../ui/ReviewFormModal';
 
 // Mock data for now, will be replaced with AppContext
 const mockReviews: ProductReview[] = [
@@ -51,6 +52,25 @@ const AdminReviewsPage: React.FC = () => {
     setIsModalOpen(false);
     setSelectedReview(null);
   };
+
+  const handleSubmit = (submittedReview: ProductReview) => {
+    if (selectedReview) {
+      // Editing existing review
+      setReviews(reviews.map(r => r.id === submittedReview.id ? submittedReview : r));
+    } else {
+      // Adding new review
+      setReviews([...reviews, { ...submittedReview, id: Date.now(), date: new Date().toISOString().split('T')[0] }]);
+    }
+    handleCloseModal();
+  };
+
+  const handleDelete = (reviewId: number) => {
+    // Add a confirmation dialog before deleting
+    if (window.confirm('Are you sure you want to delete this review?')) {
+      setReviews(reviews.filter(r => r.id !== reviewId));
+    }
+  };
+
 
   return (
     <motion.div
@@ -120,7 +140,7 @@ const AdminReviewsPage: React.FC = () => {
                     </td>
                     <td className="px-5 py-4 text-sm text-right">
                         <button onClick={() => handleOpenModal(review)} className="text-gray-500 hover:text-amber-600 p-2 rounded-full transition-colors"><PencilIcon className="w-4 h-4"/></button>
-                        <button className="text-gray-500 hover:text-red-600 p-2 rounded-full transition-colors"><TrashIcon className="w-4 h-4"/></button>
+                        <button onClick={() => handleDelete(review.id)} className="text-gray-500 hover:text-red-600 p-2 rounded-full transition-colors"><TrashIcon className="w-4 h-4"/></button>
                     </td>
                 </tr>
                 ))}
@@ -128,17 +148,16 @@ const AdminReviewsPage: React.FC = () => {
             </table>
         </div>
       </div>
-      {/* TODO: Add Modal Form for adding/editing reviews */}
+      
+      <ReviewFormModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSubmit={handleSubmit}
+        review={selectedReview}
+      />
+
     </motion.div>
   );
 };
-
-// We need to add a PlusIcon to the Icons.tsx file
-const PlusIcon: React.FC<{className?: string}> = ({className}) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-    </svg>
-);
-
 
 export default AdminReviewsPage;

@@ -2,7 +2,7 @@
 import * as React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeftIcon } from './components/Icons';
-import { Product, Page, HeroSlide, HomepageSections, Category, AdminOrder, AdminCustomer, Promotion } from './types';
+import { Product, Page, HeroSlide, HomepageSections, Category, AdminOrder, AdminCustomer, Promotion, HomepageSection, ProductReview } from './types';
 import { HERO_SLIDES, CATEGORIES } from './constants';
 import MOCK_PRODUCTS from './mockProducts';
 import { MOCK_ORDERS, MOCK_CUSTOMERS, MOCK_PROMOTIONS } from './adminConstants';
@@ -42,6 +42,7 @@ import MyAccountPage from './components/MyAccountPage';
 import { databaseService } from './services/databaseService';
 import PreorderPolicyPage from './components/PreorderPolicyPage';
 import CustomerLovePage from './components/CustomerLovePage';
+import Community from './components/Community';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
@@ -108,9 +109,9 @@ const ScrollToTop = () => {
 };
 
 const App: React.FC = () => {
-  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews, uploadImage, user, isAdmin } = useAppContext();
+  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews: contextReviews, uploadImage, user, isAdmin } = useAppContext();
   
-  const STORAGE_KEYS = { HOMEPAGE: 'craft_data_homepage', HISTORY: 'searchHistory' };
+  const STORAGE_KEYS = { HOMEPAGE: 'craft_data_homepage', HISTORY: 'searchHistory', CUSTOM_SECTIONS: 'craft_data_custom_sections' };
 
   const [products, setProducts] = React.useState<Product[]>([]);
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -118,7 +119,9 @@ const App: React.FC = () => {
   const [orders, setOrders] = React.useState<AdminOrder[]>([]);
   const [customers, setCustomers] = React.useState<AdminCustomer[]>([]);
   const [promotions, setPromotions] = React.useState<Promotion[]>([]);
+  const [reviews, setReviews] = React.useState<ProductReview[]>(contextReviews);
   const [homepageSections, setHomepageSections] = React.useState<HomepageSections>({ deals: [], bestsellers: [], preorders: [] });
+  const [customHomepageSections, setCustomHomepageSections] = React.useState<HomepageSection[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
   const initialRoute = getRouteFromHash();
@@ -140,19 +143,28 @@ const App: React.FC = () => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY) || '[]'); } catch { return []; }
   });
 
+  React.useEffect(() => { setReviews(contextReviews); }, [contextReviews]);
+
   React.useEffect(() => {
     const loadAppData = async () => {
         setIsLoading(true);
         try {
-            const unsub = await databaseService.getProducts(setProducts);
+            const unsub = await databaseService.getProducts((dbProducts) => {
+              if (dbProducts.length > 0) {
+                setProducts(dbProducts);
+              } else {
+                setProducts(MOCK_PRODUCTS);
+              }
+            });
 
-            const [c, h, o] = await Promise.all([
+            const [c, h, o, customSections] = await Promise.all([
                 databaseService.getCategories().then(res => res.length ? res : CATEGORIES).catch(() => CATEGORIES),
                 databaseService.getHeroSlides().then(res => res.length ? res : HERO_SLIDES).catch(() => HERO_SLIDES),
-                databaseService.getOrders().then(res => res.length ? res : MOCK_ORDERS).catch(() => MOCK_ORDERS)
+                databaseService.getOrders().then(res => res.length ? res : MOCK_ORDERS).catch(() => MOCK_ORDERS),
+                databaseService.getCustomHomepageSections().catch(() => [])
             ]);
 
-            setCategories(c); setHeroSlides(h); setOrders(o); setCustomers(MOCK_CUSTOMERS); setPromotions(MOCK_PROMOTIONS);
+            setCategories(c); setHeroSlides(h); setOrders(o); setCustomers(MOCK_CUSTOMERS); setPromotions(MOCK_PROMOTIONS); setCustomHomepageSections(customSections);
             
             const savedHomepage = localStorage.getItem(STORAGE_KEYS.HOMEPAGE);
             if(savedHomepage) setHomepageSections(JSON.parse(savedHomepage));
@@ -160,6 +172,7 @@ const App: React.FC = () => {
             return unsub;
         } catch (e) {
             console.error("Error loading app data", e);
+            setProducts(MOCK_PRODUCTS);
         } finally {
             setTimeout(() => setIsLoading(false), 500);
         }
@@ -233,12 +246,42 @@ const App: React.FC = () => {
       addToast('Slide deleted');
     }
   };
+  
+  const handleDeleteReview = async (reviewId: number) => {
+    if (window.confirm('Delete this review?')) {
+        try {
+            await databaseService.deleteReview(reviewId);
+            setReviews(reviews.filter(r => r.id !== reviewId));
+            addToast('Review deleted');
+        } catch (err: any) { addToast('Delete failed', 'error'); }
+    }
+  };
+
+  const handleFeatureReview = async (reviewId: number, isFeatured: boolean) => {
+    const reviewToUpdate = reviews.find(r => r.id === reviewId);
+    if (reviewToUpdate) {
+        const updatedReview = { ...reviewToUpdate, featured: isFeatured };
+        try {
+            await databaseService.saveReview(updatedReview);
+            setReviews(reviews.map(r => r.id === reviewId ? updatedReview : r));
+            addToast(`Review ${isFeatured ? 'featured' : 'unfeatured'}.`);
+        } catch (error) {
+            addToast('Update failed.', 'error');
+        }
+    }
+  };
 
   const handleCreateOrder = async (orderData: AdminOrder) => {
     await databaseService.saveOrder(orderData);
     setOrders([orderData, ...orders]);
     setCart([]);
     addToast('Order placed!');
+  };
+  
+  const handleSaveCustomHomepageSections = async (sections: HomepageSection[]) => {
+    await databaseService.saveCustomHomepageSections(sections);
+    setCustomHomepageSections(sections);
+    addToast('Homepage sections saved!');
   };
 
   React.useEffect(() => { localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(searchHistory)); }, [searchHistory]);
@@ -303,7 +346,7 @@ const App: React.FC = () => {
       case 'cart': return <CartPage products={products} onContinueShopping={() => onNavigate('shop')} onNavigateToCheckout={() => onNavigate('checkout')} />;
       case 'productDetail': return selectedProduct ? <ProductDetailPage product={selectedProduct} relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 4)} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToShop={() => onNavigate('shop')} onProductClick={handleProductClick} onNavigateToReviews={() => setCurrentPage('productReviews')} onQuickView={setQuickViewProduct} /> : <NotFoundPage onNavigate={onNavigate} />;
       case 'checkout': return <CheckoutPage products={products} onBackToCart={() => onNavigate('cart')} onPlaceOrder={handleCreateOrder} />;
-      case 'admin': return <AdminGuard onNavigate={onNavigate}><React.Suspense fallback={<div>Loading...</div>}><AdminDashboard onNavigate={onNavigate} products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct} categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory} heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide} orders={orders} customers={customers} promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))} homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} /></React.Suspense></AdminGuard>;
+      case 'admin': return <AdminGuard onNavigate={onNavigate}><React.Suspense fallback={<div>Loading...</div>}><AdminDashboard onNavigate={onNavigate} products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct} categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory} heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide} orders={orders} customers={customers} promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))} homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections} customHomepageSections={customHomepageSections} onSaveCustomHomepageSections={handleSaveCustomHomepageSections} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} reviews={reviews} onDeleteReview={handleDeleteReview} onFeatureReview={handleFeatureReview} /></React.Suspense></AdminGuard>;
       case 'productReviews': return selectedProduct ? <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} /> : <NotFoundPage onNavigate={onNavigate} />;
       case 'search': return <SearchResultsPage query={searchQuery} results={searchResults} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'searchHistory': return <SearchPage history={searchHistory} onSearch={handleSearch} onClearHistory={() => setSearchHistory([])} />;
@@ -317,7 +360,7 @@ const App: React.FC = () => {
       case 'myAccount': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'preorderPolicy': return <PreorderPolicyPage />;
       case 'customerLove': return <CustomerLovePage />;
-      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title={activeCategory === 'All' ? 'Featured Products' : activeCategory} onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{preorderProducts.length > 0 && <DealsSection products={preorderProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title="Preorder Deals" />}<ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><CTA onShopNowClick={() => onNavigate('allProducts')} />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /></>);
+      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title={activeCategory === 'All' ? 'Featured Products' : activeCategory} onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{preorderProducts.length > 0 && <ProductGrid products={preorderProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title="Preorder Now" />}{customHomepageSections.map(section => <ProductGrid key={section.id} products={products.filter(p => section.filterType === 'category' ? p.category === section.filterValue : p.tags?.includes(section.filterValue))} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title={section.title} />)}<ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><CTA onShopNowClick={() => onNavigate('allProducts')} />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /><Community /></>);
     }
   };
 

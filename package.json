@@ -9,9 +9,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/react-dnd-touch-backend": "^0.4.2",
     "firebase": "^12.7.0",
     "framer-motion": "^12.23.24",
     "react": "^19.2.0",
+    "react-dnd": "^16.0.1",
+    "react-dnd-html5-backend": "^16.0.1",
+    "react-dnd-touch-backend": "^16.0.1",
     "react-dom": "^19.2.0",
     "react-paystack": "^6.0.0"
   },
