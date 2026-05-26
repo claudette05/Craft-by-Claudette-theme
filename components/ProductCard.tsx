@@ -33,7 +33,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
 
   const handleAddToCartClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isAdded) return;
+    if (isAdded || (product.stock === 0 && !isPreorder)) return;
     addToCart(product.id, 1);
     setIsAdded(true);
     setTimeout(() => {
@@ -46,7 +46,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
     onQuickView(product);
   };
   
-  const buttonText = isPreorder ? 'Preorder' : 'Add to Cart';
+  const isOutOfStock = product.stock === 0 && !isPreorder;
+  const buttonText = isOutOfStock ? 'Sold Out' : (isPreorder ? 'Preorder' : 'Add to Cart');
   const successText = isPreorder ? 'Preordered!' : 'Added!';
 
   return (
@@ -104,6 +105,23 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
       <div className="p-3 sm:p-4 text-center flex-grow flex flex-col justify-between">
         <div>
             <h3 className="text-sm sm:text-lg font-semibold text-text-primary truncate transition-colors duration-300 group-hover:text-accent-primary">{product.name}</h3>
+            
+            {/* Stock Urgency Indicator */}
+            {product.stock > 0 && product.stock <= 5 && !isPreorder && (
+                <div className="mt-1 inline-flex items-center gap-1 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    Only {product.stock} left!
+                </div>
+            )}
+            {isOutOfStock && (
+                <div className="mt-1 inline-flex items-center gap-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full">
+                    Out of Stock
+                </div>
+            )}
+
             <div className="mt-2">
                 {hasSale ? (
                     <div className="flex flex-col sm:flex-row justify-center items-baseline sm:space-x-2">
@@ -126,12 +144,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onClick, onQuickView
           </motion.button>
           <motion.button
             onClick={handleAddToCartClick}
-            className="w-full font-bold py-2 px-2 sm:px-4 rounded-full text-sm overflow-hidden"
+            disabled={isOutOfStock}
+            className={`w-full font-bold py-2 px-2 sm:px-4 rounded-full text-sm overflow-hidden ${isOutOfStock ? 'opacity-50 cursor-not-allowed' : ''}`}
             animate={{ 
-                backgroundColor: isAdded ? '#22c55e' : (isPreorder ? '#8b5cf6' : '#f59e0b'),
+                backgroundColor: isOutOfStock ? '#9ca3af' : (isAdded ? '#22c55e' : (isPreorder ? '#8b5cf6' : '#f59e0b')),
             }}
-            whileHover={{ scale: isAdded ? 1 : 1.05 }}
-            whileTap={{ scale: isAdded ? 1 : 0.95 }}
+            whileHover={{ scale: (isAdded || isOutOfStock) ? 1 : 1.05 }}
+            whileTap={{ scale: (isAdded || isOutOfStock) ? 1 : 0.95 }}
           >
             <span className={`block ${isAdded ? 'text-white' : 'text-accent-text'}`}>
                 <AnimatePresence mode="wait" initial={false}>

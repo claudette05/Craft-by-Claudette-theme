@@ -33,13 +33,16 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
         freeGiftConfig, updateFreeGiftConfig, 
         cloudinaryConfig, updateCloudinaryConfig, 
         shopInfo, updateShopInfo, 
+        countdownBannerConfig, updateCountdownBannerConfig,
         uploadImage, addToast 
     } = useAppContext();
     
     const [localCloudConfig, setLocalCloudConfig] = React.useState(cloudinaryConfig);
     const [localShopInfo, setLocalShopInfo] = React.useState(shopInfo);
+    const [localCountdown, setLocalCountdown] = React.useState(countdownBannerConfig);
     
     const [isSavingShop, setIsSavingShop] = React.useState(false);
+    const [isSavingCountdown, setIsSavingCountdown] = React.useState(false);
     const [isSavingCloud, setIsSavingCloud] = React.useState(false);
     const [isTestingCloud, setIsTestingCloud] = React.useState(false);
     const [isUploadingLogo, setIsUploadingLogo] = React.useState(false);
@@ -50,7 +53,8 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
     React.useEffect(() => {
         setLocalCloudConfig(cloudinaryConfig);
         setLocalShopInfo(shopInfo);
-    }, [cloudinaryConfig, shopInfo]);
+        setLocalCountdown(countdownBannerConfig);
+    }, [cloudinaryConfig, shopInfo, countdownBannerConfig]);
 
     const handleShopChange = (field: keyof typeof localShopInfo, value: string) => {
         setLocalShopInfo(prev => ({ ...prev, [field]: value }));
@@ -64,6 +68,17 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
             addToast("Failed to save shop info", "error");
         } finally {
             setIsSavingShop(false);
+        }
+    };
+
+    const handleSaveCountdown = async () => {
+        setIsSavingCountdown(true);
+        try {
+            await updateCountdownBannerConfig(localCountdown);
+        } catch (e) {
+            addToast("Failed to save countdown banner", "error");
+        } finally {
+            setIsSavingCountdown(false);
         }
     };
 
@@ -209,6 +224,36 @@ const AdminSettingsPage: React.FC<AdminSettingsPageProps> = ({ isDarkMode, toggl
                         <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-700/50 rounded-lg">
                             <label className="text-sm font-medium text-[var(--text-secondary)]">Dark Mode</label>
                             <Toggle enabled={isDarkMode} onToggle={toggleDarkMode} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Countdown Banner */}
+                <div className="lg:col-span-3">
+                    <div className="bg-[var(--bg-secondary)] p-6 rounded-lg shadow-sm border border-[var(--border-primary)]">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-semibold text-[var(--text-primary)]">Top Countdown Banner</h2>
+                            <Toggle enabled={localCountdown.enabled} onToggle={() => setLocalCountdown(p => ({ ...p, enabled: !p.enabled }))} />
+                        </div>
+                        {localCountdown.enabled && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormInput label="Target Date & Time" id="countdown-date" type="datetime-local" value={localCountdown.targetDate.slice(0, 16)} onChange={(v) => setLocalCountdown(p => ({...p, targetDate: new Date(v).toISOString()}))} />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormInput label="Background Color" id="countdown-bg" type="color" value={localCountdown.backgroundColor} onChange={(v) => setLocalCountdown(p => ({...p, backgroundColor: v}))} />
+                                    <FormInput label="Text Color" id="countdown-text" type="color" value={localCountdown.textColor} onChange={(v) => setLocalCountdown(p => ({...p, textColor: v}))} />
+                                </div>
+                                <FormInput label="Pre-Sale Text" id="countdown-pre" value={localCountdown.preSaleText} onChange={(v) => setLocalCountdown(p => ({...p, preSaleText: v}))} />
+                                <FormInput label="Post-Sale Text" id="countdown-post" value={localCountdown.postSaleText} onChange={(v) => setLocalCountdown(p => ({...p, postSaleText: v}))} />
+                            </div>
+                        )}
+                        <div className="mt-6 pt-6 border-t border-[var(--border-primary)] text-right">
+                            <button 
+                                onClick={handleSaveCountdown} 
+                                disabled={isSavingCountdown}
+                                className="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 px-8 rounded-lg transition-colors shadow-sm disabled:opacity-70"
+                            >
+                                {isSavingCountdown ? 'Saving...' : 'Save Banner'}
+                            </button>
                         </div>
                     </div>
                 </div>

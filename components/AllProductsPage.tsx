@@ -8,6 +8,7 @@ interface AllProductsPageProps {
   products: Product[];
   onProductClick: (product: Product) => void;
   onQuickView: (product: Product) => void;
+  title?: string;
 }
 
 const containerVariants = {
@@ -20,7 +21,7 @@ const containerVariants = {
     },
 };
 
-const AllProductsPage: React.FC<AllProductsPageProps> = ({ products, onProductClick, onQuickView }) => {
+const AllProductsPage: React.FC<AllProductsPageProps> = ({ products, onProductClick, onQuickView, title = 'All Products' }) => {
   const [sortBy, setSortBy] = React.useState('default');
   const [filterCategory, setFilterCategory] = React.useState('All');
 
@@ -56,7 +57,7 @@ const AllProductsPage: React.FC<AllProductsPageProps> = ({ products, onProductCl
       className="container mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16"
     >
       <div className="text-center mb-8">
-        <h1 className="text-3xl md:text-4xl font-bold text-text-primary">All Products</h1>
+        <h1 className="text-3xl md:text-4xl font-bold text-text-primary">{title}</h1>
         <p className="mt-2 text-text-secondary">Explore our full collection of handmade treasures.</p>
       </div>
 

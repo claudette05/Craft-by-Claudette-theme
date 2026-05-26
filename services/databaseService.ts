@@ -12,7 +12,7 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '../firebase';
-import { Product, Category, HeroSlide, AdminOrder, HomepageSection } from '../types';
+import { Product, Category, HeroSlide, AdminOrder, HomepageSection, ProductReview } from '../types';
 import MOCK_PRODUCTS from '../mockProducts';
 
 // Track if we've encountered a permission error to stop spamming requests
@@ -197,7 +197,7 @@ export const databaseService = {
         const querySnapshot = await getDocs(collection(db, 'categories'));
         const categories = querySnapshot.docs.map(docSnap => {
             const data = docSnap.data();
-            return { ...data, id: safeParseId(docSnap.id) } as Category;
+            return { ...data, id: docSnap.id } as Category;
         });
         if (categories.length > 0) saveLocal(LOCAL_KEYS.CATEGORIES, categories);
         return categories;
@@ -226,13 +226,13 @@ export const databaseService = {
     }
   },
 
-  async deleteCategory(categoryId: number): Promise<void> {
+  async deleteCategory(categoryId: string): Promise<void> {
     const categories = (getLocal<Category[]>(LOCAL_KEYS.CATEGORIES) || []).filter(c => c.id !== categoryId);
     saveLocal(LOCAL_KEYS.CATEGORIES, categories);
 
     if (!cloudDisabled) {
       try {
-        await deleteDoc(doc(db, 'categories', String(categoryId)));
+        await deleteDoc(doc(db, 'categories', categoryId));
       } catch (error: any) {
         if (error.code === 'permission-denied') cloudDisabled = true;
       }
@@ -359,6 +359,39 @@ export const databaseService = {
     if (!cloudDisabled) {
       try {
         await deleteDoc(doc(db, 'orders', orderId));
+      } catch (error: any) {
+        if (error.code === 'permission-denied') cloudDisabled = true;
+        throw error;
+      }
+    }
+  },
+
+  // --- Reviews ---
+  async saveReview(review: ProductReview): Promise<void> {
+    const reviews = getLocal<ProductReview[]>('craft_data_reviews') || [];
+    const updated = reviews.some(r => r.id === review.id)
+      ? reviews.map(r => r.id === review.id ? review : r)
+      : [review, ...reviews];
+    saveLocal('craft_data_reviews', updated);
+
+    if (!cloudDisabled) {
+      try {
+        const revRef = doc(db, 'reviews', String(review.id));
+        await setDoc(revRef, removeUndefined(review), { merge: true });
+      } catch (error: any) {
+        if (error.code === 'permission-denied') cloudDisabled = true;
+        throw error;
+      }
+    }
+  },
+
+  async deleteReview(reviewId: number): Promise<void> {
+    const reviews = (getLocal<ProductReview[]>('craft_data_reviews') || []).filter(r => r.id !== reviewId);
+    saveLocal('craft_data_reviews', reviews);
+
+    if (!cloudDisabled) {
+      try {
+        await deleteDoc(doc(db, 'reviews', String(reviewId)));
       } catch (error: any) {
         if (error.code === 'permission-denied') cloudDisabled = true;
         throw error;

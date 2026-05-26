@@ -728,7 +728,7 @@ Product Link: ${window.location.href}`
             {relatedProducts.length > 0 ? (
                 <div className="mt-24 md:mt-32">
                     <ProductGrid 
-                        title="Complete the Look"
+                        title="You May Also Like"
                         products={relatedProducts}
                         onProductClick={onProductClick}
                         onQuickView={onQuickView}

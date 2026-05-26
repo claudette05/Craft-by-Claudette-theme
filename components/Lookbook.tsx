@@ -1,71 +1,73 @@
 import * as React from 'react';
-import { motion, Variants } from 'framer-motion';
-import { LookbookPost } from '../types';
+import { motion } from 'framer-motion';
+import { useAppContext } from '../context/AppContext';
+import { LookbookConfig } from '../types';
 
-interface LookbookProps {
-  posts: LookbookPost[];
-}
+const Lookbook: React.FC = () => {
+  const { lookbookConfig } = useAppContext();
 
-const containerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
-    },
-  },
-};
+  if (!lookbookConfig) return null;
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 30, scale: 0.95 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    transition: { type: 'spring', stiffness: 100 }
-  },
-};
+  const { mode, images, overlayText, linkUrl } = lookbookConfig as LookbookConfig;
 
-const Lookbook: React.FC<LookbookProps> = ({ posts }) => {
-  return (
-    <section className="py-12 md:py-16 bg-pink-50">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div 
-            className="text-center mb-10 md:mb-12"
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true, amount: 0.5 }}
-        >
-            <h2 className="text-2xl md:text-3xl font-bold text-zinc-800">Shop Our Instagram</h2>
-            <p className="text-zinc-600 mt-2">Tag <span className="font-semibold text-amber-600">@CraftByClaudette</span> to be featured!</p>
-        </motion.div>
-        <motion.div 
-            className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4"
-            variants={containerVariants}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, amount: 0.1 }}
-        >
-            {posts.map(post => (
-                <motion.div 
-                    key={post.id}
-                    className="group relative rounded-lg overflow-hidden cursor-pointer"
-                    variants={itemVariants}
-                >
-                    <img 
-                        src={post.imageUrl}
-                        alt={post.caption}
-                        className="w-full h-full object-cover aspect-square"
-                    />
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-4">
-                        <p className="text-white text-center text-sm font-semibold">{post.caption}</p>
-                    </div>
-                </motion.div>
-            ))}
-        </motion.div>
+  const renderCover = () => {
+    const background = images[0] || 'https://via.placeholder.com/800x400?text=Lookbook+Cover';
+    return (
+      <div className="relative w-full h-96 overflow-hidden rounded-xl lookbook" style={{ backgroundImage: `url(${background})` }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/40 to-black/70" />
+        {overlayText && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.h2
+              className="text-4xl sm:text-5xl font-bold text-white text-center"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              {overlayText}
+            </motion.h2>
+          </div>
+        )}
+        {linkUrl && (
+          <a href={linkUrl} className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2 px-6 rounded-full transition-colors shadow-lg">
+            Explore Customer Love
+          </a>
+        )}
       </div>
-    </section>
+    );
+  };
+
+  const renderCollage = () => (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 lookbook">
+      {images.filter(Boolean).map((src, idx) => (
+        <motion.div
+          key={idx}
+          className="relative overflow-hidden rounded-lg"
+          whileHover={{ scale: 1.03 }}
+        >
+          <img src={src} alt={`Lookbook ${idx}`} className="w-full h-full object-cover" />
+        </motion.div>
+      ))}
+    </div>
+  );
+
+  const renderCarousel = () => (
+    <div className="relative lookbook overflow-hidden rounded-xl">
+      <div className="whitespace-nowrap transition-transform duration-500" style={{ transform: 'translateX(0%)' }}>
+        {images.filter(Boolean).map((src, idx) => (
+          <div key={idx} className="inline-block w-full h-96">
+            <img src={src} alt={`Slide ${idx}`} className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="my-8">
+      {mode === 'cover' && renderCover()}
+      {mode === 'collage' && renderCollage()}
+      {mode === 'carousel' && renderCarousel()}
+    </div>
   );
 };
 

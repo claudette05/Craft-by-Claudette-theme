@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { HomeIcon, PackageIcon as ProductsIcon, ClipboardListIcon as OrdersIcon, TagIcon as DiscountsIcon, SettingsIcon, StarIcon as ReviewsIcon, PhotoIcon as HeroIcon, LayoutIcon as ContentIcon, EyeIcon as AppearanceIcon, LogoutIcon } from '../Icons';
 
@@ -24,8 +23,10 @@ const AdminSidebar = ({ activePage, setActivePage, onLinkClick, onNavigateToShop
             <SidebarLink icon={<DiscountsIcon />} label="Promotions" page="promotions" activePage={activePage} onClick={() => { setActivePage('promotions'); onLinkClick?.(); }} />
             
             <p className="px-4 pt-4 pb-2 text-xs font-semibold uppercase text-[var(--text-accent)]">Settings</p>
-            <SidebarLink icon={<SettingsIcon />} label="General Settings" page="settings" activePage={activePage} onClick={() => { setActivePage('settings'); onLinkClick?.(); }} />
+            <SidebarLink icon={<SettingsIcon />} label="Lookbook Settings" page="lookbook" activePage={activePage} onClick={() => { setActivePage('lookbook'); onLinkClick?.(); }} />
             <SidebarLink icon={<AppearanceIcon />} label="Popup Manager" page="popup" activePage={activePage} onClick={() => { setActivePage('popup'); onLinkClick?.(); }} />
+
+
         </nav>
         <div className="p-4 border-t border-[var(--border-primary)]">
             <button onClick={onNavigateToShop} className="w-full text-left flex items-center gap-3 py-2 px-3 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors duration-200">

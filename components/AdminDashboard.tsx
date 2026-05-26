@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Product, AdminOrder, Promotion, ToastMessage, Category, HeroSlide, HomepageSections, Page, ProductReview, HomepageSection } from '../types';
 import AdminSidebar from './admin/AdminSidebar';
 import AdminDashboardHome from './admin/pages/AdminDashboardHome';
+import AdminLookbookPage from './admin/pages/AdminLookbookPage';
 import AdminProductsPage from './admin/pages/AdminProductsPage';
 import AdminCategoriesPage from './admin/pages/AdminCategoriesPage';
 import AdminOrdersPage from './admin/pages/AdminOrdersPage';
@@ -22,8 +23,8 @@ import PromotionForm from './admin/ui/PromotionForm';
 import Toast from './admin/ui/Toast';
 import { HamburgerIcon } from './Icons';
 
-// Fix: Removed local Page type definition that was shadowing and causing conflicts with the central Page type
-type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'homepageManager' | 'settings' | 'popup';
+type AdminPage = 'dashboard' | 'products' | 'categories' | 'orders' | 'promotions' | 'reviews' | 'hero' | 'homepage' | 'homepageManager' | 'settings' | 'popup' | 'lookbook';
+
 
 interface AdminDashboardProps {
     onNavigate: (page: Page) => void;
@@ -34,7 +35,7 @@ interface AdminDashboardProps {
 
     categories: Category[];
     onSaveCategory: (category: Category, imageFile?: File) => Promise<void> | void;
-    onDeleteCategory: (categoryId: number) => Promise<void> | void;
+    onDeleteCategory: (categoryId: string) => Promise<void> | void;
 
     heroSlides: HeroSlide[];
     onSaveHeroSlide: (slide: HeroSlide, imageFile?: File, videoFile?: File) => Promise<void> | void;
@@ -74,6 +75,7 @@ const adminPageTitles: Record<AdminPage, string> = {
     homepageManager: 'Homepage Manager',
     settings: 'Settings',
     popup: 'Popup Manager',
+    lookbook: 'Lookbook Settings',
 };
 
 const AdminMobileHeader: React.FC<{ onMenuClick: () => void, title: string }> = ({ onMenuClick, title }) => (
@@ -158,7 +160,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = (props) => {
             case 'homepage': return <AdminHomepagePage allProducts={products} sections={homepageSections} onSave={onSaveHomepageSections} />;
             case 'homepageManager': return <AdminHomepageManagerPage sections={customHomepageSections} onUpdate={onSaveCustomHomepageSections} allCategories={categories} allProducts={products} />;
             case 'settings': return <AdminSettingsPage isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />;
-            case 'popup': return <AdminPopupSettingsPage />;
+            case 'lookbook': return <AdminLookbookPage />;
+
             default: return <AdminDashboardHome orders={orders} products={products} onNavigateToSettings={() => setActivePage('settings')} />;
         }
     };

@@ -8,7 +8,7 @@ interface AdminCategoriesPageProps {
     products: Product[];
     onAddCategory: () => void;
     onEditCategory: (category: Category) => void;
-    onDeleteCategory: (categoryId: number) => void;
+    onDeleteCategory: (categoryId: string) => void;
 }
 
 const CategoryRow: React.FC<{ category: Category; productCount: number; index: number; onEdit: () => void; onDelete: () => void; }> = ({ category, productCount, index, onEdit, onDelete }) => {

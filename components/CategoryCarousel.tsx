@@ -45,7 +45,7 @@ const CategoryCarousel: React.FC<CategoryCarouselProps> = ({ categories, activeC
                   }`}
                 >
                   <img 
-                    src={category.imageUrl} 
+                    src={category.imageUrl || undefined} 
                     alt={`A sample of ${category.name} products`}
                     className="w-full h-full object-cover" 
                   />

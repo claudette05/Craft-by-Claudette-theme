@@ -34,7 +34,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
           >
             {slides[currentIndex].videoUrl ? (
                 <video 
-                    src={slides[currentIndex].videoUrl}
+                    src={slides[currentIndex].videoUrl || undefined}
                     className="w-full h-full object-cover" 
                     autoPlay 
                     loop 
@@ -43,7 +43,7 @@ const HeroCarousel: React.FC<HeroCarouselProps> = ({ slides }) => {
                 />
             ) : (
                 <img 
-                    src={slides[currentIndex].imageUrl} 
+                    src={slides[currentIndex].imageUrl || undefined} 
                     alt={slides[currentIndex].title} 
                     className="w-full h-full object-cover" 
                 />

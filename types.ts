@@ -63,7 +63,8 @@ export type Page =
   | 'resetPassword'
   | 'myAccount'
   | 'preorderPolicy'
-  | 'customerLove';
+  | 'customerLove'
+  | 'allPreorders';
 
 export type HeroSlide = {
   id: number;
@@ -221,3 +222,20 @@ export interface ShopInfo {
     whatsapp: string;
     logoUrl: string;
 }
+
+export interface LookbookConfig {
+  mode: 'cover' | 'collage' | 'carousel';
+  images: string[]; // URLs of images
+  overlayText?: string; // Text displayed over cover or first image
+  linkUrl: string; // Destination when clicking CTA/button
+}
+
+export interface CountdownBannerConfig {
+  enabled: boolean;
+  targetDate: string; // ISO string
+  preSaleText: string;
+  postSaleText: string;
+  backgroundColor: string;
+  textColor: string;
+}
+

@@ -39,6 +39,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
     const [quantity, setQuantity] = React.useState(1);
     const [isAdded, setIsAdded] = React.useState(false);
     const hasSale = typeof product.salePrice === 'number';
+    const isOutOfStock = product.stock === 0 && !product.isPreorder;
 
     const [selectedImage, setSelectedImage] = React.useState(product.imageUrl);
     const thumbScrollRef = React.useRef<HTMLDivElement>(null);
@@ -82,7 +83,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
     };
 
     const handleAddToCartClick = () => {
-        if (isAdded) return;
+        if (isAdded || isOutOfStock) return;
         addToCart(product.id, quantity);
         setIsAdded(true);
         setTimeout(() => {
@@ -264,15 +265,30 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
                         {product.description}
                     </div>
                     
+                    {product.stock > 0 && product.stock <= 5 && !product.isPreorder && (
+                        <div className="mb-4 inline-flex items-center gap-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-xs font-bold px-3 py-1 rounded-full w-max">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                            </span>
+                            Only {product.stock} left in stock!
+                        </div>
+                    )}
+                    {isOutOfStock && (
+                        <div className="mb-4 inline-flex items-center gap-2 bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-400 text-xs font-bold px-3 py-1 rounded-full w-max">
+                            Out of Stock
+                        </div>
+                    )}
+                    
                     <div className="flex flex-col sm:flex-row items-center gap-6 mb-8">
                         <div className="flex flex-col gap-2 w-full sm:w-auto">
                             <span className="font-bold text-text-primary uppercase text-[10px] tracking-widest">Quantity</span>
-                            <div className="flex items-center border border-border-primary rounded-full bg-bg-primary px-1">
-                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1} className="p-2.5 text-text-secondary hover:text-accent-primary disabled:opacity-30 transition-colors" aria-label="Decrease quantity">
+                            <div className={`flex items-center border border-border-primary rounded-full bg-bg-primary px-1 ${isOutOfStock ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <button onClick={() => handleQuantityChange(-1)} disabled={quantity <= 1 || isOutOfStock} className="p-2.5 text-text-secondary hover:text-accent-primary disabled:opacity-30 transition-colors" aria-label="Decrease quantity">
                                     <MinusIcon />
                                 </button>
                                 <span className="px-5 font-black text-lg text-text-primary tabular-nums min-w-[3rem] text-center">{quantity}</span>
-                                <button onClick={() => handleQuantityChange(1)} className="p-2.5 text-text-secondary hover:text-accent-primary transition-colors" aria-label="Increase quantity">
+                                <button onClick={() => handleQuantityChange(1)} disabled={isOutOfStock} className="p-2.5 text-text-secondary hover:text-accent-primary disabled:opacity-30 transition-colors" aria-label="Increase quantity">
                                     <PlusIcon />
                                 </button>
                             </div>
@@ -281,12 +297,13 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
                         <div className="flex-grow w-full">
                             <motion.button
                                 onClick={handleAddToCartClick}
-                                className="w-full font-black py-4 px-6 rounded-full overflow-hidden shadow-xl uppercase tracking-widest text-sm"
+                                disabled={isOutOfStock}
+                                className={`w-full font-black py-4 px-6 rounded-full overflow-hidden shadow-xl uppercase tracking-widest text-sm ${isOutOfStock ? 'opacity-50 cursor-not-allowed shadow-none' : ''}`}
                                 animate={{ 
-                                    backgroundColor: isAdded ? '#22c55e' : '#f59e0b',
+                                    backgroundColor: isOutOfStock ? '#9ca3af' : (isAdded ? '#22c55e' : (product.isPreorder ? '#8b5cf6' : '#f59e0b')),
                                 }}
-                                whileHover={{ scale: isAdded ? 1 : 1.02 }}
-                                whileTap={{ scale: isAdded ? 1 : 0.98 }}
+                                whileHover={{ scale: (isAdded || isOutOfStock) ? 1 : 1.02 }}
+                                whileTap={{ scale: (isAdded || isOutOfStock) ? 1 : 0.98 }}
                             >
                                 <span className="block text-white">
                                     <AnimatePresence mode="wait" initial={false}>
@@ -298,7 +315,7 @@ const ProductModal: React.FC<ProductModalProps> = ({ product, onClose, onViewDet
                                             transition={{ duration: 0.2 }}
                                             className="inline-block"
                                         >
-                                            {isAdded ? 'Added!' : 'Add to Cart'}
+                                            {isOutOfStock ? 'Sold Out' : (isAdded ? (product.isPreorder ? 'Preordered!' : 'Added!') : (product.isPreorder ? 'Preorder' : 'Add to Cart'))}
                                         </motion.span>
                                     </AnimatePresence>
                                 </span>

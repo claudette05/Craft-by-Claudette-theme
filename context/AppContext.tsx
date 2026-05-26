@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig, User, CloudinaryConfig, ShopInfo, Product } from '../types';
+import { CartItem, ToastMessage, ProductReview, PopupConfig, EmailLog, FreeGiftConfig, User, CloudinaryConfig, ShopInfo, Product, CountdownBannerConfig, LookbookConfig } from '../types';
 import { MOCK_REVIEWS } from '../constants';
 import { databaseService } from '../services/databaseService';
 import { db } from '../firebase';
@@ -10,38 +10,40 @@ import { addDoc, collection, serverTimestamp, getDocs, writeBatch, doc } from 'f
 const ADMIN_EMAIL = 'cobbahclaudette@gmail.com';
 
 interface AppContextType {
-    cart: CartItem[];
-    setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
-    wishlist: number[];
-    reviews: ProductReview[];
-    isDarkMode: boolean;
-    toasts: ToastMessage[];
-    cartItemCount: number;
-    popupConfig: PopupConfig;
-    emailLogs: EmailLog[];
-    freeGiftConfig: FreeGiftConfig;
-    cloudinaryConfig: CloudinaryConfig;
-    shopInfo: ShopInfo;
-    updatePopupConfig: (config: PopupConfig) => void;
-    updateFreeGiftConfig: (config: FreeGiftConfig) => Promise<void>;
-    updateCloudinaryConfig: (config: CloudinaryConfig) => Promise<void>;
-    updateShopInfo: (info: ShopInfo) => Promise<void>;
-    uploadImage: (file: File) => Promise<string>;
-    sendFakeEmail: (recipient: string, subject: string, template: EmailLog['template'], data?: any) => void;
-    addToCart: (productId: number, quantity: number) => void;
-    updateCartQuantity: (productId: number, newQuantity: number) => void;
-    removeFromCart: (productId: number) => void;
-    toggleWishlist: (productId: number) => void;
-    addReview: (review: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => void;
-    addToast: (message: string, type?: ToastMessage['type']) => void;
-    toggleDarkMode: () => void;
-    user: User | null;
-    isAdmin: boolean;
-    authLoading: boolean; // To track initial auth state check
-    login: (email: string, pass: string) => Promise<void>;
-    signup: (email: string, pass: string, name: string) => Promise<void>;
-    logout: () => void;
-    sendResetLink: (email: string) => Promise<void>;
+  lookbookConfig: LookbookConfig | null;
+  updateLookbookConfig: (config: LookbookConfig) => Promise<void>;
+  cart: CartItem[];
+  setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
+  wishlist: number[];
+  reviews: ProductReview[];
+  isDarkMode: boolean;
+  toasts: ToastMessage[];
+  cartItemCount: number;
+  popupConfig: PopupConfig;
+  shopInfo: ShopInfo;
+  setShopInfo: React.Dispatch<React.SetStateAction<ShopInfo>>;
+  cloudinaryConfig: CloudinaryConfig;
+  setCloudinaryConfig: React.Dispatch<React.SetStateAction<CloudinaryConfig>>;
+  freeGiftConfig: FreeGiftConfig;
+  setFreeGiftConfig: React.Dispatch<React.SetStateAction<FreeGiftConfig>>;
+  countdownBannerConfig: CountdownBannerConfig;
+  setCountdownBannerConfig: React.Dispatch<React.SetStateAction<CountdownBannerConfig>>;
+  uploadImage: (file: File) => Promise<string>;
+  sendFakeEmail: (recipient: string, subject: string, template: EmailLog['template'], data?: any) => void;
+  addToCart: (productId: number, quantity: number) => void;
+  updateCartQuantity: (productId: number, newQuantity: number) => void;
+  removeFromCart: (productId: number) => void;
+  toggleWishlist: (productId: number) => void;
+  addReview: (review: Omit<ProductReview, 'id' | 'date' | 'verifiedPurchase'>) => void;
+  addToast: (message: string, type?: ToastMessage['type']) => void;
+  toggleDarkMode: () => void;
+  user: User | null;
+  isAdmin: boolean;
+  authLoading: boolean;
+  login: (email: string, pass: string) => Promise<void>;
+  signup: (email: string, pass: string, name: string) => Promise<void>;
+  logout: () => void;
+  sendResetLink: (email: string) => Promise<void>;
 }
 
 const AppContext = React.createContext<AppContextType | undefined>(undefined);
@@ -68,8 +70,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     const [cloudinaryConfig, setCloudinaryConfig] = React.useState<CloudinaryConfig>({ 
-        cloudName: '', 
-        uploadPreset: '' 
+    cloudName: '', 
+    uploadPreset: '' 
+  });
+  const [lookbookConfig, setLookbookConfig] = React.useState<LookbookConfig | null>(null);
+
+
+    const [countdownBannerConfig, setCountdownBannerConfig] = React.useState<CountdownBannerConfig>({
+        enabled: false,
+        targetDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        preSaleText: "🎉 Reopening Sale starts in",
+        postSaleText: "🎉 Reopening Sale is Live | Up to 50% Off",
+        backgroundColor: "#F59E0B",
+        textColor: "#ffffff"
     });
 
     const [freeGiftConfig, setFreeGiftConfig] = React.useState<FreeGiftConfig>({
@@ -118,6 +131,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 if (data.cloudinaryConfig) setCloudinaryConfig(data.cloudinaryConfig);
                 if (data.freeGiftConfig) setFreeGiftConfig(data.freeGiftConfig);
                 if (data.popupConfig) setPopupConfig(data.popupConfig);
+                if (data.countdownBannerConfig) setCountdownBannerConfig(data.countdownBannerConfig);
+                if (data.lookbookConfig) setLookbookConfig(data.lookbookConfig);
             }
         };
         loadSettings();
@@ -237,7 +252,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('upload_preset', cloudinaryConfig.uploadPreset);
-        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/image/upload`, { method: 'POST', body: formData });
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudinaryConfig.cloudName}/auto/upload`, { method: 'POST', body: formData });
         if (!response.ok) {
             const err = await response.json();
             throw new Error(err.error?.message || "Cloudinary upload failed");
@@ -344,6 +359,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addToast("Shop info synced!");
     };
 
+    const updateCountdownBannerConfig = async (config: CountdownBannerConfig) => {
+    setCountdownBannerConfig(config);
+    await databaseService.saveSettings({ countdownBannerConfig: config });
+    addToast("Countdown banner saved!");
+  };
+
+  const updateLookbookConfig = async (config: LookbookConfig) => {
+    setLookbookConfig(config);
+    await databaseService.saveSettings({ lookbookConfig: config });
+    addToast("Lookbook saved!");
+  };
+
+
+
+
+
     const toggleDarkMode = React.useCallback(() => setIsDarkMode(prev => !prev), []);
     const cartItemCount = React.useMemo(() => cart.reduce((total, item) => total + item.quantity, 0), [cart]);
 
@@ -353,7 +384,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             addToCart, updateCartQuantity, removeFromCart, toggleWishlist, addReview, addToast, 
             toggleDarkMode, popupConfig, updatePopupConfig, emailLogs, sendFakeEmail: () => {}, 
             freeGiftConfig, updateFreeGiftConfig, user, isAdmin, authLoading, login, signup, logout, sendResetLink, 
-            cloudinaryConfig, updateCloudinaryConfig, uploadImage, shopInfo, updateShopInfo 
+            cloudinaryConfig, updateCloudinaryConfig, uploadImage, shopInfo, updateShopInfo, countdownBannerConfig, updateCountdownBannerConfig, lookbookConfig, updateLookbookConfig
         }}>
             {children}
         </AppContext.Provider>
