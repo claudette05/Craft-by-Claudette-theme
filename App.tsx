@@ -11,7 +11,7 @@ import HeroCarousel from './components/HeroCarousel';
 import Features from './components/Features';
 import CategoryCarousel from './components/CategoryCarousel';
 import ProductGrid from './components/ProductGrid';
-import CTA from './components/CTA';
+
 import Footer from './components/Footer';
 import DealsSection from './components/DealsSection';
 import Bestsellers from './components/Bestsellers';
@@ -29,6 +29,7 @@ import AffiliatePage from './components/AffiliatePage';
 import WishlistSidebar from './components/WishlistSidebar';
 import GlobalToastContainer from './components/GlobalToastContainer';
 import { useAppContext } from './context/AppContext';
+import Lookbook from './components/Lookbook';
 import AllProductsPage from './components/AllProductsPage';
 import { HomeSkeleton } from './components/Skeleton';
 import ReportBugPage from './components/ReportBugPage';
@@ -43,6 +44,9 @@ import { databaseService } from './services/databaseService';
 import PreorderPolicyPage from './components/PreorderPolicyPage';
 import CustomerLovePage from './components/CustomerLovePage';
 import Community from './components/Community';
+import CountdownBanner from './components/CountdownBanner';
+import HomepageCustomerLove from './components/HomepageCustomerLove';
+import ProductCard from './components/ProductCard';
 
 const BackButton: React.FC<{ onNavigate: (page: Page) => void }> = ({ onNavigate }) => {
   const goBack = () => {
@@ -92,7 +96,7 @@ const getRouteFromHash = (): { page: Page; productId: number | null } => {
         shop: 'shop',
         login: 'login', signup: 'signup',
         forgotPassword: 'forgotPassword', resetPassword: 'resetPassword',
-        myAccount: 'myAccount', preorderPolicy: 'preorderPolicy', customerLove: 'customerLove',
+        myAccount: 'myAccount', preorderPolicy: 'preorderPolicy', customerLove: 'customerLove', allPreorders: 'allPreorders',
     };
 
     if (hash === '' || hash === '/') return { page: 'shop', productId: null };
@@ -109,7 +113,7 @@ const ScrollToTop = () => {
 };
 
 const App: React.FC = () => {
-  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews: contextReviews, uploadImage, user, isAdmin } = useAppContext();
+  const { isDarkMode, toggleDarkMode, toasts, addToast, setCart, reviews: contextReviews, uploadImage, user, isAdmin, lookbookConfig } = useAppContext();
   
   const STORAGE_KEYS = { HOMEPAGE: 'craft_data_homepage', HISTORY: 'searchHistory', CUSTOM_SECTIONS: 'craft_data_custom_sections' };
 
@@ -215,13 +219,13 @@ const App: React.FC = () => {
     let finalImageUrl = catData.imageUrl;
     if (imageFile) { try { finalImageUrl = await uploadImage(imageFile); } catch (e:any) { addToast(e.message, 'error'); return; } }
     const updated = { ...catData, imageUrl: finalImageUrl };
-    if (!updated.id) updated.id = Date.now();
+    if (!updated.id) updated.id = Date.now().toString();
     await databaseService.saveCategory(updated);
     setCategories(prev => [updated, ...prev.filter(c => c.id !== updated.id)]);
     addToast('Category saved');
   };
 
-  const handleDeleteCategory = async (catId: number) => {
+  const handleDeleteCategory = async (catId: string) => {
     if (window.confirm('Delete category?')) {
       await databaseService.deleteCategory(catId);
       setCategories(categories.filter(c => c.id !== catId));
@@ -229,10 +233,14 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveHeroSlide = async (slideData: HeroSlide, imageFile?: File) => {
+  const handleSaveHeroSlide = async (slideData: HeroSlide, imageFile?: File, videoFile?: File) => {
     let finalImageUrl = slideData.imageUrl;
-    if (imageFile) { try { finalImageUrl = await uploadImage(imageFile); } catch (e:any) { addToast(e.message, 'error'); return; } }
-    const updated = { ...slideData, imageUrl: finalImageUrl };
+    let finalVideoUrl = slideData.videoUrl;
+    try {
+        if (imageFile) { finalImageUrl = await uploadImage(imageFile); finalVideoUrl = undefined; }
+        if (videoFile) { finalVideoUrl = await uploadImage(videoFile); finalImageUrl = undefined; }
+    } catch (e:any) { addToast(e.message, 'error'); return; }
+    const updated = { ...slideData, imageUrl: finalImageUrl, videoUrl: finalVideoUrl };
     if (!updated.id) updated.id = Date.now();
     await databaseService.saveHeroSlide(updated);
     setHeroSlides(prev => [updated, ...prev.filter(s => s.id !== updated.id)]);
@@ -328,8 +336,8 @@ const App: React.FC = () => {
   const newArrivals = React.useMemo(() => [...products].filter(p => p.published).sort((a, b) => b.id - a.id).slice(0, 8), [products]);
   const searchResults = React.useMemo(() => searchQuery ? products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.tags?.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))) : [], [searchQuery, products]);
   const dealsProducts = React.useMemo(() => products.filter(p => homepageSections?.deals?.includes(p.id)), [homepageSections, products]);
-  const bestsellerProducts = React.useMemo(() => products.filter(p => homepageSections?.bestsellers?.includes(p.id)), [homepageSections, products]);
-  const preorderProducts = React.useMemo(() => products.filter(p => homepageSections?.preorders?.includes(p.id)), [homepageSections, products]);
+  const bestsellerProducts = React.useMemo(() => products.filter(p => p.published && (homepageSections?.bestsellers?.includes(p.id) || p.tags?.some(t => t.toLowerCase() === 'bestseller'))).slice(0, 8), [homepageSections, products]);
+  const preorderProducts = React.useMemo(() => products.filter(p => p.published && (homepageSections?.preorders?.includes(p.id) || p.isPreorder)).slice(0, 8), [homepageSections, products]);
   
   const filteredProducts = React.useMemo(() => {
     if (activeCategory === 'All') {
@@ -338,13 +346,13 @@ const App: React.FC = () => {
     return products.filter(p => p.category === activeCategory && p.published);
   }, [activeCategory, products, bestsellerProducts]);
 
-  const resinProducts = React.useMemo(() => products.filter(p => p.tags?.some(tag => tag.toLowerCase() === 'resin') && p.published).slice(0, 8), [products]);
-  const giftProducts = React.useMemo(() => products.filter(p => (p.salePrice ?? p.price) <= 50 && p.published).slice(0, 8), [products]);
+  const limitedProducts = React.useMemo(() => products.filter(p => p.published && (p.tags?.some(tag => tag.toLowerCase() === 'limited') || (p.stock > 0 && p.stock <= 5))).slice(0, 8), [products]);
+  const schoolPickProducts = React.useMemo(() => products.filter(p => p.published && p.tags?.some(tag => tag.toLowerCase().includes('school'))).slice(0, 8), [products]);
 
   const renderPage = () => {
     switch(currentPage) {
       case 'cart': return <CartPage products={products} onContinueShopping={() => onNavigate('shop')} onNavigateToCheckout={() => onNavigate('checkout')} />;
-      case 'productDetail': return selectedProduct ? <ProductDetailPage product={selectedProduct} relatedProducts={products.filter(p => p.category === selectedProduct.category && p.id !== selectedProduct.id).slice(0, 4)} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToShop={() => onNavigate('shop')} onProductClick={handleProductClick} onNavigateToReviews={() => setCurrentPage('productReviews')} onQuickView={setQuickViewProduct} /> : <NotFoundPage onNavigate={onNavigate} />;
+      case 'productDetail': return selectedProduct ? <ProductDetailPage product={selectedProduct} relatedProducts={products.filter(p => p.category !== selectedProduct.category && p.id !== selectedProduct.id && p.published).slice(0, 4)} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToShop={() => onNavigate('shop')} onProductClick={handleProductClick} onNavigateToReviews={() => setCurrentPage('productReviews')} onQuickView={setQuickViewProduct} /> : <NotFoundPage onNavigate={onNavigate} />;
       case 'checkout': return <CheckoutPage products={products} onBackToCart={() => onNavigate('cart')} onPlaceOrder={handleCreateOrder} />;
       case 'admin': return <AdminGuard onNavigate={onNavigate}><React.Suspense fallback={<div>Loading...</div>}><AdminDashboard onNavigate={onNavigate} products={products} onSaveProduct={handleSaveProduct} onDeleteProduct={handleDeleteProduct} categories={categories} onSaveCategory={handleSaveCategory} onDeleteCategory={handleDeleteCategory} heroSlides={heroSlides} onSaveHeroSlide={handleSaveHeroSlide} onDeleteHeroSlide={handleDeleteHeroSlide} orders={orders} customers={customers} promotions={promotions} onSavePromotion={(pr) => setPromotions([pr, ...promotions])} onDeletePromotion={(id) => setPromotions(promotions.filter(p=>p.id!==id))} homepageSections={homepageSections} onSaveHomepageSections={setHomepageSections} customHomepageSections={customHomepageSections} onSaveCustomHomepageSections={handleSaveCustomHomepageSections} isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} reviews={reviews} onDeleteReview={handleDeleteReview} onFeatureReview={handleFeatureReview} /></React.Suspense></AdminGuard>;
       case 'productReviews': return selectedProduct ? <ProductReviewsPage product={selectedProduct} reviews={reviews.filter(r => r.productId === selectedProduct.id)} onBackToProduct={() => setCurrentPage('productDetail')} /> : <NotFoundPage onNavigate={onNavigate} />;
@@ -360,7 +368,92 @@ const App: React.FC = () => {
       case 'myAccount': return <MyAccountPage products={products} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />;
       case 'preorderPolicy': return <PreorderPolicyPage />;
       case 'customerLove': return <CustomerLovePage />;
-      case 'shop': default: return (<><HeroCarousel slides={heroSlides} /><Features /><CategoryCarousel categories={categories} activeCategory={activeCategory} onSelectCategory={setActiveCategory} /><ProductGrid products={filteredProducts} onProductClick={handleProductClick} title={activeCategory === 'All' ? 'Featured Products' : activeCategory} onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" />{preorderProducts.length > 0 && <ProductGrid products={preorderProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title="Preorder Now" />}{customHomepageSections.map(section => <ProductGrid key={section.id} products={products.filter(p => section.filterType === 'category' ? p.category === section.filterValue : p.tags?.includes(section.filterValue))} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title={section.title} />)}<ProductGrid products={newArrivals} onProductClick={handleProductClick} title="New Arrivals" onQuickView={setQuickViewProduct} /><CTA onShopNowClick={() => onNavigate('allProducts')} />{dealsProducts.length > 0 && <DealsSection products={dealsProducts} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} />}<ProductGrid products={resinProducts} onProductClick={handleProductClick} title="Resin Art" onQuickView={setQuickViewProduct} bgColor="bg-bg-secondary" /><ProductGrid products={giftProducts} onProductClick={handleProductClick} title="Gifts Under ₵50" onQuickView={setQuickViewProduct} /><Community /></>);
+      case 'allPreorders': return <AllProductsPage products={products.filter(p => p.published && p.isPreorder)} onProductClick={handleProductClick} onQuickView={setQuickViewProduct} title="All Preorders" />;
+      case 'shop': default: return (
+        <>
+            <HeroCarousel slides={heroSlides} />
+            
+            {/* Preorder Section */}
+            {preorderProducts.length > 0 && (
+              <section className="bg-amber-50/50 dark:bg-bg-secondary/30 pt-10 pb-6 border-b border-border-primary">
+                 <div className="container mx-auto px-4 text-center mb-6">
+                    <h2 className="text-2xl md:text-3xl font-bold text-text-primary mb-2 flex items-center justify-center gap-2">✨ Preorder Collection</h2>
+                    <p className="text-text-secondary">Limited items available for preorder. Secure yours before slots close.</p>
+                 </div>
+                 <ProductGrid 
+                    products={preorderProducts.slice(0, 6)} 
+                    onProductClick={handleProductClick} 
+                    title="" 
+                    onQuickView={setQuickViewProduct} 
+                    bgColor="bg-transparent" 
+                 />
+                 <div className="text-center mt-2 pb-6">
+                     <motion.button 
+                        whileHover={{ scale: 1.05 }} 
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => onNavigate('allPreorders')}
+                        className="px-6 py-2 bg-text-primary text-bg-primary rounded-full font-medium"
+                     >
+                        View All Preorders
+                     </motion.button>
+                 </div>
+              </section>
+            )}
+
+            {/* Shop Everything Section */}
+            <section id="shop-everything" className="py-16">
+                <div className="container mx-auto px-4">
+                    <h2 className="text-3xl md:text-4xl font-bold text-center text-text-primary mb-8">Shop Everything 💕</h2>
+                    
+                    {/* Quick Filters */}
+                    <div className="flex flex-wrap justify-center gap-2 mb-10">
+                        {['All', 'Earrings', 'Necklaces', 'Bracelets', 'Keychains', 'Lipgloss', 'Sets'].map(cat => (
+                            <button
+                                key={cat}
+                                onClick={() => setActiveCategory(cat)}
+                                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${activeCategory === cat || (cat === 'All' && activeCategory === 'All') ? 'bg-accent-primary text-white' : 'bg-bg-secondary text-text-secondary hover:bg-bg-secondary/80'}`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                        {(activeCategory === 'All' ? products.filter(p => p.published) : products.filter(p => p.published && (p.category === activeCategory || p.tags?.includes(activeCategory)))).slice(0, 16).map(product => (
+                            <ProductCard 
+                                key={product.id} 
+                                product={product} 
+                                onClick={handleProductClick} 
+                                onQuickView={setQuickViewProduct} 
+                            />
+                        ))}
+                    </div>
+                    
+                    <div className="text-center mt-12">
+                        <motion.button 
+                            whileHover={{ scale: 1.05 }} 
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => onNavigate('allProducts')}
+                            className="px-8 py-3 bg-bg-secondary text-text-primary border border-border-primary hover:border-accent-primary rounded-full font-medium"
+                        >
+                            Load More
+                        </motion.button>
+                    </div>
+                </div>
+            </section>
+
+            {/* Featured Bundle Banner (using Lookbook Config) */}
+            {lookbookConfig && (
+                <div className="my-10">
+                    <Lookbook />
+                </div>
+            )}
+
+            <HomepageCustomerLove reviews={reviews} onNavigate={onNavigate} />
+            
+            <Community />
+        </>
+      );
     }
   };
 
@@ -370,7 +463,12 @@ const App: React.FC = () => {
     <ErrorBoundary>
         <div className={isDarkMode ? 'dark' : ''}>
             <ScrollToTop />
-            {currentPage !== 'admin' && currentPage !== 'notFound' && <Navbar onCartClick={() => onNavigate('cart')} onWishlistClick={() => setIsWishlistOpen(true)} onHomeClick={() => onNavigate('shop')} onNavigate={onNavigate} searchHistory={searchHistory} onSearch={handleSearch} products={products} />}
+            {currentPage !== 'admin' && currentPage !== 'notFound' && (
+                <>
+                    <CountdownBanner />
+                    <Navbar onCartClick={() => onNavigate('cart')} onWishlistClick={() => setIsWishlistOpen(true)} onHomeClick={() => onNavigate('shop')} onNavigate={onNavigate} searchHistory={searchHistory} onSearch={handleSearch} products={products} />
+                </>
+            )}
             <AnimatePresence>{currentPage !== 'shop' && currentPage !== 'admin' && currentPage !== 'productDetail' && currentPage !== 'productReviews' && currentPage !== 'notFound' && <BackButton onNavigate={onNavigate} />}</AnimatePresence>
             <AnimatePresence mode="wait"><motion.div key={currentPage} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>{renderPage()}</motion.div></AnimatePresence>
             {currentPage !== 'admin' && currentPage !== 'notFound' && <Footer onNavigate={onNavigate} />}
